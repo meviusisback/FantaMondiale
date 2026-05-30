@@ -1119,3 +1119,37 @@ dialog::backdrop {
 .cloud-table tr:hover td {
   background: rgba(255, 255, 255, 0.01);
 }
+
+/* Unified Actions Dropdown block item styles */
+.dropdown-item-action-wrapper {
+  display: block !important;
+  width: 100% !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.dropdown-item-action-link {
+  display: block;
+  padding: 0.45rem 1rem;
+  color: #fff;
+  text-decoration: none;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: left;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.dropdown-item-action-link:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-primary);
+}
+
+.dropdown-submenu-header {
+  padding: 0.35rem 1rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 0.25rem;
+}

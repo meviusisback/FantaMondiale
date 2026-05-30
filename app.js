@@ -191,7 +191,7 @@ function initDOM() {
   dom.cloudSaveAuthor = document.getElementById('cloud-save-author');
   dom.cloudSaveDate = document.getElementById('cloud-save-date');
   dom.btnCloudSaveConfirm = document.getElementById('btn-cloud-save-confirm');
-  dom.cloudLoadDropdownWrapper = document.getElementById('cloud-load-dropdown-wrapper');
+  dom.cloudLoadDropdownWrapper = document.getElementById('actions-dropdown-wrapper');
   dom.cloudLoadDropdownList = document.getElementById('cloud-load-dropdown-list');
   dom.btnManageCloudSessions = document.getElementById('btn-manage-cloud-sessions');
   dom.cloudLoadDialog = document.getElementById('cloud-load-dialog');
@@ -257,14 +257,26 @@ function setupEventListeners() {
   // File Imports / Exports
   dom.fileDatabaseInput.addEventListener('change', handlePlayerDatabaseImport);
   dom.fileSessionInput.addEventListener('change', handleSessionImport);
-  dom.btnExportSession.addEventListener('click', exportSession);
-  dom.btnResetAll.addEventListener('click', resetSession);
+  
+  dom.btnExportSession.addEventListener('click', (e) => {
+    e.preventDefault();
+    exportSession();
+  });
+  
+  dom.btnResetAll.addEventListener('click', (e) => {
+    e.preventDefault();
+    resetSession();
+  });
 
   // Cloud Persistence Sync Event Listeners
-  if (dom.btnCloudSave) dom.btnCloudSave.addEventListener('click', openCloudSaveModal);
+  if (dom.btnCloudSave) dom.btnCloudSave.addEventListener('click', (e) => {
+    e.preventDefault();
+    openCloudSaveModal();
+  });
+  
   if (dom.btnCloudSaveConfirm) dom.btnCloudSaveConfirm.addEventListener('click', confirmCloudSave);
   
-  // Hover Dropdown Trigger
+  // Hover Dropdown Trigger (mouseenter on unified menu triggers real-time load sub-list)
   if (dom.cloudLoadDropdownWrapper) {
     dom.cloudLoadDropdownWrapper.addEventListener('mouseenter', handleCloudDropdownHover);
   }
