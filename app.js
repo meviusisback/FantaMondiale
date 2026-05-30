@@ -908,21 +908,52 @@ async function openStartupDialog() {
 }
 
 function resetSessionClean() {
-  state.players.forEach(p => {
-    p.ownerId = null;
-    p.purchaseCost = null;
-  });
-  
-  state.teams.forEach(t => {
-    t.budget = state.settings.budget || 500;
-    t.players = [];
-    t.module = '4-3-3';
-  });
+  // Reset settings to default
+  state.settings = {
+    budget: 500,
+    slots: {
+      POR: 3,
+      DIF: 8,
+      CEN: 8,
+      ATT: 6
+    },
+    aiProvider: 'openrouter',
+    openRouterModel: 'openai/gpt-oss-120b:free'
+  };
 
-  state.teamIdealLineups = {};
+  // Reset teams to default
+  state.teams = [
+    { id: 't-1', name: 'Dream Team', budget: 500, players: [], module: '4-3-3' },
+    { id: 't-2', name: 'F.C. Fantasmi', budget: 500, players: [], module: '4-3-3' },
+    { id: 't-3', name: 'Galacticos', budget: 500, players: [], module: '4-3-3' },
+    { id: 't-4', name: 'Real Madrink', budget: 500, players: [], module: '4-3-3' }
+  ];
+
+  // Restore players to default cloned from SEED_PLAYERS
+  state.players = JSON.parse(JSON.stringify(SEED_PLAYERS));
+
+  // Reset active state variables
+  state.activeTab = 'giocatori';
+  state.activeTeamId = 't-1';
   state.activeCloudSessionId = null;
+  state.activePitchTeamId = null;
+  state.pitchShowIdeal = false;
+  state.draggedPlayerId = null;
+  state.filters = {
+    search: '',
+    role: 'all',
+    status: 'free'
+  };
+  state.aiCache = {};
+  state.teamIdealLineups = {};
   state.activeCloudSessionMetadata = null;
+
+  // Clear last used session from localStorage and sessionStorage
   localStorage.removeItem('fantamondiale_last_cloud_session_id');
+  sessionStorage.clear();
+
+  // Commit this clean state immediately to local storage autosave
+  autoSave();
 }
 
 function openNewSessionFromStartup() {
