@@ -71,8 +71,8 @@ let state = {
       CEN: 8,
       ATT: 6
     },
-    aiProvider: 'google',
-    openRouterModel: 'nvidia/nemotron-3-super-120b-a12b:free'
+    aiProvider: 'openrouter',
+    openRouterModel: 'openai/gpt-oss-120b:free'
   },
   teams: [
     { id: 't-1', name: 'Dream Team', budget: 500, players: [], module: '4-3-3' },
@@ -244,11 +244,11 @@ function initDOM() {
   dom.teamListInput.value = state.teams.map(t => t.name).join('\n');
 
   // Fill AI settings from state
-  if (dom.configAIProvider) dom.configAIProvider.value = state.settings.aiProvider || 'google';
-  if (dom.configOpenRouterModel) dom.configOpenRouterModel.value = state.settings.openRouterModel || 'nvidia/nemotron-3-super-120b-a12b:free';
+  if (dom.configAIProvider) dom.configAIProvider.value = state.settings.aiProvider || 'openrouter';
+  if (dom.configOpenRouterModel) dom.configOpenRouterModel.value = state.settings.openRouterModel || 'openai/gpt-oss-120b:free';
   
   // Apply dynamic show/hide style
-  const isOR = (state.settings.aiProvider || 'google') === 'openrouter';
+  const isOR = (state.settings.aiProvider || 'openrouter') === 'openrouter';
   const divORModel = document.getElementById('div-openrouter-model');
   if (divORModel) divORModel.style.display = isOR ? 'block' : 'none';
 }
@@ -407,8 +407,8 @@ function saveConfig() {
   const newSlotDIF = parseInt(dom.configSlotDIF.value) || 8;
   const newSlotCEN = parseInt(dom.configSlotCEN.value) || 8;
   const newSlotATT = parseInt(dom.configSlotATT.value) || 6;
-  const newAIProvider = dom.configAIProvider ? dom.configAIProvider.value : 'google';
-  const newOpenRouterModel = dom.configOpenRouterModel ? dom.configOpenRouterModel.value.trim() : 'nvidia/nemotron-3-super-120b-a12b:free';
+  const newAIProvider = dom.configAIProvider ? dom.configAIProvider.value : 'openrouter';
+  const newOpenRouterModel = dom.configOpenRouterModel ? dom.configOpenRouterModel.value.trim() : 'openai/gpt-oss-120b:free';
 
   const rawTeamNames = dom.teamListInput.value.split('\n').map(name => name.trim()).filter(Boolean);
 
@@ -594,9 +594,9 @@ function handleSessionImport(e) {
       dom.teamListInput.value = state.teams.map(t => t.name).join('\n');
 
       // Restore AI settings
-      if (dom.configAIProvider) dom.configAIProvider.value = state.settings.aiProvider || 'google';
-      if (dom.configOpenRouterModel) dom.configOpenRouterModel.value = state.settings.openRouterModel || 'nvidia/nemotron-3-super-120b-a12b:free';
-      const isOR = (state.settings.aiProvider || 'google') === 'openrouter';
+      if (dom.configAIProvider) dom.configAIProvider.value = state.settings.aiProvider || 'openrouter';
+      if (dom.configOpenRouterModel) dom.configOpenRouterModel.value = state.settings.openRouterModel || 'openai/gpt-oss-120b:free';
+      const isOR = (state.settings.aiProvider || 'openrouter') === 'openrouter';
       const divORModel = document.getElementById('div-openrouter-model');
       if (divORModel) divORModel.style.display = isOR ? 'block' : 'none';
 
@@ -685,9 +685,9 @@ function loadAutoSave() {
       dom.teamListInput.value = state.teams.map(t => t.name).join('\n');
 
       // Restore AI settings
-      if (dom.configAIProvider) dom.configAIProvider.value = state.settings.aiProvider || 'google';
-      if (dom.configOpenRouterModel) dom.configOpenRouterModel.value = state.settings.openRouterModel || 'nvidia/nemotron-3-super-120b-a12b:free';
-      const isOR = (state.settings.aiProvider || 'google') === 'openrouter';
+      if (dom.configAIProvider) dom.configAIProvider.value = state.settings.aiProvider || 'openrouter';
+      if (dom.configOpenRouterModel) dom.configOpenRouterModel.value = state.settings.openRouterModel || 'openai/gpt-oss-120b:free';
+      const isOR = (state.settings.aiProvider || 'openrouter') === 'openrouter';
       const divORModel = document.getElementById('div-openrouter-model');
       if (divORModel) divORModel.style.display = isOR ? 'block' : 'none';
       
@@ -1688,9 +1688,9 @@ async function loadSpecificCloudSession(id) {
     dom.teamListInput.value = state.teams.map(t => t.name).join('\n');
 
     // Restore AI settings
-    if (dom.configAIProvider) dom.configAIProvider.value = state.settings.aiProvider || 'google';
-    if (dom.configOpenRouterModel) dom.configOpenRouterModel.value = state.settings.openRouterModel || 'nvidia/nemotron-3-super-120b-a12b:free';
-    const isOR = (state.settings.aiProvider || 'google') === 'openrouter';
+    if (dom.configAIProvider) dom.configAIProvider.value = state.settings.aiProvider || 'openrouter';
+    if (dom.configOpenRouterModel) dom.configOpenRouterModel.value = state.settings.openRouterModel || 'openai/gpt-oss-120b:free';
+    const isOR = (state.settings.aiProvider || 'openrouter') === 'openrouter';
     const divORModel = document.getElementById('div-openrouter-model');
     if (divORModel) divORModel.style.display = isOR ? 'block' : 'none';
 
@@ -1817,8 +1817,8 @@ async function showPlayerAIAnalysis(playerId, name, country, role, buttonEl, for
         name, 
         country, 
         role,
-        provider: state.settings.aiProvider || 'google',
-        openRouterModel: state.settings.openRouterModel || 'nvidia/nemotron-3-super-120b-a12b:free'
+        provider: state.settings.aiProvider || 'openrouter',
+        openRouterModel: state.settings.openRouterModel || 'openai/gpt-oss-120b:free'
       })
     });
 
@@ -2105,8 +2105,8 @@ async function showTeamAIAnalysis(buttonEl, forceRefresh = false) {
       body: JSON.stringify({
         teamName: team.name,
         roster: rosterData,
-        provider: state.settings.aiProvider || 'google',
-        openRouterModel: state.settings.openRouterModel || 'nvidia/nemotron-3-super-120b-a12b:free'
+        provider: state.settings.aiProvider || 'openrouter',
+        openRouterModel: state.settings.openRouterModel || 'openai/gpt-oss-120b:free'
       })
     });
 

@@ -264,16 +264,16 @@
                 <div class="form-group" style="margin-top: 1.25rem;">
                   <label for="config-ai-provider">Provider Intelligenza Artificiale</label>
                   <select id="config-ai-provider" class="input-control">
-                    <option value="google">Google Gemini API (Default)</option>
-                    <option value="openrouter">OpenRouter API</option>
+                    <option value="openrouter" selected>OpenRouter API (Default)</option>
+                    <option value="google">Google Gemini API</option>
                   </select>
                 </div>
 
-                <div id="div-openrouter-model" class="form-group" style="margin-top: 1rem; display: none;">
+                <div id="div-openrouter-model" class="form-group" style="margin-top: 1rem;">
                   <label for="config-openrouter-model">Modello OpenRouter</label>
-                  <input type="text" id="config-openrouter-model" class="input-control" placeholder="es. nvidia/nemotron-3-super-120b-a12b:free" value="nvidia/nemotron-3-super-120b-a12b:free">
+                  <input type="text" id="config-openrouter-model" class="input-control" placeholder="es. openai/gpt-oss-120b:free" value="openai/gpt-oss-120b:free">
                   <span style="font-size:0.65rem; color:var(--color-text-muted); display:block; margin-top:0.25rem;">
-                    Modelli suggeriti: <code>nvidia/nemotron-3-super-120b-a12b:free</code>, <code>google/gemini-2.5-flash</code>, <code>meta-llama/llama-3.3-70b-instruct</code>
+                    Modelli suggeriti: <code>openai/gpt-oss-120b:free</code>, <code>google/gemini-2.5-flash</code>, <code>meta-llama/llama-3.3-70b-instruct</code>
                   </span>
                 </div>
               </div>

@@ -47,7 +47,7 @@ Rispondi esclusivamente con il codice JSON, senza alcun blocco di codice markdow
 
     if (useOpenRouter) {
       const openRouterUrl = 'https://openrouter.ai/api/v1/chat/completions';
-      const openRouterModelString = openRouterModel || 'nvidia/nemotron-3-super-120b-a12b:free';
+      const openRouterModelString = openRouterModel || 'openai/gpt-oss-120b:free';
       const openRouterResponse = await fetch(openRouterUrl, {
         method: 'POST',
         headers: {
