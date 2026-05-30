@@ -1968,7 +1968,7 @@ document.addEventListener('click', function(e) {
   }
 });
 
-async function showTeamAIAnalysis(buttonEl) {
+async function showTeamAIAnalysis(buttonEl, forceRefresh = false) {
   const team = state.teams.find(t => t.id === state.activeTeamId);
   if (!team) {
     showToast('Seleziona una squadra attiva nel pannello laterale per poter effettuare l\'analisi tattica!', 'warning');
@@ -1976,7 +1976,7 @@ async function showTeamAIAnalysis(buttonEl) {
   }
 
   // 1. If popover already open for this team, close it and return
-  if (activeAIPopover && activeAIPopover.dataset.teamId === team.id) {
+  if (activeAIPopover && activeAIPopover.dataset.teamId === team.id && !forceRefresh) {
     closeAIPopover();
     return;
   }
@@ -2018,15 +2018,17 @@ async function showTeamAIAnalysis(buttonEl) {
   const rosterHash = team.players.map(p => p.id).sort().join(',');
   const cacheKey = `fantamondiale_team_ai_${team.id}_${rosterHash}`;
 
-  // Check Cache
-  const cachedData = sessionStorage.getItem(cacheKey);
-  if (cachedData) {
-    try {
-      const parsed = JSON.parse(cachedData);
-      renderTeamAnalysisPopoverData(popover, team, parsed.analysis, buttonEl);
-      return;
-    } catch (e) {
-      sessionStorage.removeItem(cacheKey);
+  // Check Cache (only if not force refreshing)
+  if (!forceRefresh) {
+    const cachedData = sessionStorage.getItem(cacheKey);
+    if (cachedData) {
+      try {
+        const parsed = JSON.parse(cachedData);
+        renderTeamAnalysisPopoverData(popover, team, parsed.analysis, buttonEl);
+        return;
+      } catch (e) {
+        sessionStorage.removeItem(cacheKey);
+      }
     }
   }
 
@@ -2080,6 +2082,7 @@ function renderTeamAnalysisPopoverData(popover, team, analysisText, buttonEl) {
     <div class="ai-popover-header">
       <span class="ai-popover-title">Analisi Tattica IA 🔮</span>
       <div class="ai-popover-actions">
+        <button class="ai-popover-refresh" title="Aggiorna analisi (ricerca online ad oggi)">🔄</button>
         <button class="ai-popover-close" onclick="closeAIPopover()">✕</button>
       </div>
     </div>
@@ -2092,6 +2095,15 @@ function renderTeamAnalysisPopoverData(popover, team, analysisText, buttonEl) {
       ${parsedHtml}
     </div>
   `;
+
+  // Bind refresh click programmatically using closure variables
+  const refreshBtn = popover.querySelector('.ai-popover-refresh');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      showTeamAIAnalysis(buttonEl, true);
+    });
+  }
 
   // Re-adjust height dynamically
   if (buttonEl) {

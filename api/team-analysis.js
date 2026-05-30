@@ -35,7 +35,7 @@ Struttura rigidamente l'output in 3 brevissimi punti elenco (usa il grassetto pe
 2. **Focus Ruoli & Lacune:** Indica chiaramente se mancano slot da completare per il regolamento o su quale reparto specifico focalizzarsi sul mercato (es. "Centrocampo corto", "Manca un top in attacco").
 3. **Formazione Ideale:** Schiera l'11 migliore possibile in base al roster e alle ultime notizie reali sui titolari nel Mondiale (usa moduli standard come 3-4-3, 4-3-3, ecc.). Se ci sono ballottaggi critici, segnalali tra parentesi.`;
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key=${apiKey}`;
 
     const response = await fetch(url, {
       method: 'POST',

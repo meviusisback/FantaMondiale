@@ -482,14 +482,42 @@ header {
     justify-content: center;
   }
   .dropdown-menu {
-    right: auto;
-    left: 50%;
-    transform: translateX(-50%) translateY(8px);
+    right: auto !important;
+    left: 50% !important;
+    transform: translateX(-50%) translateY(8px) !important;
     width: 100%;
     max-width: 290px;
   }
   .dropdown-wrapper.open .dropdown-menu {
-    transform: translateX(-50%) translateY(0);
+    transform: translateX(-50%) translateY(0) !important;
+  }
+
+  /* Center Player & Team AI Popovers as premium fixed modal on mobile */
+  .ai-bubble-popover {
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) scale(1) !important;
+    width: calc(100vw - 24px) !important;
+    max-width: 340px !important;
+    margin: 0 !important;
+    box-shadow: var(--shadow-dark), 0 0 35px rgba(168, 85, 247, 0.25) !important;
+    animation: mobileAiFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  }
+  
+  .ai-bubble-popover::after {
+    display: none !important; /* Hide indicator arrow */
+  }
+
+  @keyframes mobileAiFadeIn {
+    from {
+      opacity: 0;
+      transform: translate(-50%, -46%) scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
   }
 }
 
