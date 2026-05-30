@@ -1199,20 +1199,66 @@ function handleDrop(e) {
     return;
   }
 
-  // Swap indices in the team's player roster array
-  const idx1 = team.players.indexOf(p1);
-  const idx2 = team.players.indexOf(p2);
+  // If in ideal lineup mode and team has a generated ideal lineup, swap them there
+  if (state.pitchShowIdeal && state.teamIdealLineups?.[team.id]) {
+    const ideal = state.teamIdealLineups[team.id];
+    const isP1Starter = ideal.starters.includes(p1.id);
+    const isP2Starter = ideal.starters.includes(p2.id);
 
-  if (idx1 !== -1 && idx2 !== -1) {
-    team.players[idx1] = p2;
-    team.players[idx2] = p1;
+    if (isP1Starter !== isP2Starter) {
+      // Swap positions in starters and bench arrays
+      if (isP1Starter) {
+        ideal.starters = ideal.starters.filter(id => id !== p1.id);
+        ideal.bench = ideal.bench.filter(id => id !== p2.id);
+        ideal.starters.push(p2.id);
+        ideal.bench.push(p1.id);
+      } else {
+        ideal.starters = ideal.starters.filter(id => id !== p2.id);
+        ideal.bench = ideal.bench.filter(id => id !== p1.id);
+        ideal.starters.push(p1.id);
+        ideal.bench.push(p2.id);
+      }
+    } else {
+      // Both starters or both bench
+      if (isP1Starter) {
+        const idxS1 = ideal.starters.indexOf(p1.id);
+        const idxS2 = ideal.starters.indexOf(p2.id);
+        if (idxS1 !== -1 && idxS2 !== -1) {
+          ideal.starters[idxS1] = p2.id;
+          ideal.starters[idxS2] = p1.id;
+        }
+      } else {
+        const idxB1 = ideal.bench.indexOf(p1.id);
+        const idxB2 = ideal.bench.indexOf(p2.id);
+        if (idxB1 !== -1 && idxB2 !== -1) {
+          ideal.bench[idxB1] = p2.id;
+          ideal.bench[idxB2] = p1.id;
+        }
+      }
+    }
     
-    showToast(`Scambio completato: ${p1.name} ⇆ ${p2.name}!`, 'success');
-    
-    autoSave();
-    renderPitch();
-    renderTeamDashboard();
+    // Also reorder team.players roster array to preserve saving order compatibility
+    const idx1 = team.players.indexOf(p1);
+    const idx2 = team.players.indexOf(p2);
+    if (idx1 !== -1 && idx2 !== -1) {
+      team.players[idx1] = p2;
+      team.players[idx2] = p1;
+    }
+  } else {
+    // Normal manual mode reordering of team.players
+    const idx1 = team.players.indexOf(p1);
+    const idx2 = team.players.indexOf(p2);
+    if (idx1 !== -1 && idx2 !== -1) {
+      team.players[idx1] = p2;
+      team.players[idx2] = p1;
+    }
   }
+
+  showToast(`Scambio completato: ${p1.name} ⇆ ${p2.name}!`, 'success');
+  
+  autoSave();
+  renderPitch();
+  renderTeamDashboard();
 }
 
 function handlePlaceholderDrop(e) {
@@ -1236,14 +1282,30 @@ function handlePlaceholderDrop(e) {
     return;
   }
 
-  // Move the player to the front of this role's players to make them starter
-  team.players = team.players.filter(x => x.id !== player.id);
-  
-  const firstRoleIdx = team.players.findIndex(x => x.role === player.role);
-  if (firstRoleIdx !== -1) {
-    team.players.splice(firstRoleIdx, 0, player);
+  if (state.pitchShowIdeal && state.teamIdealLineups?.[team.id]) {
+    const ideal = state.teamIdealLineups[team.id];
+    ideal.bench = ideal.bench.filter(id => id !== player.id);
+    if (!ideal.starters.includes(player.id)) {
+      ideal.starters.push(player.id);
+    }
+    
+    // Also reorder team.players roster array
+    team.players = team.players.filter(x => x.id !== player.id);
+    const firstRoleIdx = team.players.findIndex(x => x.role === player.role);
+    if (firstRoleIdx !== -1) {
+      team.players.splice(firstRoleIdx, 0, player);
+    } else {
+      team.players.push(player);
+    }
   } else {
-    team.players.push(player);
+    // Normal manual mode reordering
+    team.players = team.players.filter(x => x.id !== player.id);
+    const firstRoleIdx = team.players.findIndex(x => x.role === player.role);
+    if (firstRoleIdx !== -1) {
+      team.players.splice(firstRoleIdx, 0, player);
+    } else {
+      team.players.push(player);
+    }
   }
 
   showToast(`${player.name} inserito nei titolari!`, 'success');
