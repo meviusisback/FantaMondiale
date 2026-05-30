@@ -85,6 +85,7 @@ let state = {
   activeTeamId: 't-1', // Selected team for quick assignments
   activeCloudSessionId: null, // Track currently loaded cloud session ID
   activePitchTeamId: null, // Stores ID of the team visualized on the pitch
+  pitchShowIdeal: false, // Flag to sort starting line-up by AI Form score
   draggedPlayerId: null, // Stores ID of the player being dragged
   filters: {
     search: '',
@@ -131,6 +132,7 @@ const dom = {
   cloudLoadDialog: null,
   cloudLoadListContainer: null,
   btnTeamAIAnalysis: null,
+  btnTeamIdealPitch: null,
 
   // Tabs buttons and contents
   tabButtons: [],
@@ -207,6 +209,7 @@ function initDOM() {
   dom.cloudLoadDialog = document.getElementById('cloud-load-dialog');
   dom.cloudLoadListContainer = document.getElementById('cloud-load-list-container');
   dom.btnTeamAIAnalysis = document.getElementById('btn-team-ai-analysis');
+  dom.btnTeamIdealPitch = document.getElementById('btn-team-ideal-pitch');
 
   dom.tabButtons = Array.from(document.querySelectorAll('.tab-btn'));
   dom.tabContents = Array.from(document.querySelectorAll('.tab-content'));
@@ -332,6 +335,19 @@ function setupEventListeners() {
       e.preventDefault();
       e.stopPropagation();
       showTeamAIAnalysis(dom.btnTeamAIAnalysis);
+    });
+  }
+
+  if (dom.btnTeamIdealPitch) {
+    dom.btnTeamIdealPitch.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const team = state.teams.find(t => t.id === state.activeTeamId);
+      if (!team) {
+        showToast('Seleziona una squadra attiva nel pannello laterale per poter visualizzare la formazione ideale!', 'warning');
+        return;
+      }
+      showTeamPitch(team.id, true);
     });
   }
 
@@ -1253,10 +1269,41 @@ function renderPitch() {
   const porNeeded = 1;
 
   // Separate all team players by role
-  const porPlayers = team.players.filter(p => p.role === 'POR');
-  const difPlayers = team.players.filter(p => p.role === 'DIF');
-  const cenPlayers = team.players.filter(p => p.role === 'CEN');
-  const attPlayers = team.players.filter(p => p.role === 'ATT');
+  let porPlayers = team.players.filter(p => p.role === 'POR');
+  let difPlayers = team.players.filter(p => p.role === 'DIF');
+  let cenPlayers = team.players.filter(p => p.role === 'CEN');
+  let attPlayers = team.players.filter(p => p.role === 'ATT');
+
+  // If ideal lineup mode, sort by AI Form Score
+  if (state.pitchShowIdeal) {
+    const getPlayerFormScore = (player) => {
+      const cached = state.aiCache[player.id] || JSON.parse(sessionStorage.getItem(`fantamondiale_ai_${player.id}`) || '{}');
+      let score = 50;
+      
+      // Category score
+      const cat = (cached.playerCategory || '').toLowerCase();
+      if (cat.includes('stella')) score += 40;
+      else if (cat.includes('ottimo')) score += 30;
+      else if (cat.includes('buono')) score += 20;
+      else if (cat.includes('accettabile')) score += 10;
+      else if (cat.includes('scarso')) score -= 20;
+
+      // Starter probability score
+      if (cached.starterProbability) {
+        const prob = parseInt(cached.starterProbability.replace(/[^0-9]/g, '')) || 50;
+        score += prob * 0.2;
+      }
+      
+      // Cost score
+      score += (player.purchaseCost || 0) * 0.1;
+      return score;
+    };
+
+    porPlayers = [...porPlayers].sort((a, b) => getPlayerFormScore(b) - getPlayerFormScore(a));
+    difPlayers = [...difPlayers].sort((a, b) => getPlayerFormScore(b) - getPlayerFormScore(a));
+    cenPlayers = [...cenPlayers].sort((a, b) => getPlayerFormScore(b) - getPlayerFormScore(a));
+    attPlayers = [...attPlayers].sort((a, b) => getPlayerFormScore(b) - getPlayerFormScore(a));
+  }
 
   // Slices: Starters (Titolari) and Bench (Panchina)
   const porStarters = porPlayers.slice(0, porNeeded);
@@ -1376,13 +1423,20 @@ function renderPitch() {
   }
 }
 
-function showTeamPitch(teamId) {
+function showTeamPitch(teamId, showIdeal = false) {
   const team = state.teams.find(t => t.id === teamId);
   if (!team) return;
 
   state.activePitchTeamId = teamId;
+  state.pitchShowIdeal = showIdeal;
   dom.pitchModuleSelect.value = team.module || '4-3-3';
   
+  // Set modal title dynamically
+  const pitchTitleEl = document.getElementById('pitchTitle');
+  if (pitchTitleEl) {
+    pitchTitleEl.innerHTML = showIdeal ? 'Formazione Ideale IA 📈🔮' : 'Formazione in Campo ⚽';
+  }
+
   renderPitch();
   document.getElementById('pitch-dialog').showModal();
 }
@@ -1987,6 +2041,13 @@ function renderPopoverData(popover, name, country, role, data, buttonEl) {
         <span class="ai-category-emoji">${categoryEmoji}</span>
         <span class="ai-category-text">${categoryText}</span>
       </div>
+    </div>
+
+    <div class="ai-form-section" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.04); border-radius: 8px; padding: 0.5rem 0.6rem; margin-bottom: 0.6rem;">
+      <span class="ai-stat-label" style="display:block; margin-bottom:0.25rem; font-size: 0.6rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em;">Stato di Forma (Settimana Corrente) 📈</span>
+      <p class="ai-form-text" style="margin: 0; font-size: 0.72rem; line-height: 1.4; color: #fff; font-weight: 500;">
+        ${data.formState || 'Nessun aggiornamento recente su questa settimana.'}
+      </p>
     </div>
 
     <div class="ai-profile-section">

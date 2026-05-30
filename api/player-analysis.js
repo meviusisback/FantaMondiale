@@ -26,7 +26,7 @@ Fornisci un'analisi strategica dettagliata e accurata in lingua italiana per il 
 Esegui una ricerca online in tempo reale tramite Google Search / Web Search per ottenere le informazioni calcistiche reali più recenti ed aggiornate ad oggi (squadra di club attuale, ultimo stato di forma, infortuni o convocazioni recenti, presenze e gol nella stagione 2025/2026).
 
 REGOLE DI ESATTEZZA NUMERICA DELLE PRESENZE (CRUCIALE):
-- Per la chiave 'appearances' del JSON, devi identificare tramite ricerca web statistica (ad esempio interrogando Transfermarkt, Soccerway o FBref) il numero REALE ed ESATTO di presenze, gol e assist effettuati dal calciatore ${name} specificamente nell'ultima stagione calcistica 2025/2026 (sommando le competizioni di club 25/26 e le partite ufficiali o amichevoli con la sua Nazionale).
+- Per la chiave 'appearances' del JSON, devi identificare tramite ricerca web statistica (ad esempio interrogando Transfermarkt, Soccerway o FBref) il numero REALE ed ESATTO di presenze, gol e assist effettuati dal calciatore ${name} specificamente nella stagione calcistica 2025/2026, contando ESCLUSIVAMENTE e SOLO le partite in CAMPIONATO (al fine di uniformare e rendere omogenei i dati tra tutti i giocatori, escludendo quindi coppe nazionali, coppe continentali e partite della Nazionale).
 - È tassativamente vietato inventare, stimare o tirare a indovinare i numeri. Fai ricerche mirate (es. "${name} presenze gol 2025 2026 transfermarkt"). Se dopo molteplici tentativi non trovi dati certi, rispondi con "Dati non disponibili nella stagione 25/26", ma fai ogni sforzo per trovare l'esatta statistica reale ad oggi.
 
 Regole FantaMondiale per formulare la tua risposta:
@@ -39,7 +39,7 @@ Regole FantaMondiale per formulare la tua risposta:
 
 Fornisci i dati strutturati RIGOROSAMENTE in formato JSON con le seguenti chiavi:
 - club: la squadra di club attuale in cui gioca (es. "Inter Miami", "Real Madrid")
-- appearances: le presenze e gol/assist registrati nella stagione calcistica più recente 2025/2026 di club e nazionale (es. "34 presenze, 12 gol nella stagione 25/26")
+- appearances: le presenze e gol/assist registrati nella stagione calcistica più recente 2025/2026 in CAMPIONATO (es. "34 presenze, 12 gol nella stagione 25/26")
 - starterProbability: stima percentuale (es. "85%" o "30%") che giochi effettivamente come titolare durante questo Mondiale.
 - playerCategory: la classificazione del giocatore a livello FantaMondiale (scegli rigorosamente tra: "scarso", "accettabile", "buono", "ottimo", "stella"). Assegna il valore valutando attentamente i seguenti criteri:
   - "scarso": gioca poco o niente, pochi bonus, squadra nazionale di appartenenza scarsa
@@ -48,6 +48,7 @@ Fornisci i dati strutturati RIGOROSAMENTE in formato JSON con le seguenti chiavi
   - "ottimo": titolare e con buoni bonus e pochi malus
   - "stella": uno dei migliori giocatori del ruolo, ottimi bonus, ottimo rendimento, gioca per squadre nazionali forti oppure è leader indiscusso di una squadra più debole e garantisce ottimi bonus
 - valueForMoney: valutazione sintetica del rapporto qualità/prezzo all'asta FantaMondiale (scegli rigorosamente tra: "Ottimo", "Buono", "Rischioso", "Sopravvalutato"). Ad esempio, un ottimo giocatore in una nazionale debole potrebbe essere "Sopravvalutato" o "Rischioso" perché uscirà presto.
+- formState: una breve descrizione testuale (1 riga o massimo 2 frasi) dello stato di forma e notizie reali del calciatore aggiornate a questa settimana (es. "In gran forma dopo il gol decisivo nel weekend", "In dubbio per affaticamento muscolare", "Reduce da ottime prestazioni").
 - description: descrizione del profilo del calciatore, valutando le performance recenti e le aspettative/performance al Mondiale in ottica FantaMondiale (2-3 frasi chiare).
 
 Rispondi esclusivamente con il codice JSON, senza alcun blocco di codice markdown o testo introduttivo.`;
