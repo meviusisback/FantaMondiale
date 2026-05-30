@@ -991,26 +991,27 @@ dialog::backdrop {
 .dropdown-wrapper {
   position: relative;
   display: inline-block;
+  z-index: 9999 !important; /* Force high stacking context for the dropdown */
 }
 
 .dropdown-menu {
   display: none;
   position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%) translateY(8px);
+  top: calc(100% - 2px); /* Slight overlap to ensure 100% gapless mouse hover transition */
+  right: 0;
+  left: auto;
   min-width: 280px;
-  background: rgba(15, 23, 42, 0.95);
+  background: rgba(15, 23, 42, 0.98);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
   box-shadow: var(--shadow-dark), 0 10px 30px rgba(0, 0, 0, 0.7);
-  z-index: 1000;
+  z-index: 999999 !important; /* Bring to absolute front over all dialogues and panels */
   padding: 0.5rem 0;
   overflow: hidden;
   opacity: 0;
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition: opacity 0.15s ease;
   pointer-events: none;
 }
 
@@ -1018,7 +1019,6 @@ dialog::backdrop {
 .dropdown-wrapper:hover .dropdown-menu {
   display: block;
   opacity: 1;
-  transform: translateX(-50%) translateY(4px);
   pointer-events: auto;
 }
 
