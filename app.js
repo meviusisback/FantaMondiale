@@ -120,6 +120,7 @@ const dom = {
   cloudSaveAuthor: null,
   cloudSaveDate: null,
   btnCloudSaveConfirm: null,
+  btnActionsMenu: null,
   cloudLoadDropdownWrapper: null,
   cloudLoadDropdownList: null,
   btnManageCloudSessions: null,
@@ -192,6 +193,7 @@ function initDOM() {
   dom.cloudSaveAuthor = document.getElementById('cloud-save-author');
   dom.cloudSaveDate = document.getElementById('cloud-save-date');
   dom.btnCloudSaveConfirm = document.getElementById('btn-cloud-save-confirm');
+  dom.btnActionsMenu = document.getElementById('btn-actions-menu');
   dom.cloudLoadDropdownWrapper = document.getElementById('actions-dropdown-wrapper');
   dom.cloudLoadDropdownList = document.getElementById('cloud-load-dropdown-list');
   dom.btnManageCloudSessions = document.getElementById('btn-manage-cloud-sessions');
@@ -277,6 +279,27 @@ function setupEventListeners() {
   
   if (dom.btnCloudSaveConfirm) dom.btnCloudSaveConfirm.addEventListener('click', confirmCloudSave);
   
+  // Toggle Actions Dropdown on Click/Tap (for mobile support and persistent click triggers)
+  if (dom.btnActionsMenu) {
+    dom.btnActionsMenu.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (dom.cloudLoadDropdownWrapper) {
+        const isOpen = dom.cloudLoadDropdownWrapper.classList.toggle('open');
+        if (isOpen) {
+          handleCloudDropdownHover();
+        }
+      }
+    });
+  }
+
+  // Close Actions Dropdown when clicking outside
+  document.addEventListener('click', (e) => {
+    if (dom.cloudLoadDropdownWrapper && !dom.cloudLoadDropdownWrapper.contains(e.target)) {
+      dom.cloudLoadDropdownWrapper.classList.remove('open');
+    }
+  });
+
   // Hover Dropdown Trigger (mouseenter on unified menu triggers real-time load sub-list)
   if (dom.cloudLoadDropdownWrapper) {
     dom.cloudLoadDropdownWrapper.addEventListener('mouseenter', handleCloudDropdownHover);

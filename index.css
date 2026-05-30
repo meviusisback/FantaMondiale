@@ -285,14 +285,137 @@ header {
     margin-bottom: 1.25rem;
     padding: 1rem 1.25rem;
   }
-  .player-table-container {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+  .search-filter-bar {
+    flex-direction: column;
+    gap: 0.5rem;
   }
-  .player-table th, 
+  .search-filter-bar > div {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  .player-table-container {
+    border: none;
+    max-height: none;
+    overflow-x: visible;
+  }
+  .player-table thead {
+    display: none;
+  }
+  .player-table, 
+  .player-table tbody, 
+  .player-table tr {
+    display: block;
+    width: 100%;
+  }
+  .player-table tr {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    margin-bottom: 0.75rem;
+    padding: 0.85rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    display: grid;
+    grid-template-areas: 
+      "name role"
+      "country value"
+      "cost cost"
+      "action action";
+    grid-template-columns: 1fr auto;
+    gap: 0.6rem;
+    align-items: center;
+  }
+  .player-table tr.taken {
+    background: rgba(99, 102, 241, 0.04);
+    border-color: rgba(99, 102, 241, 0.2);
+  }
   .player-table td {
-    padding: 0.55rem 0.75rem;
-    font-size: 0.78rem;
+    display: block !important;
+    padding: 0 !important;
+    border-bottom: none !important;
+    text-align: left !important;
+    width: auto !important;
+  }
+  .player-table td:nth-child(1) {
+    grid-area: name;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .player-table td:nth-child(2) {
+    grid-area: role;
+    justify-self: end;
+  }
+  .player-table td:nth-child(3) {
+    grid-area: country;
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+  }
+  .player-table td:nth-child(4) {
+    grid-area: value;
+    justify-self: end;
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    font-weight: 600;
+  }
+  .player-table td:nth-child(4)::before {
+    content: "Quotazione: ";
+    color: var(--color-text-muted);
+    font-weight: 400;
+  }
+  .player-table td:nth-child(5) {
+    grid-area: cost;
+    display: flex !important;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    border-top: 1px dashed rgba(255, 255, 255, 0.06);
+    padding-top: 0.6rem !important;
+  }
+  .player-table td:nth-child(5)::before {
+    content: "Offerta Asta:";
+    color: var(--color-text-muted);
+    font-weight: 500;
+  }
+  .player-table td:nth-child(5) .table-input {
+    max-width: 90px;
+    height: 30px;
+    padding: 0.25rem 0.5rem;
+  }
+  .player-table td:nth-child(6) {
+    grid-area: action;
+    width: 100% !important;
+    margin-top: 0.25rem;
+  }
+  .player-table td:nth-child(6) .btn {
+    width: 100%;
+    justify-content: center;
+    padding: 0.5rem;
+    font-size: 0.8rem;
+  }
+  .player-table td:nth-child(6) > div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: space-between !important;
+    width: 100%;
+    align-items: center;
+  }
+  .player-table td:nth-child(6) > div > span:first-child {
+    font-size: 0.75rem;
+  }
+  .player-table td:nth-child(6) > div > span:nth-child(2) {
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
+  .player-table td:nth-child(6) > div .btn-danger {
+    width: auto;
+    flex-grow: 1;
+    margin-left: auto;
   }
   .badge {
     padding: 0.2rem 0.4rem;
@@ -365,7 +488,7 @@ header {
     width: 100%;
     max-width: 290px;
   }
-  .dropdown-wrapper:hover .dropdown-menu {
+  .dropdown-wrapper.open .dropdown-menu {
     transform: translateX(-50%) translateY(0);
   }
 }
@@ -1141,8 +1264,8 @@ dialog::backdrop {
   pointer-events: none;
 }
 
-/* Smooth dropdown reveal on hover */
-.dropdown-wrapper:hover .dropdown-menu {
+/* Smooth dropdown reveal on click toggle */
+.dropdown-wrapper.open .dropdown-menu {
   display: block;
   opacity: 1;
   pointer-events: auto;
