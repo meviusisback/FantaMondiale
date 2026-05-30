@@ -1726,7 +1726,7 @@ dialog::backdrop {
   transform: translateY(0);
 }
 
-/* Glassmorphic Markdown Card List Layout */
+/* Glassmorphic Markdown Card List Layout (Legacy compatibility) */
 .ai-analysis-list {
   list-style: none;
   padding: 0;
@@ -1753,9 +1753,96 @@ dialog::backdrop {
 }
 
 .ai-analysis-item strong {
-  color: #c084fc; /* Purple accent for keywords */
+  color: #c084fc;
   font-weight: 700;
   display: block;
   margin-bottom: 0.15rem;
   font-size: 0.8rem;
+}
+
+/* Premium AI Analysis Accent Cards Layout */
+.ai-analysis-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.ai-analysis-card-item {
+  display: flex;
+  gap: 0.75rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+  padding: 0.7rem 0.8rem;
+  transition: all var(--transition-fast);
+  align-items: flex-start;
+}
+
+.ai-analysis-card-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(168, 85, 247, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.ai-card-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: rgba(168, 85, 247, 0.1);
+  border: 1px solid rgba(168, 85, 247, 0.25);
+  flex-shrink: 0;
+}
+
+.card-step-1 .ai-card-badge {
+  background: rgba(14, 165, 233, 0.1);
+  border-color: rgba(14, 165, 233, 0.25);
+}
+
+.card-step-2 .ai-card-badge {
+  background: rgba(234, 179, 8, 0.1);
+  border-color: rgba(234, 179, 8, 0.25);
+}
+
+.card-step-3 .ai-card-badge {
+  background: rgba(168, 85, 247, 0.1);
+  border-color: rgba(168, 85, 247, 0.25);
+}
+
+.ai-card-icon {
+  font-size: 0.9rem;
+}
+
+.ai-card-content {
+  flex-grow: 1;
+  min-width: 0;
+}
+
+.ai-card-title {
+  margin: 0 0 0.2rem 0;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.card-step-1 .ai-card-title {
+  color: #38bdf8; /* sky blue */
+}
+
+.card-step-2 .ai-card-title {
+  color: #facc15; /* yellow */
+}
+
+.card-step-3 .ai-card-title {
+  color: #c084fc; /* purple */
+}
+
+.ai-card-text {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.85);
 }

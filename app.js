@@ -2171,8 +2171,9 @@ function renderTeamAnalysisPopoverData(popover, team, analysisText, buttonEl) {
 function parseMarkdown(text) {
   if (!text) return '';
   const lines = text.split('\n').map(line => line.trim()).filter(Boolean);
-  let parsedHtml = '<ul class="ai-analysis-list">';
+  let parsedHtml = '<div class="ai-analysis-cards">';
   
+  let cardIndex = 0;
   lines.forEach(line => {
     let cleanLine = line;
     // Strip bullet points or numbered prefix like "1. ", "- ", "* "
@@ -2183,11 +2184,43 @@ function parseMarkdown(text) {
     cleanLine = cleanLine.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
     
     if (cleanLine.length > 0) {
-      parsedHtml += `<li class="ai-analysis-item">${cleanLine}</li>`;
+      cardIndex++;
+      let icon = '✨';
+      let title = '';
+      
+      // Try to extract bold text as title
+      const strongMatch = cleanLine.match(/^<strong>(.*?)<\/strong>:?\s*/);
+      if (strongMatch) {
+        title = strongMatch[1].replace(/^\d+[\.\s\-:]+\s*/, '');
+        cleanLine = cleanLine.replace(/^<strong>.*?<\/strong>:?\s*/, '');
+      }
+      
+      if (cardIndex === 1) {
+        icon = '📊';
+        if (!title) title = 'Voto & Potenziale';
+      } else if (cardIndex === 2) {
+        icon = '🎯';
+        if (!title) title = 'Strategia & Mercato';
+      } else if (cardIndex === 3) {
+        icon = '🏆';
+        if (!title) title = '11 Ideale da Bonus';
+      }
+      
+      parsedHtml += `
+        <div class="ai-analysis-card-item card-step-${cardIndex}">
+          <div class="ai-card-badge">
+            <span class="ai-card-icon">${icon}</span>
+          </div>
+          <div class="ai-card-content">
+            <h4 class="ai-card-title">${title}</h4>
+            <p class="ai-card-text">${cleanLine}</p>
+          </div>
+        </div>
+      `;
     }
   });
   
-  parsedHtml += '</ul>';
+  parsedHtml += '</div>';
   return parsedHtml;
 }
 
