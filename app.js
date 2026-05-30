@@ -126,6 +126,7 @@ const dom = {
   btnManageCloudSessions: null,
   cloudLoadDialog: null,
   cloudLoadListContainer: null,
+  btnTeamAIAnalysis: null,
 
   // Tabs buttons and contents
   tabButtons: [],
@@ -199,6 +200,7 @@ function initDOM() {
   dom.btnManageCloudSessions = document.getElementById('btn-manage-cloud-sessions');
   dom.cloudLoadDialog = document.getElementById('cloud-load-dialog');
   dom.cloudLoadListContainer = document.getElementById('cloud-load-list-container');
+  dom.btnTeamAIAnalysis = document.getElementById('btn-team-ai-analysis');
 
   dom.tabButtons = Array.from(document.querySelectorAll('.tab-btn'));
   dom.tabContents = Array.from(document.querySelectorAll('.tab-content'));
@@ -299,6 +301,15 @@ function setupEventListeners() {
       dom.cloudLoadDropdownWrapper.classList.remove('open');
     }
   });
+
+  // AI Active Team Analysis click handler
+  if (dom.btnTeamAIAnalysis) {
+    dom.btnTeamAIAnalysis.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      showTeamAIAnalysis(dom.btnTeamAIAnalysis);
+    });
+  }
 
   // Hover Dropdown Trigger (mouseenter on unified menu triggers real-time load sub-list)
   if (dom.cloudLoadDropdownWrapper) {
@@ -1945,12 +1956,171 @@ function renderPopoverError(popover, errorMsg) {
   `;
 }
 
-// Click outside popover to close it automatically
+// Click outside popover to close it automatically (with support for active team analysis trigger)
 document.addEventListener('click', function(e) {
-  if (activeAIPopover && !activeAIPopover.contains(e.target) && !e.target.classList.contains('btn-ai-sparkle') && !e.target.closest('.btn-ai-sparkle')) {
+  if (activeAIPopover && 
+      !activeAIPopover.contains(e.target) && 
+      !e.target.classList.contains('btn-ai-sparkle') && 
+      !e.target.closest('.btn-ai-sparkle') &&
+      e.target.id !== 'btn-team-ai-analysis' &&
+      !e.target.closest('#btn-team-ai-analysis')) {
     closeAIPopover();
   }
 });
+
+async function showTeamAIAnalysis(buttonEl) {
+  const team = state.teams.find(t => t.id === state.activeTeamId);
+  if (!team) {
+    showToast('Seleziona una squadra attiva nel pannello laterale per poter effettuare l\'analisi tattica!', 'warning');
+    return;
+  }
+
+  // 1. If popover already open for this team, close it and return
+  if (activeAIPopover && activeAIPopover.dataset.teamId === team.id) {
+    closeAIPopover();
+    return;
+  }
+
+  // 2. Close any other open popovers first
+  closeAIPopover();
+
+  // 3. Create Popover Div
+  const popover = document.createElement('div');
+  popover.className = 'ai-bubble-popover';
+  popover.dataset.teamId = team.id;
+  activeAIPopover = popover;
+
+  // Append to body immediately to calculate dimensions
+  document.body.appendChild(popover);
+
+  // 4. Position Popover relative to buttonEl
+  if (buttonEl) {
+    positionPopover(popover, buttonEl);
+  }
+
+  // 5. Render Loading State (Skeleton Loader)
+  popover.innerHTML = `
+    <div class="ai-popover-header">
+      <span class="ai-popover-title">Analisi Tattica IA 🔮</span>
+      <div class="ai-popover-actions">
+        <button class="ai-popover-close" onclick="closeAIPopover()">✕</button>
+      </div>
+    </div>
+    <div style="font-size:0.75rem; font-weight:700; color:#fff; margin-bottom: 0.65rem;">
+      Studio la rosa di <span style="color:#c084fc;">${team.name}</span>...
+    </div>
+    <div class="ai-skeleton-pulse ai-skeleton-line" style="width: 100%; height: 50px; border-radius: 8px;"></div>
+    <div class="ai-skeleton-pulse ai-skeleton-line" style="width: 100%; height: 50px; border-radius: 8px; margin-top: 0.5rem;"></div>
+    <div class="ai-skeleton-pulse ai-skeleton-line" style="width: 100%; height: 50px; border-radius: 8px; margin-top: 0.5rem;"></div>
+  `;
+
+  // 6. Roster Hash & Cache Key
+  const rosterHash = team.players.map(p => p.id).sort().join(',');
+  const cacheKey = `fantamondiale_team_ai_${team.id}_${rosterHash}`;
+
+  // Check Cache
+  const cachedData = sessionStorage.getItem(cacheKey);
+  if (cachedData) {
+    try {
+      const parsed = JSON.parse(cachedData);
+      renderTeamAnalysisPopoverData(popover, team, parsed.analysis, buttonEl);
+      return;
+    } catch (e) {
+      sessionStorage.removeItem(cacheKey);
+    }
+  }
+
+  // 7. Group roster by role with minimal details
+  const rosterData = {
+    POR: team.players.filter(p => p.role === 'POR').map(p => ({ name: p.name, country: p.country })),
+    DIF: team.players.filter(p => p.role === 'DIF').map(p => ({ name: p.name, country: p.country })),
+    CEN: team.players.filter(p => p.role === 'CEN').map(p => ({ name: p.name, country: p.country })),
+    ATT: team.players.filter(p => p.role === 'ATT').map(p => ({ name: p.name, country: p.country }))
+  };
+
+  // 8. Fetch analysis from Serverless API
+  try {
+    const response = await fetch('/api/team-analysis', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        teamName: team.name,
+        roster: rosterData
+      })
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || result.error) {
+      if (result.fallback) {
+        renderPopoverFallback(popover, result.error);
+      } else {
+        throw new Error(result.error || 'Errore di connessione API.');
+      }
+      return;
+    }
+
+    // Save to cache
+    sessionStorage.setItem(cacheKey, JSON.stringify(result));
+
+    // Render Data
+    renderTeamAnalysisPopoverData(popover, team, result.analysis, buttonEl);
+  } catch (error) {
+    console.error(error);
+    renderPopoverError(popover, error.message);
+  }
+}
+
+function renderTeamAnalysisPopoverData(popover, team, analysisText, buttonEl) {
+  const parsedHtml = parseMarkdown(analysisText);
+
+  popover.innerHTML = `
+    <div class="ai-popover-header">
+      <span class="ai-popover-title">Analisi Tattica IA 🔮</span>
+      <div class="ai-popover-actions">
+        <button class="ai-popover-close" onclick="closeAIPopover()">✕</button>
+      </div>
+    </div>
+    
+    <div style="font-size: 0.82rem; font-weight: 800; color: #fff; margin-bottom: 0.75rem; border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 0.35rem;">
+      Roster: <span style="color:#c084fc;">${team.name}</span>
+    </div>
+
+    <div style="max-height: 310px; overflow-y: auto; padding-right: 0.25rem;">
+      ${parsedHtml}
+    </div>
+  `;
+
+  // Re-adjust height dynamically
+  if (buttonEl) {
+    positionPopover(popover, buttonEl);
+  }
+}
+
+function parseMarkdown(text) {
+  if (!text) return '';
+  const lines = text.split('\n').map(line => line.trim()).filter(Boolean);
+  let parsedHtml = '<ul class="ai-analysis-list">';
+  
+  lines.forEach(line => {
+    let cleanLine = line;
+    // Strip bullet points or numbered prefix like "1. ", "- ", "* "
+    cleanLine = cleanLine.replace(/^\s*[-*]\s+/, '');
+    cleanLine = cleanLine.replace(/^\s*\d+\.\s+/, '');
+    
+    // Convert bold **text** to <strong>text</strong>
+    cleanLine = cleanLine.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    
+    if (cleanLine.length > 0) {
+      parsedHtml += `<li class="ai-analysis-item">${cleanLine}</li>`;
+    }
+  });
+  
+  parsedHtml += '</ul>';
+  return parsedHtml;
+}
 
 // Window globals to wire up inline HTML onclick actions
 window.assignPlayerDirect = assignPlayerDirect;
@@ -1959,4 +2129,5 @@ window.showTeamPitch = showTeamPitch;
 window.loadSpecificCloudSession = loadSpecificCloudSession;
 window.deleteSpecificCloudSession = deleteSpecificCloudSession;
 window.showPlayerAIAnalysis = showPlayerAIAnalysis;
+window.showTeamAIAnalysis = showTeamAIAnalysis;
 window.closeAIPopover = closeAIPopover;

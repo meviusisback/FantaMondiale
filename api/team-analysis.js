@@ -1,0 +1,70 @@
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    return res.status(200).json({
+      fallback: true,
+      error: 'Chiave API di Gemini non configurata. Aggiungi GEMINI_API_KEY alle variabili d\'ambiente di Vercel.'
+    });
+  }
+
+  try {
+    const { teamName, roster } = req.body;
+    if (!roster) {
+      return res.status(400).json({ error: 'Dati incompleti: roster è obbligatorio.' });
+    }
+
+    const systemPrompt = `Tu sei un esperto analista di Fantacalcio specializzato nel Fantamondiale. Il tuo compito è analizzare il roster attuale dell'utente e generare un'analisi ultra-concisa, adatta a essere letta in un piccolo box/fumetto UI (massimo 120-150 parole totali). Usa un tono diretto, esperto e leggermente ironico.
+
+Input ricevuti:
+- Nome Squadra: ${teamName || 'Mia Squadra'}
+- Roster attuale (calciatori divisi per ruolo):
+  - Portieri (POR): ${roster.POR?.map(p => `${p.name} (${p.country})`).join(', ') || 'Nessuno'}
+  - Difensori (DIF): ${roster.DIF?.map(p => `${p.name} (${p.country})`).join(', ') || 'Nessuno'}
+  - Centrocampisti (CEN): ${roster.CEN?.map(p => `${p.name} (${p.country})`).join(', ') || 'Nessuno'}
+  - Attaccanti (ATT): ${roster.ATT?.map(p => `${p.name} (${p.country})`).join(', ') || 'Nessuno'}
+
+Se ci sono infortuni, ballottaggi e probabili formazioni reali per il Mondiale riferite a questi calciatori, considerale integrando le notizie reali più recenti da una ricerca web in tempo reale.
+
+Struttura rigidamente l'output in 3 brevissimi punti elenco (usa il grassetto per le parole chiave, niente introduzioni o conclusioni inutili):
+
+1. **Competitività:** Dai un voto sintetico o un giudizio sul livello generale del team (es. "Top tier", "Manca una scintilla", "Da sfoltire").
+2. **Focus Ruoli & Lacune:** Indica chiaramente se mancano slot da completare per il regolamento o su quale reparto specifico focalizzarsi sul mercato (es. "Centrocampo corto", "Manca un top in attacco").
+3. **Formazione Ideale:** Schiera l'11 migliore possibile in base al roster e alle ultime notizie reali sui titolari nel Mondiale (usa moduli standard come 3-4-3, 4-3-3, ecc.). Se ci sono ballottaggi critici, segnalali tra parentesi.`;
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{ text: systemPrompt }]
+        }],
+        tools: [{
+          googleSearch: {}
+        }]
+      })
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      return res.status(response.status).json({ error: `Errore dall'API Gemini: ${errText}` });
+    }
+
+    const data = await response.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) {
+      return res.status(500).json({ error: 'Nessun testo ricevuto dal modello.' });
+    }
+
+    return res.status(200).json({ analysis: text });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+}
