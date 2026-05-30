@@ -1822,14 +1822,12 @@ function renderPopoverLoading(popover, name) {
 
 function renderPopoverData(popover, name, country, role, data, buttonEl) {
   const qpClass = data.valueForMoney ? data.valueForMoney.toLowerCase().replace(/[^a-z]/g, '') : 'buono';
-  const escapedName = name.replace(/'/g, "\\'");
-  const escapedCountry = country.replace(/'/g, "\\'");
 
   popover.innerHTML = `
     <div class="ai-popover-header">
       <span class="ai-popover-title">Analisi IA ✨</span>
       <div class="ai-popover-actions">
-        <button class="ai-popover-refresh" onclick="showPlayerAIAnalysis('${popover.dataset.playerId}', '${escapedName}', '${escapedCountry}', '${role}', null, true)" title="Aggiorna analisi (ricerca online ad oggi)">🔄</button>
+        <button class="ai-popover-refresh" title="Aggiorna analisi (ricerca online ad oggi)">🔄</button>
         <button class="ai-popover-close" onclick="closeAIPopover()">✕</button>
       </div>
     </div>
@@ -1876,6 +1874,15 @@ function renderPopoverData(popover, name, country, role, data, buttonEl) {
       <p class="ai-profile-text">${data.description || 'Nessuna descrizione disponibile.'}</p>
     </div>
   `;
+
+  // Bind refresh click programmatically using raw closure variables!
+  const refreshBtn = popover.querySelector('.ai-popover-refresh');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      showPlayerAIAnalysis(popover.dataset.playerId, name, country, role, buttonEl, true);
+    });
+  }
 
   // Re-adjust height dynamically in case text is longer
   if (buttonEl) {
