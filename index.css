@@ -1049,7 +1049,11 @@ dialog::backdrop {
 }
 
 .dropdown-item-session:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.dropdown-item-session:hover .dropdown-item-title {
+  color: hsl(245, 90%, 75%) !important;
 }
 
 .dropdown-item-title {
@@ -1143,9 +1147,16 @@ dialog::backdrop {
   transition: background var(--transition-fast), color var(--transition-fast);
 }
 
-.dropdown-item-action-link:hover {
+.dropdown-item-action-link:hover,
+.dropdown-item-action-wrapper:hover .dropdown-item-action-link {
   background: rgba(255, 255, 255, 0.08);
   color: var(--color-primary);
+}
+
+/* Custom hover state for the destructive Reset Asta option */
+#btn-reset-all:hover {
+  color: hsl(350, 80%, 60%) !important;
+  background: rgba(239, 68, 68, 0.08) !important;
 }
 
 .dropdown-submenu-header {
