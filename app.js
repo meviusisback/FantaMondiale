@@ -70,7 +70,9 @@ let state = {
       DIF: 8,
       CEN: 8,
       ATT: 6
-    }
+    },
+    aiProvider: 'google',
+    openRouterModel: 'google/gemini-2.5-flash'
   },
   teams: [
     { id: 't-1', name: 'Dream Team', budget: 500, players: [], module: '4-3-3' },
@@ -100,6 +102,8 @@ const dom = {
   configSlotDIF: null,
   configSlotCEN: null,
   configSlotATT: null,
+  configAIProvider: null,
+  configOpenRouterModel: null,
   teamListInput: null,
   btnSaveConfig: null,
 
@@ -178,6 +182,8 @@ function initDOM() {
   dom.configSlotATT = document.getElementById('config-slot-att');
   dom.teamListInput = document.getElementById('config-team-names');
   dom.btnSaveConfig = document.getElementById('btn-save-config');
+  dom.configAIProvider = document.getElementById('config-ai-provider');
+  dom.configOpenRouterModel = document.getElementById('config-openrouter-model');
 
   dom.fileDatabaseInput = document.getElementById('file-import-players');
   dom.fileSessionInput = document.getElementById('file-import-session');
@@ -236,6 +242,15 @@ function initDOM() {
   dom.configSlotCEN.value = state.settings.slots.CEN;
   dom.configSlotATT.value = state.settings.slots.ATT;
   dom.teamListInput.value = state.teams.map(t => t.name).join('\n');
+
+  // Fill AI settings from state
+  if (dom.configAIProvider) dom.configAIProvider.value = state.settings.aiProvider || 'google';
+  if (dom.configOpenRouterModel) dom.configOpenRouterModel.value = state.settings.openRouterModel || 'google/gemini-2.5-flash';
+  
+  // Apply dynamic show/hide style
+  const isOR = (state.settings.aiProvider || 'google') === 'openrouter';
+  const divORModel = document.getElementById('div-openrouter-model');
+  if (divORModel) divORModel.style.display = isOR ? 'block' : 'none';
 }
 
 function setupEventListeners() {
@@ -249,6 +264,15 @@ function setupEventListeners() {
 
   // Settings Save
   dom.btnSaveConfig.addEventListener('click', saveConfig);
+
+  // AI Provider Change Listener
+  if (dom.configAIProvider) {
+    dom.configAIProvider.addEventListener('change', (e) => {
+      const isOR = e.target.value === 'openrouter';
+      const divORModel = document.getElementById('div-openrouter-model');
+      if (divORModel) divORModel.style.display = isOR ? 'block' : 'none';
+    });
+  }
 
   // Active Team Selector Change
   if (dom.activeTeamSelector) {
@@ -383,6 +407,8 @@ function saveConfig() {
   const newSlotDIF = parseInt(dom.configSlotDIF.value) || 8;
   const newSlotCEN = parseInt(dom.configSlotCEN.value) || 8;
   const newSlotATT = parseInt(dom.configSlotATT.value) || 6;
+  const newAIProvider = dom.configAIProvider ? dom.configAIProvider.value : 'google';
+  const newOpenRouterModel = dom.configOpenRouterModel ? dom.configOpenRouterModel.value.trim() : 'google/gemini-2.5-flash';
 
   const rawTeamNames = dom.teamListInput.value.split('\n').map(name => name.trim()).filter(Boolean);
 
@@ -397,6 +423,8 @@ function saveConfig() {
   state.settings.slots.DIF = newSlotDIF;
   state.settings.slots.CEN = newSlotCEN;
   state.settings.slots.ATT = newSlotATT;
+  state.settings.aiProvider = newAIProvider;
+  state.settings.openRouterModel = newOpenRouterModel;
 
   // Process Teams
   const newTeams = [];
@@ -565,6 +593,13 @@ function handleSessionImport(e) {
       dom.configSlotATT.value = state.settings.slots.ATT;
       dom.teamListInput.value = state.teams.map(t => t.name).join('\n');
 
+      // Restore AI settings
+      if (dom.configAIProvider) dom.configAIProvider.value = state.settings.aiProvider || 'google';
+      if (dom.configOpenRouterModel) dom.configOpenRouterModel.value = state.settings.openRouterModel || 'google/gemini-2.5-flash';
+      const isOR = (state.settings.aiProvider || 'google') === 'openrouter';
+      const divORModel = document.getElementById('div-openrouter-model');
+      if (divORModel) divORModel.style.display = isOR ? 'block' : 'none';
+
       if (state.teams.length > 0) {
         state.activeTeamId = state.teams[0].id;
       } else {
@@ -648,6 +683,13 @@ function loadAutoSave() {
       dom.configSlotCEN.value = state.settings.slots.CEN;
       dom.configSlotATT.value = state.settings.slots.ATT;
       dom.teamListInput.value = state.teams.map(t => t.name).join('\n');
+
+      // Restore AI settings
+      if (dom.configAIProvider) dom.configAIProvider.value = state.settings.aiProvider || 'google';
+      if (dom.configOpenRouterModel) dom.configOpenRouterModel.value = state.settings.openRouterModel || 'google/gemini-2.5-flash';
+      const isOR = (state.settings.aiProvider || 'google') === 'openrouter';
+      const divORModel = document.getElementById('div-openrouter-model');
+      if (divORModel) divORModel.style.display = isOR ? 'block' : 'none';
       
       if (state.teams.length > 0) {
         state.activeTeamId = state.teams[0].id;
@@ -1645,6 +1687,13 @@ async function loadSpecificCloudSession(id) {
     dom.configSlotATT.value = state.settings.slots.ATT;
     dom.teamListInput.value = state.teams.map(t => t.name).join('\n');
 
+    // Restore AI settings
+    if (dom.configAIProvider) dom.configAIProvider.value = state.settings.aiProvider || 'google';
+    if (dom.configOpenRouterModel) dom.configOpenRouterModel.value = state.settings.openRouterModel || 'google/gemini-2.5-flash';
+    const isOR = (state.settings.aiProvider || 'google') === 'openrouter';
+    const divORModel = document.getElementById('div-openrouter-model');
+    if (divORModel) divORModel.style.display = isOR ? 'block' : 'none';
+
     if (state.teams.length > 0) {
       state.activeTeamId = state.teams[0].id;
     } else {
@@ -1764,7 +1813,13 @@ async function showPlayerAIAnalysis(playerId, name, country, role, buttonEl, for
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ name, country, role })
+      body: JSON.stringify({ 
+        name, 
+        country, 
+        role,
+        provider: state.settings.aiProvider || 'google',
+        openRouterModel: state.settings.openRouterModel || 'google/gemini-2.5-flash'
+      })
     });
 
     const result = await response.json();
@@ -2049,7 +2104,9 @@ async function showTeamAIAnalysis(buttonEl, forceRefresh = false) {
       },
       body: JSON.stringify({
         teamName: team.name,
-        roster: rosterData
+        roster: rosterData,
+        provider: state.settings.aiProvider || 'google',
+        openRouterModel: state.settings.openRouterModel || 'google/gemini-2.5-flash'
       })
     });
 

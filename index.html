@@ -260,6 +260,22 @@
                     </div>
                   </div>
                 </div>
+
+                <div class="form-group" style="margin-top: 1.25rem;">
+                  <label for="config-ai-provider">Provider Intelligenza Artificiale</label>
+                  <select id="config-ai-provider" class="input-control">
+                    <option value="google">Google Gemini API (Default)</option>
+                    <option value="openrouter">OpenRouter API</option>
+                  </select>
+                </div>
+
+                <div id="div-openrouter-model" class="form-group" style="margin-top: 1rem; display: none;">
+                  <label for="config-openrouter-model">Modello OpenRouter</label>
+                  <input type="text" id="config-openrouter-model" class="input-control" placeholder="es. google/gemini-2.5-flash" value="google/gemini-2.5-flash">
+                  <span style="font-size:0.65rem; color:var(--color-text-muted); display:block; margin-top:0.25rem;">
+                    Modelli suggeriti: <code>google/gemini-2.5-flash</code>, <code>meta-llama/llama-3.3-70b-instruct</code>, <code>deepseek/deepseek-chat</code>
+                  </span>
+                </div>
               </div>
 
               <div>
