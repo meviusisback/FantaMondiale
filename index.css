@@ -95,6 +95,8 @@ header {
   border: 1px solid var(--border-light);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-dark);
+  position: relative;
+  z-index: 9999 !important; /* Establishes high foreground stacking context for all absolute children */
 }
 
 .logo-section h1 {
