@@ -25,6 +25,10 @@ export default async function handler(req, res) {
 Fornisci un'analisi strategica dettagliata e accurata in lingua italiana per il calciatore: ${name} (Nazionale: ${country}, Ruolo: ${role}).
 Esegui una ricerca online in tempo reale tramite Google Search / Web Search per ottenere le informazioni calcistiche reali più recenti ed aggiornate ad oggi (squadra di club attuale, ultimo stato di forma, infortuni o convocazioni recenti, presenze e gol nella stagione 2025/2026).
 
+REGOLE DI ESATTEZZA NUMERICA DELLE PRESENZE (CRUCIALE):
+- Per la chiave 'appearances' del JSON, devi identificare tramite ricerca web statistica (ad esempio interrogando Transfermarkt, Soccerway o FBref) il numero REALE ed ESATTO di presenze, gol e assist effettuati dal calciatore ${name} specificamente nell'ultima stagione calcistica 2025/2026 (sommando le competizioni di club 25/26 e le partite ufficiali o amichevoli con la sua Nazionale).
+- È tassativamente vietato inventare, stimare o tirare a indovinare i numeri. Fai ricerche mirate (es. "${name} presenze gol 2025 2026 transfermarkt"). Se dopo molteplici tentativi non trovi dati certi, rispondi con "Dati non disponibili nella stagione 25/26", ma fai ogni sforzo per trovare l'esatta statistica reale ad oggi.
+
 Regole FantaMondiale per formulare la tua risposta:
 1. Impatto in relazione alla Nazionale di appartenenza:
    Nel FantaMondiale, un calciatore che gioca per una Nazionale favorita (es. Francia, Brasile, Argentina) ha un impatto fantacalcistico nettamente superiore rispetto a uno altrettanto bravo che gioca in una Nazionale con scarse probabilità di superare i gironi o avanzare nel torneo (es. Marocco, Canada). Questo perché chi va avanti nel tabellone gioca più partite e accumula più punteggi. Ad esempio: un portiere del Marocco, per quanto talentuoso, avrà un "impactScore" ridotto poiché la sua squadra giocherà verosimilmente meno partite rispetto a un portiere della Francia. Pesa fortemente le reali probabilità di avanzamento della sua Nazionale nei Mondiali.
