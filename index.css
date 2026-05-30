@@ -1168,3 +1168,260 @@ dialog::backdrop {
   letter-spacing: 0.05em;
   margin-top: 0.25rem;
 }
+
+/* ==========================================
+   AI ASSISTANT SPARKLE & SPEECH BUBBLE STYLES
+   ========================================== */
+
+/* Sparkle button */
+.btn-ai-sparkle {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.25) 0%, rgba(99, 102, 241, 0.25) 100%);
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  color: #c084fc;
+  cursor: pointer;
+  padding: 0.15rem 0.35rem;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-family: inherit;
+  margin-left: 0.4rem;
+  vertical-align: middle;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.btn-ai-sparkle:hover {
+  transform: scale(1.12);
+  border-color: rgba(168, 85, 247, 0.8);
+  box-shadow: 0 0 8px rgba(168, 85, 247, 0.4);
+  color: #e9d5ff;
+}
+
+.btn-ai-sparkle:active {
+  transform: scale(0.95);
+}
+
+/* Glassmorphism Speech Bubble Popover */
+.ai-bubble-popover {
+  position: absolute;
+  width: 320px;
+  background: rgba(15, 23, 42, 0.96);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 1rem;
+  box-shadow: var(--shadow-dark), 0 0 25px rgba(168, 85, 247, 0.12);
+  z-index: 10000000 !important;
+  color: var(--color-text);
+  font-family: inherit;
+  pointer-events: auto;
+  transform-origin: top left;
+  animation: aiPopoverFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes aiPopoverFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Triangle Pointer / Arrow pointing to trigger button */
+.ai-bubble-popover::after {
+  content: '';
+  position: absolute;
+  border-width: 8px;
+  border-style: solid;
+  border-color: transparent;
+  pointer-events: none;
+}
+
+/* When popover is displayed below the button */
+.ai-bubble-popover.ai-bubble-below::after {
+  bottom: 100%;
+  left: var(--arrow-left, 24px);
+  border-bottom-color: rgba(15, 23, 42, 0.96);
+}
+
+/* When popover is displayed above the button */
+.ai-bubble-popover.ai-bubble-above::after {
+  top: 100%;
+  left: var(--arrow-left, 24px);
+  border-top-color: rgba(15, 23, 42, 0.96);
+}
+
+/* Popover Content Structure */
+.ai-popover-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding-bottom: 0.4rem;
+}
+
+.ai-popover-title {
+  font-size: 0.85rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #c084fc 0%, #818cf8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.ai-popover-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.ai-popover-refresh,
+.ai-popover-close {
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 0.2rem;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.ai-popover-refresh:hover {
+  color: var(--color-success);
+  background: rgba(16, 185, 129, 0.1);
+  transform: rotate(30deg);
+}
+
+.ai-popover-close:hover {
+  color: var(--color-danger);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+/* Stats Row Grid */
+.ai-stat-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+}
+
+.ai-stat-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  padding: 0.4rem 0.55rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.ai-stat-label {
+  font-size: 0.6rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+  margin-bottom: 0.15rem;
+}
+
+.ai-stat-value {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Badges for Quality-to-Price (Q/P) */
+.badge-qp-ottimo { color: var(--color-success); font-weight: 800; }
+.badge-qp-buono { color: var(--color-primary); font-weight: 800; }
+.badge-qp-rischioso { color: var(--color-warning); font-weight: 800; }
+.badge-qp-sopravvalutato { color: var(--color-danger); font-weight: 800; }
+
+/* Impact Score bar styling */
+.ai-impact-section {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  padding: 0.5rem 0.65rem;
+  margin-bottom: 0.6rem;
+}
+
+.ai-impact-value {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #c084fc;
+}
+
+.ai-impact-track {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.ai-impact-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #818cf8 0%, #c084fc 100%);
+  border-radius: 3px;
+  box-shadow: 0 0 8px rgba(168, 85, 247, 0.6);
+}
+
+/* Profile Description */
+.ai-profile-section {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  padding: 0.5rem 0.65rem;
+}
+
+.ai-profile-text {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.4;
+  margin: 0;
+  font-style: italic;
+}
+
+/* Skeleton Loading Pulsing Style */
+.ai-skeleton-pulse {
+  background: linear-gradient(-90deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.08) 50%, rgba(255, 255, 255, 0.03) 100%);
+  background-size: 400% 400%;
+  animation: aiPulse 1.5s ease infinite;
+  border-radius: 4px;
+}
+
+@keyframes aiPulse {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.ai-skeleton-line {
+  height: 12px;
+  margin-bottom: 0.5rem;
+}
+
+.ai-skeleton-line-sm {
+  height: 10px;
+  width: 60%;
+}

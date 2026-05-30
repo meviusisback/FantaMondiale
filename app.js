@@ -88,7 +88,8 @@ let state = {
     search: '',
     role: 'all',
     status: 'free' // 'all', 'free', 'taken'
-  }
+  },
+  aiCache: {}
 };
 
 // --- DOM ELEMENTS CACHE & SELECTORS ---
@@ -941,8 +942,13 @@ function renderPlayerList() {
       `;
     }
 
+    const escapedName = p.name.replace(/'/g, "\\'");
+    const escapedCountry = p.country.replace(/'/g, "\\'");
     tr.innerHTML = `
-      <td style="font-weight: 700;">${p.name}</td>
+      <td style="font-weight: 700; white-space: nowrap;">
+        ${p.name}
+        <button class="btn-ai-sparkle" onclick="showPlayerAIAnalysis('${p.id}', '${escapedName}', '${escapedCountry}', '${p.role}', this); event.stopPropagation();" title="Analisi IA ✨">✨</button>
+      </td>
       <td><span class="badge badge-${p.role.toLowerCase()}">${p.role}</span></td>
       <td>${p.country}</td>
       <td style="font-weight: 600; text-align: center;">${p.initialValue} cr</td>
@@ -1662,9 +1668,265 @@ async function deleteSpecificCloudSession(id) {
   }
 }
 
+// --- DYNAMIC AI SPEECH BUBBLE OVERLAY LOGIC ---
+let activeAIPopover = null;
+
+async function showPlayerAIAnalysis(playerId, name, country, role, buttonEl, forceRefresh = false) {
+  // 1. If popover already open for this player, close it and return
+  if (activeAIPopover && activeAIPopover.dataset.playerId === playerId && !forceRefresh) {
+    closeAIPopover();
+    return;
+  }
+
+  // 2. Close any other open popovers first
+  closeAIPopover();
+
+  // 3. Create Popover Div
+  const popover = document.createElement('div');
+  popover.className = 'ai-bubble-popover';
+  popover.dataset.playerId = playerId;
+  activeAIPopover = popover;
+
+  // Append to body immediately to calculate dimensions, but keep invisible or positioned offscreen
+  document.body.appendChild(popover);
+
+  // If buttonEl is missing (e.g. from dynamic refresh callback), find it in the DOM
+  if (!buttonEl) {
+    buttonEl = document.querySelector(`.btn-ai-sparkle[onclick*="${playerId}"]`);
+  }
+
+  // 4. Position Popover relative to buttonEl
+  if (buttonEl) {
+    positionPopover(popover, buttonEl);
+  }
+
+  // 5. Render Loading State (Skeleton Loader)
+  renderPopoverLoading(popover, name);
+
+  // 6. Check Cache (sessionStorage & in-memory)
+  let cachedData = state.aiCache[playerId];
+  if (!cachedData) {
+    const sessionCached = sessionStorage.getItem(`fantamondiale_ai_${playerId}`);
+    if (sessionCached) {
+      try {
+        cachedData = JSON.parse(sessionCached);
+        state.aiCache[playerId] = cachedData;
+      } catch (e) {
+        cachedData = null;
+      }
+    }
+  }
+
+  // If in cache and not force refreshing, render data immediately
+  if (cachedData && !forceRefresh) {
+    renderPopoverData(popover, name, country, role, cachedData, buttonEl);
+    return;
+  }
+
+  // 7. Fetch from Serverless endpoint
+  try {
+    const response = await fetch('/api/player-analysis', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ name, country, role })
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || result.error) {
+      if (result.fallback) {
+        renderPopoverFallback(popover, result.error);
+      } else {
+        throw new Error(result.error || 'Errore di connessione API.');
+      }
+      return;
+    }
+
+    // Save to Cache
+    state.aiCache[playerId] = result;
+    sessionStorage.setItem(`fantamondiale_ai_${playerId}`, JSON.stringify(result));
+
+    // Render Data
+    renderPopoverData(popover, name, country, role, result, buttonEl);
+  } catch (error) {
+    console.error(error);
+    renderPopoverError(popover, error.message);
+  }
+}
+
+function closeAIPopover() {
+  if (activeAIPopover) {
+    activeAIPopover.remove();
+    activeAIPopover = null;
+  }
+}
+
+// Position speech bubble dynamically with pointer arrow direction
+function positionPopover(popover, buttonEl) {
+  const rect = buttonEl.getBoundingClientRect();
+  const popoverWidth = 320;
+  
+  // Calculate relative absolute top & left including page scroll
+  const scrollX = window.scrollX || window.pageXOffset;
+  const scrollY = window.scrollY || window.pageYOffset;
+
+  let left = rect.left + scrollX - 20; // Align arrow roughly with button
+  let top = rect.bottom + scrollY + 12; // Default below button
+  let isBelow = true;
+
+  // If popover overflows bottom of viewport, position above the button
+  const popoverHeightEst = 290; // Estimate based on stats cards + profile
+  if (rect.bottom + popoverHeightEst > window.innerHeight && rect.top > popoverHeightEst) {
+    top = rect.top + scrollY - popoverHeightEst - 12;
+    isBelow = false;
+  }
+
+  // Keep inside left boundary
+  if (left < 10) left = 10;
+  // Keep inside right boundary
+  if (left + popoverWidth > window.innerWidth - 10) {
+    left = window.innerWidth - popoverWidth - 10;
+  }
+
+  popover.style.left = `${left}px`;
+  popover.style.top = `${top}px`;
+
+  // Apply triangular class
+  popover.classList.remove('ai-bubble-below', 'ai-bubble-above');
+  popover.classList.add(isBelow ? 'ai-bubble-below' : 'ai-bubble-above');
+
+  // Dynamically position the ::after arrow to point exactly at the trigger button
+  const arrowOffsetLeft = rect.left + scrollX - left + (rect.width / 2) - 8;
+  popover.style.setProperty('--arrow-left', `${arrowOffsetLeft}px`);
+}
+
+function renderPopoverLoading(popover, name) {
+  popover.innerHTML = `
+    <div class="ai-popover-header">
+      <span class="ai-popover-title">Analisi IA ✨</span>
+      <div class="ai-popover-actions">
+        <button class="ai-popover-close" onclick="closeAIPopover()">✕</button>
+      </div>
+    </div>
+    <div style="font-size:0.75rem; font-weight:700; color:#fff; margin-bottom: 0.65rem;">
+      Consulto l'analista per <span style="color:#c084fc;">${name}</span>...
+    </div>
+    <div class="ai-skeleton-pulse ai-skeleton-line" style="width: 100%; height: 40px; border-radius: 8px;"></div>
+    <div class="ai-skeleton-pulse ai-skeleton-line" style="width: 100%; height: 40px; border-radius: 8px; margin-top: 0.5rem;"></div>
+    <div class="ai-skeleton-pulse ai-skeleton-line" style="width: 100%; height: 30px; border-radius: 8px; margin-top: 0.5rem;"></div>
+    <div class="ai-skeleton-pulse ai-skeleton-line" style="width: 100%; height: 60px; border-radius: 8px; margin-top: 0.5rem;"></div>
+  `;
+}
+
+function renderPopoverData(popover, name, country, role, data, buttonEl) {
+  const qpClass = data.valueForMoney ? data.valueForMoney.toLowerCase().replace(/[^a-z]/g, '') : 'buono';
+  const escapedName = name.replace(/'/g, "\\'");
+  const escapedCountry = country.replace(/'/g, "\\'");
+
+  popover.innerHTML = `
+    <div class="ai-popover-header">
+      <span class="ai-popover-title">Analisi IA ✨</span>
+      <div class="ai-popover-actions">
+        <button class="ai-popover-refresh" onclick="showPlayerAIAnalysis('${popover.dataset.playerId}', '${escapedName}', '${escapedCountry}', '${role}', null, true)" title="Aggiorna analisi (ricerca online ad oggi)">🔄</button>
+        <button class="ai-popover-close" onclick="closeAIPopover()">✕</button>
+      </div>
+    </div>
+    
+    <div style="font-size: 0.82rem; font-weight: 800; color: #fff; margin-bottom: 0.65rem; display: flex; align-items: center; justify-content: space-between;">
+      <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 160px;">${name}</span>
+      <span style="font-size: 0.65rem; color: var(--color-text-muted); font-weight: 600; flex-shrink: 0;">${role} | ${country}</span>
+    </div>
+
+    <div class="ai-stat-row">
+      <div class="ai-stat-card">
+        <span class="ai-stat-label">Club</span>
+        <span class="ai-stat-value" title="${data.club || 'N/D'}">${data.club || 'N/D'}</span>
+      </div>
+      <div class="ai-stat-card">
+        <span class="ai-stat-label">Presenze</span>
+        <span class="ai-stat-value" title="${data.appearances || 'N/D'}">${data.appearances || 'N/D'}</span>
+      </div>
+    </div>
+
+    <div class="ai-stat-row">
+      <div class="ai-stat-card">
+        <span class="ai-stat-label">Titolare 🏆</span>
+        <span class="ai-stat-value" title="${data.starterProbability || 'N/D'}">${data.starterProbability || 'N/D'}</span>
+      </div>
+      <div class="ai-stat-card">
+        <span class="ai-stat-label">Rapporto Q/P</span>
+        <span class="ai-stat-value badge-qp-${qpClass}">${data.valueForMoney || 'N/D'}</span>
+      </div>
+    </div>
+
+    <div class="ai-impact-section">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+        <span class="ai-stat-label">Punteggio Impatto</span>
+        <span class="ai-impact-value">${data.impactScore !== undefined ? data.impactScore : 50} / 100</span>
+      </div>
+      <div class="ai-impact-track">
+        <div class="ai-impact-fill" style="width: ${data.impactScore !== undefined ? data.impactScore : 50}%;"></div>
+      </div>
+    </div>
+
+    <div class="ai-profile-section">
+      <span class="ai-stat-label" style="display:block; margin-bottom:0.25rem">Profilo Calciatore</span>
+      <p class="ai-profile-text">${data.description || 'Nessuna descrizione disponibile.'}</p>
+    </div>
+  `;
+
+  // Re-adjust height dynamically in case text is longer
+  if (buttonEl) {
+    positionPopover(popover, buttonEl);
+  }
+}
+
+function renderPopoverFallback(popover, errorMsg) {
+  popover.innerHTML = `
+    <div class="ai-popover-header">
+      <span class="ai-popover-title" style="color: var(--color-warning);">Configurazione AI ⚠️</span>
+      <div class="ai-popover-actions">
+        <button class="ai-popover-close" onclick="closeAIPopover()">✕</button>
+      </div>
+    </div>
+    <p style="font-size:0.75rem; color:#fff; line-height: 1.4; margin-bottom:0.75rem;">
+      ${errorMsg}
+    </p>
+    <div style="font-size: 0.65rem; color: var(--color-text-muted); line-height: 1.3;">
+      Per attivare le funzionalità AI, imposta la variabile <strong>GEMINI_API_KEY</strong> su Vercel con la tua chiave di Google AI Studio.
+    </div>
+  `;
+}
+
+function renderPopoverError(popover, errorMsg) {
+  popover.innerHTML = `
+    <div class="ai-popover-header">
+      <span class="ai-popover-title" style="color: var(--color-danger);">Errore Analisi ❌</span>
+      <div class="ai-popover-actions">
+        <button class="ai-popover-close" onclick="closeAIPopover()">✕</button>
+      </div>
+    </div>
+    <p style="font-size:0.75rem; color:#fff; line-height: 1.4; margin:0;">
+      Impossibile recuperare i dati dell'IA in questo momento.<br>
+      <span style="color: var(--color-text-muted); font-size: 0.65rem;">Dettaglio: ${errorMsg}</span>
+    </p>
+  `;
+}
+
+// Click outside popover to close it automatically
+document.addEventListener('click', function(e) {
+  if (activeAIPopover && !activeAIPopover.contains(e.target) && !e.target.classList.contains('btn-ai-sparkle') && !e.target.closest('.btn-ai-sparkle')) {
+    closeAIPopover();
+  }
+});
+
 // Window globals to wire up inline HTML onclick actions
 window.assignPlayerDirect = assignPlayerDirect;
 window.releasePlayer = releasePlayer;
 window.showTeamPitch = showTeamPitch;
 window.loadSpecificCloudSession = loadSpecificCloudSession;
 window.deleteSpecificCloudSession = deleteSpecificCloudSession;
+window.showPlayerAIAnalysis = showPlayerAIAnalysis;
+window.closeAIPopover = closeAIPopover;
