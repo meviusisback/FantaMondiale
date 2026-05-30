@@ -72,7 +72,7 @@ let state = {
       ATT: 6
     },
     aiProvider: 'google',
-    openRouterModel: 'google/gemini-2.5-flash'
+    openRouterModel: 'nvidia/nemotron-3-super-120b-a12b:free'
   },
   teams: [
     { id: 't-1', name: 'Dream Team', budget: 500, players: [], module: '4-3-3' },
@@ -245,7 +245,7 @@ function initDOM() {
 
   // Fill AI settings from state
   if (dom.configAIProvider) dom.configAIProvider.value = state.settings.aiProvider || 'google';
-  if (dom.configOpenRouterModel) dom.configOpenRouterModel.value = state.settings.openRouterModel || 'google/gemini-2.5-flash';
+  if (dom.configOpenRouterModel) dom.configOpenRouterModel.value = state.settings.openRouterModel || 'nvidia/nemotron-3-super-120b-a12b:free';
   
   // Apply dynamic show/hide style
   const isOR = (state.settings.aiProvider || 'google') === 'openrouter';
@@ -408,7 +408,7 @@ function saveConfig() {
   const newSlotCEN = parseInt(dom.configSlotCEN.value) || 8;
   const newSlotATT = parseInt(dom.configSlotATT.value) || 6;
   const newAIProvider = dom.configAIProvider ? dom.configAIProvider.value : 'google';
-  const newOpenRouterModel = dom.configOpenRouterModel ? dom.configOpenRouterModel.value.trim() : 'google/gemini-2.5-flash';
+  const newOpenRouterModel = dom.configOpenRouterModel ? dom.configOpenRouterModel.value.trim() : 'nvidia/nemotron-3-super-120b-a12b:free';
 
   const rawTeamNames = dom.teamListInput.value.split('\n').map(name => name.trim()).filter(Boolean);
 
@@ -595,7 +595,7 @@ function handleSessionImport(e) {
 
       // Restore AI settings
       if (dom.configAIProvider) dom.configAIProvider.value = state.settings.aiProvider || 'google';
-      if (dom.configOpenRouterModel) dom.configOpenRouterModel.value = state.settings.openRouterModel || 'google/gemini-2.5-flash';
+      if (dom.configOpenRouterModel) dom.configOpenRouterModel.value = state.settings.openRouterModel || 'nvidia/nemotron-3-super-120b-a12b:free';
       const isOR = (state.settings.aiProvider || 'google') === 'openrouter';
       const divORModel = document.getElementById('div-openrouter-model');
       if (divORModel) divORModel.style.display = isOR ? 'block' : 'none';
@@ -686,7 +686,7 @@ function loadAutoSave() {
 
       // Restore AI settings
       if (dom.configAIProvider) dom.configAIProvider.value = state.settings.aiProvider || 'google';
-      if (dom.configOpenRouterModel) dom.configOpenRouterModel.value = state.settings.openRouterModel || 'google/gemini-2.5-flash';
+      if (dom.configOpenRouterModel) dom.configOpenRouterModel.value = state.settings.openRouterModel || 'nvidia/nemotron-3-super-120b-a12b:free';
       const isOR = (state.settings.aiProvider || 'google') === 'openrouter';
       const divORModel = document.getElementById('div-openrouter-model');
       if (divORModel) divORModel.style.display = isOR ? 'block' : 'none';
@@ -1689,7 +1689,7 @@ async function loadSpecificCloudSession(id) {
 
     // Restore AI settings
     if (dom.configAIProvider) dom.configAIProvider.value = state.settings.aiProvider || 'google';
-    if (dom.configOpenRouterModel) dom.configOpenRouterModel.value = state.settings.openRouterModel || 'google/gemini-2.5-flash';
+    if (dom.configOpenRouterModel) dom.configOpenRouterModel.value = state.settings.openRouterModel || 'nvidia/nemotron-3-super-120b-a12b:free';
     const isOR = (state.settings.aiProvider || 'google') === 'openrouter';
     const divORModel = document.getElementById('div-openrouter-model');
     if (divORModel) divORModel.style.display = isOR ? 'block' : 'none';
@@ -1818,7 +1818,7 @@ async function showPlayerAIAnalysis(playerId, name, country, role, buttonEl, for
         country, 
         role,
         provider: state.settings.aiProvider || 'google',
-        openRouterModel: state.settings.openRouterModel || 'google/gemini-2.5-flash'
+        openRouterModel: state.settings.openRouterModel || 'nvidia/nemotron-3-super-120b-a12b:free'
       })
     });
 
@@ -2106,7 +2106,7 @@ async function showTeamAIAnalysis(buttonEl, forceRefresh = false) {
         teamName: team.name,
         roster: rosterData,
         provider: state.settings.aiProvider || 'google',
-        openRouterModel: state.settings.openRouterModel || 'google/gemini-2.5-flash'
+        openRouterModel: state.settings.openRouterModel || 'nvidia/nemotron-3-super-120b-a12b:free'
       })
     });
 

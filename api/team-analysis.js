@@ -43,7 +43,7 @@ Struttura rigidamente l'output in 3 brevissimi punti elenco (usa il grassetto pe
 
     if (useOpenRouter) {
       const openRouterUrl = 'https://openrouter.ai/api/v1/chat/completions';
-      const openRouterModelString = openRouterModel || 'google/gemini-2.5-flash';
+      const openRouterModelString = openRouterModel || 'nvidia/nemotron-3-super-120b-a12b:free';
       const openRouterResponse = await fetch(openRouterUrl, {
         method: 'POST',
         headers: {
