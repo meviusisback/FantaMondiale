@@ -107,6 +107,10 @@ const dom = {
   btnExportSession: null,
   btnResetAll: null,
 
+  // Cloud Storage Controls
+  btnCloudSave: null,
+  btnCloudLoad: null,
+
   // Tabs buttons and contents
   tabButtons: [],
   tabContents: [],
@@ -162,6 +166,9 @@ function initDOM() {
   dom.fileSessionInput = document.getElementById('file-import-session');
   dom.btnExportSession = document.getElementById('btn-export-session');
   dom.btnResetAll = document.getElementById('btn-reset-all');
+
+  dom.btnCloudSave = document.getElementById('btn-cloud-save');
+  dom.btnCloudLoad = document.getElementById('btn-cloud-load');
 
   dom.tabButtons = Array.from(document.querySelectorAll('.tab-btn'));
   dom.tabContents = Array.from(document.querySelectorAll('.tab-content'));
@@ -225,6 +232,10 @@ function setupEventListeners() {
   dom.fileSessionInput.addEventListener('change', handleSessionImport);
   dom.btnExportSession.addEventListener('click', exportSession);
   dom.btnResetAll.addEventListener('click', resetSession);
+
+  // Cloud Persistence Sync Event Listeners
+  if (dom.btnCloudSave) dom.btnCloudSave.addEventListener('click', saveToCloud);
+  if (dom.btnCloudLoad) dom.btnCloudLoad.addEventListener('click', loadFromCloud);
 
   // Filters & Search
   dom.searchInput.addEventListener('input', (e) => {
@@ -1268,6 +1279,88 @@ function showToast(message, type = 'success') {
   setTimeout(() => {
     dom.toast.classList.remove('show');
   }, 4000);
+}
+
+// --- CLOUD STORAGE IMPLEMENTATION ---
+
+async function saveToCloud() {
+  const originalText = dom.btnCloudSave.innerHTML;
+  try {
+    dom.btnCloudSave.disabled = true;
+    dom.btnCloudSave.innerHTML = `Salvataggio...`;
+
+    const response = await fetch('/api/save', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(state)
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || 'Errore durante il salvataggio cloud');
+    }
+
+    showToast('Sessione salvata con successo sul Cloud Redis! ☁️', 'success');
+  } catch (error) {
+    console.error(error);
+    showToast(error.message, 'danger');
+  } finally {
+    dom.btnCloudSave.disabled = false;
+    dom.btnCloudSave.innerHTML = originalText;
+  }
+}
+
+async function loadFromCloud() {
+  if (!confirm('Sei sicuro di voler caricare la sessione dal Cloud? Sostituirà la sessione d\'asta corrente.')) {
+    return;
+  }
+
+  const originalText = dom.btnCloudLoad.innerHTML;
+  try {
+    dom.btnCloudLoad.disabled = true;
+    dom.btnCloudLoad.innerHTML = `Caricamento...`;
+
+    const response = await fetch('/api/load');
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || 'Errore durante il caricamento cloud');
+    }
+
+    // Load state
+    state.settings = result.settings;
+    state.teams = result.teams;
+    state.teams.forEach(t => {
+      if (!t.module) t.module = '4-3-3';
+    });
+    state.players = result.players;
+
+    // Fill config inputs
+    dom.configBudget.value = state.settings.budget;
+    dom.configSlotPOR.value = state.settings.slots.POR;
+    dom.configSlotDIF.value = state.settings.slots.DIF;
+    dom.configSlotCEN.value = state.settings.slots.CEN;
+    dom.configSlotATT.value = state.settings.slots.ATT;
+    dom.teamListInput.value = state.teams.map(t => t.name).join('\n');
+
+    if (state.teams.length > 0) {
+      state.activeTeamId = state.teams[0].id;
+    } else {
+      state.activeTeamId = null;
+    }
+
+    autoSave();
+    renderAll();
+    showToast('Sessione d\'asta caricata con successo dal Cloud Redis! ☁️', 'success');
+  } catch (error) {
+    console.error(error);
+    showToast(error.message, 'danger');
+  } finally {
+    dom.btnCloudLoad.disabled = false;
+    dom.btnCloudLoad.innerHTML = originalText;
+  }
 }
 
 // Window globals to wire up inline HTML onclick actions
