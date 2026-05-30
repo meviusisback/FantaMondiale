@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FantaMondiale 🏆 - Asta e Selezione Giocatori</title>
+  <meta name="description" content="Facilita l'asta e la selezione dei calciatori per il FantaMondiale con i tuoi amici. Gestione del budget, delle rose, e calcolo automatico dell'offerta massima in tempo reale.">
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+
+  <div class="container">
+    <!-- APP HEADER -->
+    <header>
+      <div class="logo-section">
+        <h1>FantaMondiale 🏆</h1>
+        <p>Manager Asta e Selezione Rose</p>
+      </div>
+      
+      <!-- Top controls & imports/exports -->
+      <div class="controls-group">
+        <div class="file-input-wrapper" data-tooltip="Importa elenco giocatori in formato CSV">
+          <button class="btn">
+            <svg style="width:16px; height:16px; fill:currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd"/></svg>
+            Carica CSV
+          </button>
+          <input type="file" id="file-import-players" accept=".csv">
+        </div>
+        
+        <div class="file-input-wrapper" data-tooltip="Ripristina una sessione salvata (JSON)">
+          <button class="btn">
+            <svg style="width:16px; height:16px; fill:currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M2 9.5A3.5 3.5 0 005.5 13H9v2.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 15.586V13h3.5a3.5 3.5 0 003.5-3.5V5a2 2 0 00-2-2H4a2 2 0 00-2 2v4.5z" clip-rule="evenodd"/></svg>
+            Ripristina Stato
+          </button>
+          <input type="file" id="file-import-session" accept=".json">
+        </div>
+        
+        <button id="btn-export-session" class="btn" data-tooltip="Esporta e scarica la sessione corrente per poterla riprendere più tardi">
+          <svg style="width:16px; height:16px; fill:currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-9.707a1 1 0 011.414 0L9 9.586V3a1 1 0 112 0v6.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+          Salva Sessione
+        </button>
+        
+        <button id="btn-reset-all" class="btn btn-danger" data-tooltip="Azzera tutti gli acquisti dell'asta mantenendo i giocatori e le squadre">
+          Reset Asta
+        </button>
+      </div>
+    </header>
+
+    <!-- CONTENT WRAPPER -->
+    <div class="dashboard-grid">
+      
+      <!-- LEFT SIDEBAR (CONSOLE SQUADRA ATTIVA COCKPIT) -->
+      <aside class="panel">
+        <h2 class="panel-title mb-4">
+          <svg style="width:20px; height:20px; stroke:currentColor" fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+          Squadra Attiva ⚡
+        </h2>
+        
+        <!-- Team Selector Dropdown -->
+        <div class="form-group">
+          <label for="active-team-selector">Seleziona Squadra Asta</label>
+          <select id="active-team-selector" class="input-control">
+            <!-- Populated via JS -->
+          </select>
+        </div>
+
+        <!-- Financial Summary Counter Boxes -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 1.25rem;">
+          <div class="console-stat-box">
+            <span class="console-stat-label">Crediti Rimasti</span>
+            <span id="console-team-credits" class="console-stat-value">500</span>
+          </div>
+          <div class="console-stat-box highlight">
+            <span class="console-stat-label">Offerta Max</span>
+            <span id="console-team-max-bid" class="console-stat-value">500</span>
+          </div>
+        </div>
+
+        <!-- Role slots remaining boxes -->
+        <div class="form-group">
+          <label style="margin-bottom: 0.5rem;">Slot Mancanti in Rosa</label>
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.35rem;">
+            <div class="console-role-box" style="border-color: rgba(30, 200, 220, 0.25);">
+              <span style="color: var(--color-por); font-weight:700; font-size:0.65rem;">POR</span>
+              <span id="console-slot-por" style="font-weight: 800; font-size: 0.95rem; color: #fff;">0</span>
+            </div>
+            <div class="console-role-box" style="border-color: rgba(16, 185, 129, 0.25);">
+              <span style="color: var(--color-dif); font-weight:700; font-size:0.65rem;">DIF</span>
+              <span id="console-slot-dif" style="font-weight: 800; font-size: 0.95rem; color: #fff;">0</span>
+            </div>
+            <div class="console-role-box" style="border-color: rgba(168, 85, 247, 0.25);">
+              <span style="color: var(--color-cen); font-weight:700; font-size:0.65rem;">CEN</span>
+              <span id="console-slot-cen" style="font-weight: 800; font-size: 0.95rem; color: #fff;">0</span>
+            </div>
+            <div class="console-role-box" style="border-color: rgba(249, 115, 22, 0.25);">
+              <span style="color: var(--color-att); font-weight:700; font-size:0.65rem;">ATT</span>
+              <span id="console-slot-att" style="font-weight: 800; font-size: 0.95rem; color: #fff;">0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mini roster of the active team -->
+        <div class="form-group" style="margin-bottom: 0;">
+          <label id="console-roster-title" style="margin-bottom: 0.4rem;">Rosa Attuale (0 giocatori)</label>
+          <div id="console-team-roster" class="console-roster-container">
+            <!-- Roster lists populated dynamically -->
+          </div>
+        </div>
+      </aside>
+
+      <!-- RIGHT PANEL (TABS & CORE MODULES) -->
+      <main class="tab-container">
+        
+        <!-- Navigation Tabs (Now featuring settings tab) -->
+        <nav class="tabs-header">
+          <button class="tab-btn active" data-tab="giocatori">
+            Database Giocatori 📋
+          </button>
+          <button class="tab-btn" data-tab="rose">
+            Rose & Statistiche 📊
+          </button>
+          <button class="tab-btn" data-tab="impostazioni">
+            Impostazioni Asta ⚙️
+          </button>
+        </nav>
+
+        <!-- TAB 1: DATABASE LISTA GIOCATORI (FEATURING DYNAMIC QUICK BUY) -->
+        <section id="tab-giocatori" class="tab-content active">
+          <div class="panel">
+            <div class="panel-header">
+              <h2 class="panel-title">Lista Calciatori e Acquisto Rapido</h2>
+              <span id="players-count" style="font-size:0.85rem; color:var(--color-text-muted); font-weight:600">0 calciatori</span>
+            </div>
+
+            <!-- Filters bar -->
+            <div class="search-filter-bar">
+              <div class="input-control-wrapper" style="flex-grow:1">
+                <input type="text" id="search-player" class="input-control" placeholder="Cerca calciatore o nazionale...">
+              </div>
+              
+              <div style="min-width:140px">
+                <select id="filter-role" class="input-control">
+                  <option value="all">Tutti i ruoli</option>
+                  <option value="POR">Portieri (POR)</option>
+                  <option value="DIF">Difensori (DIF)</option>
+                  <option value="CEN">Centrocampisti (CEN)</option>
+                  <option value="ATT">Attaccanti (ATT)</option>
+                </select>
+              </div>
+
+              <div style="min-width:140px">
+                <select id="filter-status" class="input-control">
+                  <option value="free">Solo Liberi</option>
+                  <option value="taken">Solo Acquistati</option>
+                  <option value="all">Tutti</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Players Table -->
+            <div class="player-table-container">
+              <table class="player-table">
+                <thead>
+                  <tr>
+                    <th>Nome Calciatore</th>
+                    <th style="width: 80px;">Ruolo</th>
+                    <th>Nazionale</th>
+                    <th style="width: 100px; text-align: center;">Quotazione</th>
+                    <th style="width: 110px; text-align: center;">Costo (cr)</th>
+                    <th style="text-align: right; width: 230px;">Azione</th>
+                  </tr>
+                </thead>
+                <tbody id="players-table-body">
+                  <!-- Rows populated in app.js -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 2: ROSE E STATISTICHE SQUADRE -->
+        <section id="tab-rose" class="tab-content">
+          <div class="panel-header mb-4" style="border-bottom:none; padding-bottom:0">
+            <h2 class="panel-title">Resoconto Rose & Budget</h2>
+          </div>
+          
+          <div id="teams-dashboard-grid" class="team-dashboard-grid">
+            <!-- Team cards generated dynamically in app.js -->
+          </div>
+        </section>
+
+        <!-- TAB 3: IMPOSTAZIONI ASTA -->
+        <section id="tab-impostazioni" class="tab-content">
+          <div class="panel">
+            <div class="panel-header">
+              <h2 class="panel-title">
+                <svg style="width:20px; height:20px; stroke:currentColor" fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                Regole e Partecipanti Asta
+              </h2>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem; margin-top: 1rem;">
+              <div>
+                <div class="form-group">
+                  <label for="config-budget">Budget Iniziale per ciascuna Squadra</label>
+                  <input type="number" id="config-budget" class="input-control" value="500">
+                </div>
+
+                <div class="form-group">
+                  <label style="margin-bottom:0.75rem">Configurazione Slot Limite per Ruolo</label>
+                  <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem">
+                    <div>
+                      <label for="config-slot-por" style="font-size:0.7rem; color:var(--color-por)">Portieri</label>
+                      <input type="number" id="config-slot-por" class="input-control" value="3">
+                    </div>
+                    <div>
+                      <label for="config-slot-dif" style="font-size:0.7rem; color:var(--color-dif)">Difensori</label>
+                      <input type="number" id="config-slot-dif" class="input-control" value="8">
+                    </div>
+                    <div>
+                      <label for="config-slot-cen" style="font-size:0.7rem; color:var(--color-cen)">Centrocampisti</label>
+                      <input type="number" id="config-slot-cen" class="input-control" value="8">
+                    </div>
+                    <div>
+                      <label for="config-slot-att" style="font-size:0.7rem; color:var(--color-att)">Attaccanti</label>
+                      <input type="number" id="config-slot-att" class="input-control" value="6">
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div class="form-group">
+                  <label for="config-team-names">Nomi Squadre Partecipanti <span style="font-size:0.7rem; text-transform:none; font-weight:400">(Inserisci un nome per riga)</span></label>
+                  <textarea id="config-team-names" class="input-control" rows="8" style="resize:vertical; line-height:1.4"></textarea>
+                </div>
+              </div>
+            </div>
+
+            <button id="btn-save-config" class="btn btn-primary" style="width: 250px; padding: 0.75rem;">
+              Salva e Applica Modifiche
+            </button>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- MODAL DIALOG FOR TACTICAL FIELD LINEUP VISUALIZER -->
+  <dialog id="pitch-dialog" closedby="any" aria-labelledby="pitchTitle" style="max-width: 600px; width: 95%;">
+    <div class="modal-header">
+      <h3 id="pitchTitle">Formazione in Campo ⚽</h3>
+      <button class="btn" style="padding: 0.35rem 0.65rem;" onclick="document.getElementById('pitch-dialog').close()">Chiudi</button>
+    </div>
+    
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem;">
+      <p style="font-size:0.8rem; color:var(--color-text-muted); margin: 0; max-width: 320px;">
+        Trascina un calciatore e rilascialo su un compagno dello stesso ruolo per scambiare titolari e panchina!
+      </p>
+      
+      <!-- Module selector dropdown -->
+      <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <label for="pitch-module-select" style="font-size:0.8rem; font-weight:700; white-space:nowrap; color: var(--color-text-muted)">MODULO:</label>
+        <select id="pitch-module-select" class="input-control" style="width: 100px; padding: 0.4rem 0.5rem; font-size: 0.85rem;">
+          <option value="4-3-3">4-3-3</option>
+          <option value="4-4-2">4-4-2</option>
+          <option value="3-5-2">3-5-2</option>
+          <option value="3-4-3">3-4-3</option>
+          <option value="5-3-2">5-3-2</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Football Field Pitch -->
+    <div id="pitch-visualizer-container">
+      <!-- Pitch elements generated in app.js -->
+    </div>
+    
+    <!-- Bench listing section -->
+    <div style="margin-top: 1.25rem;">
+      <h4 style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; color: var(--color-text-muted); margin-bottom: 0.5rem; border-bottom: 1px solid var(--border-light); padding-bottom: 0.25rem; letter-spacing: 0.05em;">Panchina</h4>
+      <div id="pitch-bench-container" style="display: flex; flex-wrap: wrap; gap: 0.5rem; min-height: 40px; align-items: center;">
+        <!-- Bench players list populated via JS -->
+      </div>
+    </div>
+  </dialog>
+
+  <!-- FLOATING TOAST NOTIFIER -->
+  <div id="toast-notification" class="toast">
+    <!-- Managed inside app.js -->
+  </div>
+
+  <!-- SCRIPT -->
+  <script src="app.js"></script>
+</body>
+</html>
