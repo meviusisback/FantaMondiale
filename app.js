@@ -1912,6 +1912,33 @@ function renderPopoverLoading(popover, name) {
 function renderPopoverData(popover, name, country, role, data, buttonEl) {
   const qpClass = data.valueForMoney ? data.valueForMoney.toLowerCase().replace(/[^a-z]/g, '') : 'buono';
 
+  const categoryValue = (data.playerCategory || '').toLowerCase().trim();
+  let categoryClass = 'buono';
+  let categoryEmoji = '👍';
+  let categoryText = 'Buono';
+
+  if (categoryValue.includes('scarso')) {
+    categoryClass = 'scarso';
+    categoryEmoji = '📉';
+    categoryText = 'Scarso';
+  } else if (categoryValue.includes('accettabile')) {
+    categoryClass = 'accettabile';
+    categoryEmoji = '⚖️';
+    categoryText = 'Accettabile';
+  } else if (categoryValue.includes('buono')) {
+    categoryClass = 'buono';
+    categoryEmoji = '👍';
+    categoryText = 'Buono';
+  } else if (categoryValue.includes('ottimo')) {
+    categoryClass = 'ottimo';
+    categoryEmoji = '🎯';
+    categoryText = 'Ottimo';
+  } else if (categoryValue.includes('stella') || categoryValue.includes('star')) {
+    categoryClass = 'stella';
+    categoryEmoji = '👑';
+    categoryText = 'Stella';
+  }
+
   popover.innerHTML = `
     <div class="ai-popover-header">
       <span class="ai-popover-title">Analisi IA ✨</span>
@@ -1948,13 +1975,11 @@ function renderPopoverData(popover, name, country, role, data, buttonEl) {
       </div>
     </div>
 
-    <div class="ai-impact-section">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
-        <span class="ai-stat-label">Punteggio Impatto</span>
-        <span class="ai-impact-value">${data.impactScore !== undefined ? data.impactScore : 50} / 100</span>
-      </div>
-      <div class="ai-impact-track">
-        <div class="ai-impact-fill" style="width: ${data.impactScore !== undefined ? data.impactScore : 50}%;"></div>
+    <div class="ai-category-section">
+      <span class="ai-stat-label" style="display:block; margin-bottom:0.25rem">Categoria Giocatore</span>
+      <div class="ai-category-badge badge-cat-${categoryClass}">
+        <span class="ai-category-emoji">${categoryEmoji}</span>
+        <span class="ai-category-text">${categoryText}</span>
       </div>
     </div>
 

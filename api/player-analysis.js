@@ -41,7 +41,12 @@ Fornisci i dati strutturati RIGOROSAMENTE in formato JSON con le seguenti chiavi
 - club: la squadra di club attuale in cui gioca (es. "Inter Miami", "Real Madrid")
 - appearances: le presenze e gol/assist registrati nella stagione calcistica più recente 2025/2026 di club e nazionale (es. "34 presenze, 12 gol nella stagione 25/26")
 - starterProbability: stima percentuale (es. "85%" o "30%") che giochi effettivamente come titolare durante questo Mondiale.
-- impactScore: un valore numerico intero da 0 a 100 che indica l'impatto fantacalcistico totale atteso al FantaMondiale. Questo punteggio DEVE essere calcolato tenendo conto sia della forza individuale del giocatore sia del cammino previsto e della forza della sua Nazionale (country: ${country}). Nazionali favorite = punteggio potenziale molto più alto.
+- playerCategory: la classificazione del giocatore a livello FantaMondiale (scegli rigorosamente tra: "scarso", "accettabile", "buono", "ottimo", "stella"). Assegna il valore valutando attentamente i seguenti criteri:
+  - "scarso": gioca poco o niente, pochi bonus, squadra nazionale di appartenenza scarsa
+  - "accettabile": titolare in squadra scarsa, pochi bonus
+  - "buono": titolare in squadra forte, qualche bonus, pochi malus
+  - "ottimo": titolare e con buoni bonus e pochi malus
+  - "stella": uno dei migliori giocatori del ruolo, ottimi bonus, ottimo rendimento, gioca per squadre nazionali forti oppure è leader indiscusso di una squadra più debole e garantisce ottimi bonus
 - valueForMoney: valutazione sintetica del rapporto qualità/prezzo all'asta FantaMondiale (scegli rigorosamente tra: "Ottimo", "Buono", "Rischioso", "Sopravvalutato"). Ad esempio, un ottimo giocatore in una nazionale debole potrebbe essere "Sopravvalutato" o "Rischioso" perché uscirà presto.
 - description: descrizione del profilo del calciatore, valutando le performance recenti e le aspettative/performance al Mondiale in ottica FantaMondiale (2-3 frasi chiare).
 
