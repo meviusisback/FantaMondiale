@@ -1437,6 +1437,40 @@ function showTeamPitch(teamId, showIdeal = false) {
     pitchTitleEl.innerHTML = showIdeal ? 'Formazione Ideale IA 📈🔮' : 'Formazione in Campo ⚽';
   }
 
+  // Generate action buttons dynamically
+  const buttonsWrapper = document.getElementById('pitch-action-buttons-wrapper');
+  if (buttonsWrapper) {
+    buttonsWrapper.innerHTML = '';
+    
+    // Add Email button
+    const emailBtn = document.createElement('button');
+    emailBtn.className = 'btn btn-secondary';
+    emailBtn.style.padding = '0.4rem 0.8rem';
+    emailBtn.style.fontSize = '0.75rem';
+    emailBtn.style.display = 'flex';
+    emailBtn.style.alignItems = 'center';
+    emailBtn.style.gap = '0.35rem';
+    emailBtn.innerHTML = '✉️ Condividi via Email';
+    emailBtn.onclick = () => sendLineupEmail(team, showIdeal);
+    buttonsWrapper.appendChild(emailBtn);
+
+    // If showing Ideal, add AI Update button
+    if (showIdeal) {
+      const refreshAIBtn = document.createElement('button');
+      refreshAIBtn.className = 'btn btn-team-ai-sparkle';
+      refreshAIBtn.style.padding = '0.4rem 0.8rem';
+      refreshAIBtn.style.fontSize = '0.75rem';
+      refreshAIBtn.style.display = 'flex';
+      refreshAIBtn.style.alignItems = 'center';
+      refreshAIBtn.style.gap = '0.35rem';
+      refreshAIBtn.style.background = 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)';
+      refreshAIBtn.style.borderColor = 'rgba(168, 85, 247, 0.4)';
+      refreshAIBtn.innerHTML = '🔄 Ricalcola Formazione IA';
+      refreshAIBtn.onclick = () => recalculateIdealLineup(team);
+      buttonsWrapper.appendChild(refreshAIBtn);
+    }
+  }
+
   renderPitch();
   document.getElementById('pitch-dialog').showModal();
 }
@@ -2316,6 +2350,166 @@ function parseMarkdown(text) {
   return parsedHtml;
 }
 
+// --- LINEUP EMAIL AND BATCH AI RECALCULATE FUNCTIONS ---
+
+function sendLineupEmail(team, isIdeal) {
+  if (!team) return;
+
+  const module = team.module || '4-3-3';
+  const parts = module.split('-').map(x => parseInt(x));
+  const defNeeded = parts[0] || 4;
+  const cenNeeded = parts[1] || 3;
+  const attNeeded = parts[2] || 3;
+
+  // Grab roles, potentially sorted by form if isIdeal
+  let porPlayers = team.players.filter(p => p.role === 'POR');
+  let difPlayers = team.players.filter(p => p.role === 'DIF');
+  let cenPlayers = team.players.filter(p => p.role === 'CEN');
+  let attPlayers = team.players.filter(p => p.role === 'ATT');
+
+  if (isIdeal) {
+    const getPlayerFormScore = (player) => {
+      const cached = state.aiCache[player.id] || JSON.parse(sessionStorage.getItem(`fantamondiale_ai_${player.id}`) || '{}');
+      let score = 50;
+      const cat = (cached.playerCategory || '').toLowerCase();
+      if (cat.includes('stella')) score += 40;
+      else if (cat.includes('ottimo')) score += 30;
+      else if (cat.includes('buono')) score += 20;
+      else if (cat.includes('accettabile')) score += 10;
+      else if (cat.includes('scarso')) score -= 20;
+
+      if (cached.starterProbability) {
+        const prob = parseInt(cached.starterProbability.replace(/[^0-9]/g, '')) || 50;
+        score += prob * 0.2;
+      }
+      score += (player.purchaseCost || 0) * 0.1;
+      return score;
+    };
+
+    porPlayers = [...porPlayers].sort((a, b) => getPlayerFormScore(b) - getPlayerFormScore(a));
+    difPlayers = [...difPlayers].sort((a, b) => getPlayerFormScore(b) - getPlayerFormScore(a));
+    cenPlayers = [...cenPlayers].sort((a, b) => getPlayerFormScore(b) - getPlayerFormScore(a));
+    attPlayers = [...attPlayers].sort((a, b) => getPlayerFormScore(b) - getPlayerFormScore(a));
+  }
+
+  const porStarters = porPlayers.slice(0, 1);
+  const porBench = porPlayers.slice(1);
+
+  const difStarters = difPlayers.slice(0, defNeeded);
+  const difBench = difPlayers.slice(defNeeded);
+
+  const cenStarters = cenPlayers.slice(0, cenNeeded);
+  const cenBench = cenPlayers.slice(cenNeeded);
+
+  const attStarters = attPlayers.slice(0, attNeeded);
+  const attBench = attPlayers.slice(attNeeded);
+
+  const benchList = [...porBench, ...difBench, ...cenBench, ...attBench];
+
+  // Build the email body
+  let bodyText = `Ciao!\n\nEcco la formazione per la squadra "${team.name}" di FantaMondiale (Modulo: ${module}):\n\n`;
+  bodyText += `⚽ TITOLARI:\n`;
+  bodyText += `🧤 POR: ${porStarters.map(p => `${p.name} (${p.country})`).join(', ') || 'Nessuno'}\n`;
+  bodyText += `🛡️ DIF: ${difStarters.map(p => `${p.name} (${p.country})`).join(', ') || 'Nessuno'}\n`;
+  bodyText += `💎 CEN: ${cenStarters.map(p => `${p.name} (${p.country})`).join(', ') || 'Nessuno'}\n`;
+  bodyText += `🔥 ATT: ${attStarters.map(p => `${p.name} (${p.country})`).join(', ') || 'Nessuno'}\n\n`;
+  
+  bodyText += `🛋️ PANCHINA:\n`;
+  if (benchList.length > 0) {
+    bodyText += benchList.map(p => `- ${p.role}: ${p.name} (${p.country})`).join('\n') + '\n';
+  } else {
+    bodyText += `Nessuno in panchina\n`;
+  }
+
+  bodyText += `\nGenerato automaticamente dall'Analisi Tattica IA di FantaMondiale 🔮✨`;
+
+  const subject = `FantaMondiale: ${isIdeal ? 'Formazione Ideale IA' : 'Formazione in Campo'} - ${team.name}`;
+  
+  // Open mailto link
+  const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyText)}`;
+  window.location.href = mailtoUrl;
+}
+
+async function recalculateIdealLineup(team) {
+  if (!team || team.players.length === 0) {
+    showToast('Nessun giocatore in rosa da aggiornare!', 'warning');
+    return;
+  }
+
+  const pitchContainer = dom.pitchVisualizerContainer;
+  const benchContainer = dom.pitchBenchContainer;
+  if (!pitchContainer || !benchContainer) return;
+
+  const originalPitchHtml = pitchContainer.innerHTML;
+  const originalBenchHtml = benchContainer.innerHTML;
+
+  // Disable buttons during load
+  const buttons = document.querySelectorAll('#pitch-action-buttons-wrapper button');
+  buttons.forEach(btn => btn.disabled = true);
+
+  // Render a beautiful, premium glassmorphic loader inside the field container
+  pitchContainer.innerHTML = `
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 380px; background: rgba(0,0,0,0.5); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); padding: 2rem; text-align: center; box-sizing: border-box;">
+      <div class="ai-skeleton-pulse" style="width: 50px; height: 50px; border-radius: 50%; background: var(--color-primary); margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; animation: pulse 1.5s infinite;">🔮</div>
+      <h4 style="margin: 0 0 0.5rem 0; color: #fff; font-size: 0.9rem;">Ricalcolo Formazione IA...</h4>
+      <p id="ai-recalc-status" style="margin: 0 0 1rem 0; font-size: 0.75rem; color: var(--color-text-muted);">Inizializzazione statistica dei calciatori...</p>
+      <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; margin-bottom: 0.5rem;">
+        <div id="ai-recalc-progress" style="width: 0%; height: 100%; background: linear-gradient(90deg, #38bdf8 0%, #c084fc 100%); border-radius: 3px; transition: width 0.3s ease;"></div>
+      </div>
+    </div>
+  `;
+  benchContainer.innerHTML = `<div style="text-align: center; color: var(--color-text-muted); font-size: 0.75rem; font-style: italic;">Ricarica in corso...</div>`;
+
+  const statusEl = document.getElementById('ai-recalc-status');
+  const progressEl = document.getElementById('ai-recalc-progress');
+
+  try {
+    const players = team.players;
+    for (let i = 0; i < players.length; i++) {
+      const p = players[i];
+      if (statusEl) statusEl.textContent = `Analisi di ${p.name} (${i + 1}/${players.length})...`;
+      if (progressEl) progressEl.style.width = `${((i) / players.length) * 100}%`;
+
+      // Trigger the fetch call to clear cache and pull latest weekly updates
+      const response = await fetch('/api/player-analysis', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 
+          name: p.name, 
+          country: p.country, 
+          role: p.role,
+          provider: state.settings.aiProvider || 'openrouter',
+          openRouterModel: state.settings.openRouterModel || 'openai/gpt-oss-120b:free'
+        })
+      });
+
+      const result = await response.json();
+      if (response.ok && !result.error) {
+        // Save to cache
+        state.aiCache[p.id] = result;
+        sessionStorage.setItem(`fantamondiale_ai_${p.id}`, JSON.stringify(result));
+      }
+      
+      // Safety wait to bypass provider rate limits
+      await new Promise(resolve => setTimeout(resolve, 350));
+    }
+
+    if (progressEl) progressEl.style.width = '100%';
+    showToast('Tutti i giocatori aggiornati con successo! Ricalcolo formazione...', 'success');
+  } catch (err) {
+    console.error(err);
+    showToast('Errore durante l\'aggiornamento di alcuni giocatori, ricalcolo parziale.', 'warning');
+  }
+
+  // Restore buttons state
+  buttons.forEach(btn => btn.disabled = false);
+
+  // Render fresh updated pitch
+  renderPitch();
+}
+
 // Window globals to wire up inline HTML onclick actions
 window.assignPlayerDirect = assignPlayerDirect;
 window.releasePlayer = releasePlayer;
@@ -2325,3 +2519,5 @@ window.deleteSpecificCloudSession = deleteSpecificCloudSession;
 window.showPlayerAIAnalysis = showPlayerAIAnalysis;
 window.showTeamAIAnalysis = showTeamAIAnalysis;
 window.closeAIPopover = closeAIPopover;
+window.sendLineupEmail = sendLineupEmail;
+window.recalculateIdealLineup = recalculateIdealLineup;
