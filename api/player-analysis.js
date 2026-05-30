@@ -39,7 +39,7 @@ Fornisci i dati strutturati RIGOROSAMENTE in formato JSON con le seguenti chiavi
 
 Rispondi esclusivamente con il codice JSON, senza alcun blocco di codice markdown o testo introduttivo.`;
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key=${apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
 
     const response = await fetch(url, {
       method: 'POST',
