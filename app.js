@@ -81,6 +81,7 @@ let state = {
   players: JSON.parse(JSON.stringify(SEED_PLAYERS)), // Clone seed data
   activeTab: 'giocatori', // default tab is players list
   activeTeamId: 't-1', // Selected team for quick assignments
+  activeCloudSessionId: null, // Track currently loaded cloud session ID
   activePitchTeamId: null, // Stores ID of the team visualized on the pitch
   draggedPlayerId: null, // Stores ID of the player being dragged
   filters: {
@@ -110,6 +111,19 @@ const dom = {
   // Cloud Storage Controls
   btnCloudSave: null,
   btnCloudLoad: null,
+
+  // Cloud Persistence Dialog Elements
+  cloudSaveDialog: null,
+  cloudSaveMode: null,
+  cloudSaveTitle: null,
+  cloudSaveAuthor: null,
+  cloudSaveDate: null,
+  btnCloudSaveConfirm: null,
+  cloudLoadDropdownWrapper: null,
+  cloudLoadDropdownList: null,
+  btnManageCloudSessions: null,
+  cloudLoadDialog: null,
+  cloudLoadListContainer: null,
 
   // Tabs buttons and contents
   tabButtons: [],
@@ -169,6 +183,19 @@ function initDOM() {
 
   dom.btnCloudSave = document.getElementById('btn-cloud-save');
   dom.btnCloudLoad = document.getElementById('btn-cloud-load');
+
+  // Cloud Persistence Dialog Cache
+  dom.cloudSaveDialog = document.getElementById('cloud-save-dialog');
+  dom.cloudSaveMode = document.getElementById('cloud-save-mode');
+  dom.cloudSaveTitle = document.getElementById('cloud-save-title');
+  dom.cloudSaveAuthor = document.getElementById('cloud-save-author');
+  dom.cloudSaveDate = document.getElementById('cloud-save-date');
+  dom.btnCloudSaveConfirm = document.getElementById('btn-cloud-save-confirm');
+  dom.cloudLoadDropdownWrapper = document.getElementById('cloud-load-dropdown-wrapper');
+  dom.cloudLoadDropdownList = document.getElementById('cloud-load-dropdown-list');
+  dom.btnManageCloudSessions = document.getElementById('btn-manage-cloud-sessions');
+  dom.cloudLoadDialog = document.getElementById('cloud-load-dialog');
+  dom.cloudLoadListContainer = document.getElementById('cloud-load-list-container');
 
   dom.tabButtons = Array.from(document.querySelectorAll('.tab-btn'));
   dom.tabContents = Array.from(document.querySelectorAll('.tab-content'));
@@ -234,8 +261,26 @@ function setupEventListeners() {
   dom.btnResetAll.addEventListener('click', resetSession);
 
   // Cloud Persistence Sync Event Listeners
-  if (dom.btnCloudSave) dom.btnCloudSave.addEventListener('click', saveToCloud);
-  if (dom.btnCloudLoad) dom.btnCloudLoad.addEventListener('click', loadFromCloud);
+  if (dom.btnCloudSave) dom.btnCloudSave.addEventListener('click', openCloudSaveModal);
+  if (dom.btnCloudSaveConfirm) dom.btnCloudSaveConfirm.addEventListener('click', confirmCloudSave);
+  
+  // Hover Dropdown Trigger
+  if (dom.cloudLoadDropdownWrapper) {
+    dom.cloudLoadDropdownWrapper.addEventListener('mouseenter', handleCloudDropdownHover);
+  }
+
+  // Manage Sessions link
+  if (dom.btnManageCloudSessions) {
+    dom.btnManageCloudSessions.addEventListener('click', (e) => {
+      e.preventDefault();
+      openCloudLoadModal();
+    });
+  }
+
+  // Change listener on save dropdown mode to prefill title/author/date on overwrite selection
+  if (dom.cloudSaveMode) {
+    dom.cloudSaveMode.addEventListener('change', handleSaveModeChange);
+  }
 
   // Filters & Search
   dom.searchInput.addEventListener('input', (e) => {
@@ -1283,50 +1328,252 @@ function showToast(message, type = 'success') {
 
 // --- CLOUD STORAGE IMPLEMENTATION ---
 
-async function saveToCloud() {
-  const originalText = dom.btnCloudSave.innerHTML;
+let cloudSessionsCatalog = []; // Cache list of sessions metadata globally inside file
+
+async function openCloudSaveModal() {
+  if (!dom.cloudSaveDialog) return;
+
+  // Pre-fill today's date if empty or not set
+  if (dom.cloudSaveDate && !dom.cloudSaveDate.value) {
+    dom.cloudSaveDate.value = new Date().toISOString().substring(0, 10);
+  }
+
+  // Pre-fill last used author from local storage
+  const lastAuthor = localStorage.getItem('fantamondiale_last_author');
+  if (dom.cloudSaveAuthor && lastAuthor) {
+    dom.cloudSaveAuthor.value = lastAuthor;
+  }
+
+  // Show temporary loading in save dialog mode dropdown
+  if (dom.cloudSaveMode) {
+    dom.cloudSaveMode.innerHTML = `
+      <option value="new">-- Crea Nuova Sessione --</option>
+      <option disabled>Caricamento sessioni...</option>
+    `;
+  }
+
+  dom.cloudSaveDialog.showModal();
+
   try {
-    dom.btnCloudSave.disabled = true;
-    dom.btnCloudSave.innerHTML = `Salvataggio...`;
+    const response = await fetch('/api/load');
+    if (!response.ok) throw new Error('Failed to load session list');
+    
+    cloudSessionsCatalog = await response.json();
+    
+    if (dom.cloudSaveMode) {
+      let optionsHtml = `<option value="new">-- Crea Nuova Sessione --</option>`;
+      if (Array.isArray(cloudSessionsCatalog)) {
+        cloudSessionsCatalog.forEach(s => {
+          optionsHtml += `<option value="${s.id}" ${state.activeCloudSessionId === s.id ? 'selected' : ''}>Sovrascrivi: ${s.title} (${s.author})</option>`;
+        });
+      }
+      dom.cloudSaveMode.innerHTML = optionsHtml;
+      
+      // Trigger change event to prefill if a session was pre-selected
+      handleSaveModeChange();
+    }
+  } catch (error) {
+    console.error(error);
+    if (dom.cloudSaveMode) {
+      dom.cloudSaveMode.innerHTML = `
+        <option value="new">-- Crea Nuova Sessione --</option>
+        <option disabled style="color: var(--color-danger)">Errore caricamento lista</option>
+      `;
+    }
+  }
+}
+
+function handleSaveModeChange() {
+  if (!dom.cloudSaveMode) return;
+  const mode = dom.cloudSaveMode.value;
+
+  if (mode === 'new') {
+    if (dom.cloudSaveTitle) dom.cloudSaveTitle.value = '';
+    // Keep author as is or prefill
+    if (dom.cloudSaveDate) dom.cloudSaveDate.value = new Date().toISOString().substring(0, 10);
+  } else {
+    const selectedSession = cloudSessionsCatalog.find(s => s.id === mode);
+    if (selectedSession) {
+      if (dom.cloudSaveTitle) dom.cloudSaveTitle.value = selectedSession.title;
+      if (dom.cloudSaveAuthor) dom.cloudSaveAuthor.value = selectedSession.author;
+      if (dom.cloudSaveDate) dom.cloudSaveDate.value = selectedSession.date;
+    }
+  }
+}
+
+async function confirmCloudSave() {
+  const title = dom.cloudSaveTitle?.value?.trim();
+  const author = dom.cloudSaveAuthor?.value?.trim();
+  const date = dom.cloudSaveDate?.value;
+  const mode = dom.cloudSaveMode?.value || 'new';
+
+  if (!title || !author || !date) {
+    showToast('Compila tutti i campi obbligatori (Titolo, Autore e Data)!', 'warning');
+    return;
+  }
+
+  const originalText = dom.btnCloudSaveConfirm.innerHTML;
+  try {
+    dom.btnCloudSaveConfirm.disabled = true;
+    dom.btnCloudSaveConfirm.innerHTML = `Salvataggio in corso...`;
+
+    const metadata = {
+      id: mode === 'new' ? null : mode,
+      title: title,
+      author: author,
+      date: date
+    };
 
     const response = await fetch('/api/save', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(state)
+      body: JSON.stringify({
+        metadata: metadata,
+        state: {
+          settings: state.settings,
+          teams: state.teams,
+          players: state.players
+        }
+      })
     });
 
     const result = await response.json();
     if (!response.ok) {
-      throw new Error(result.error || 'Errore durante il salvataggio cloud');
+      throw new Error(result.error || 'Errore durante il salvataggio');
     }
 
-    showToast('Sessione salvata con successo sul Cloud Redis! ☁️', 'success');
+    // Save author for next pre-fills
+    localStorage.setItem('fantamondiale_last_author', author);
+    
+    // Set active session ID
+    state.activeCloudSessionId = result.id;
+
+    showToast('Sessione d\'asta salvata con successo sul Cloud Redis! ☁️', 'success');
+    if (dom.cloudSaveDialog) dom.cloudSaveDialog.close();
   } catch (error) {
     console.error(error);
     showToast(error.message, 'danger');
   } finally {
-    dom.btnCloudSave.disabled = false;
-    dom.btnCloudSave.innerHTML = originalText;
+    dom.btnCloudSaveConfirm.disabled = false;
+    dom.btnCloudSaveConfirm.innerHTML = originalText;
   }
 }
 
-async function loadFromCloud() {
-  if (!confirm('Sei sicuro di voler caricare la sessione dal Cloud? Sostituirà la sessione d\'asta corrente.')) {
+async function handleCloudDropdownHover() {
+  if (!dom.cloudLoadDropdownList) return;
+
+  try {
+    dom.cloudLoadDropdownList.innerHTML = `<div class="dropdown-item-placeholder">Caricamento in corso...</div>`;
+    
+    const response = await fetch('/api/load');
+    if (!response.ok) throw new Error('Failed to load sessions');
+    
+    const sessions = await response.json();
+    cloudSessionsCatalog = sessions; // Sync local catalog cache
+    
+    if (!Array.isArray(sessions) || sessions.length === 0) {
+      dom.cloudLoadDropdownList.innerHTML = `<div class="dropdown-item-placeholder">Nessuna sessione salvata</div>`;
+      return;
+    }
+
+    let itemsHtml = '';
+    sessions.forEach(s => {
+      itemsHtml += `
+        <div class="dropdown-item-session" onclick="loadSpecificCloudSession('${s.id}')">
+          <div class="dropdown-item-title">${s.title}</div>
+          <div class="dropdown-item-meta">
+            <span>Autore: <strong>${s.author}</strong></span>
+            <span>${s.date}</span>
+          </div>
+        </div>
+      `;
+    });
+    dom.cloudLoadDropdownList.innerHTML = itemsHtml;
+  } catch (error) {
+    console.error(error);
+    dom.cloudLoadDropdownList.innerHTML = `<div class="dropdown-item-placeholder" style="color: var(--color-danger);">Errore di connessione</div>`;
+  }
+}
+
+async function openCloudLoadModal() {
+  if (!dom.cloudLoadDialog || !dom.cloudLoadListContainer) return;
+
+  dom.cloudLoadListContainer.innerHTML = `<div class="dropdown-item-placeholder">Caricamento elenco in corso...</div>`;
+  dom.cloudLoadDialog.showModal();
+
+  try {
+    const response = await fetch('/api/load');
+    if (!response.ok) throw new Error('Failed to load session catalog');
+    
+    const sessions = await response.json();
+    cloudSessionsCatalog = sessions; // Sync local catalog cache
+    
+    renderCloudLoadCatalogTable(sessions);
+  } catch (error) {
+    console.error(error);
+    dom.cloudLoadListContainer.innerHTML = `<div class="dropdown-item-placeholder" style="color: var(--color-danger)">Impossibile caricare il catalogo delle sessioni cloud.</div>`;
+  }
+}
+
+function renderCloudLoadCatalogTable(sessions) {
+  if (!dom.cloudLoadListContainer) return;
+
+  if (!Array.isArray(sessions) || sessions.length === 0) {
+    dom.cloudLoadListContainer.innerHTML = `<div class="dropdown-item-placeholder">Nessuna sessione salvata su Upstash Redis.</div>`;
     return;
   }
 
-  const originalText = dom.btnCloudLoad.innerHTML;
-  try {
-    dom.btnCloudLoad.disabled = true;
-    dom.btnCloudLoad.innerHTML = `Caricamento...`;
+  let tableHtml = `
+    <table class="cloud-table">
+      <thead>
+        <tr>
+          <th>Titolo Sessione</th>
+          <th>Autore</th>
+          <th style="width: 100px;">Data</th>
+          <th style="text-align: right; width: 180px;">Azioni</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
 
-    const response = await fetch('/api/load');
+  sessions.forEach(s => {
+    tableHtml += `
+      <tr>
+        <td style="font-weight: 700; color: var(--color-primary);">${s.title}</td>
+        <td style="font-weight: 600;">${s.author}</td>
+        <td>${s.date}</td>
+        <td style="text-align: right;">
+          <button class="btn" style="padding: 0.25rem 0.5rem; font-size: 0.7rem; background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%); border-color: rgba(13, 148, 136, 0.3); margin-right: 0.35rem;" onclick="loadSpecificCloudSession('${s.id}')">
+            Carica 📥
+          </button>
+          <button class="btn btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.7rem;" onclick="deleteSpecificCloudSession('${s.id}')">
+            Elimina 🗑️
+          </button>
+        </td>
+      </tr>
+    `;
+  });
+
+  tableHtml += `
+      </tbody>
+    </table>
+  `;
+  dom.cloudLoadListContainer.innerHTML = tableHtml;
+}
+
+async function loadSpecificCloudSession(id) {
+  if (!confirm('Sei sicuro di voler caricare questa sessione dal Cloud? Sostituirà la sessione d\'asta corrente.')) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/load?id=${id}`);
     const result = await response.json();
 
     if (!response.ok) {
-      throw new Error(result.error || 'Errore durante il caricamento cloud');
+      throw new Error(result.error || 'Errore durante il caricamento della sessione.');
     }
 
     // Load state
@@ -1336,8 +1583,9 @@ async function loadFromCloud() {
       if (!t.module) t.module = '4-3-3';
     });
     state.players = result.players;
+    state.activeCloudSessionId = id;
 
-    // Fill config inputs
+    // Fill config inputs in settings tab
     dom.configBudget.value = state.settings.budget;
     dom.configSlotPOR.value = state.settings.slots.POR;
     dom.configSlotDIF.value = state.settings.slots.DIF;
@@ -1353,13 +1601,52 @@ async function loadFromCloud() {
 
     autoSave();
     renderAll();
-    showToast('Sessione d\'asta caricata con successo dal Cloud Redis! ☁️', 'success');
+    
+    // Close open cloud dialogs if any
+    if (dom.cloudSaveDialog) dom.cloudSaveDialog.close();
+    if (dom.cloudLoadDialog) dom.cloudLoadDialog.close();
+
+    showToast('Sessione d\'asta ripristinata con successo dal Cloud! ☁️', 'success');
   } catch (error) {
     console.error(error);
     showToast(error.message, 'danger');
-  } finally {
-    dom.btnCloudLoad.disabled = false;
-    dom.btnCloudLoad.innerHTML = originalText;
+  }
+}
+
+async function deleteSpecificCloudSession(id) {
+  const selectedSession = cloudSessionsCatalog.find(s => s.id === id);
+  const sessionName = selectedSession ? `"${selectedSession.title}"` : 'questa sessione';
+
+  if (!confirm(`Sei sicuro di voler eliminare definitivamente ${sessionName} dal Cloud? L'operazione non è reversibile.`)) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/delete?id=${id}`, {
+      method: 'DELETE'
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || 'Impossibile eliminare la sessione.');
+    }
+
+    // Clear active ID if we deleted the currently active session
+    if (state.activeCloudSessionId === id) {
+      state.activeCloudSessionId = null;
+    }
+
+    // Update catalog cache and re-render catalog table in modal
+    cloudSessionsCatalog = cloudSessionsCatalog.filter(s => s.id !== id);
+    renderCloudLoadCatalogTable(cloudSessionsCatalog);
+    
+    // Refresh dropdown as well
+    handleCloudDropdownHover();
+
+    showToast('Sessione rimossa con successo dal Cloud Redis! 🗑️', 'warning');
+  } catch (error) {
+    console.error(error);
+    showToast(error.message, 'danger');
   }
 }
 
@@ -1367,3 +1654,5 @@ async function loadFromCloud() {
 window.assignPlayerDirect = assignPlayerDirect;
 window.releasePlayer = releasePlayer;
 window.showTeamPitch = showTeamPitch;
+window.loadSpecificCloudSession = loadSpecificCloudSession;
+window.deleteSpecificCloudSession = deleteSpecificCloudSession;

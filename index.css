@@ -983,3 +983,139 @@ dialog::backdrop {
   opacity: 1;
   transform: translateX(-50%) scale(1);
 }
+
+/* ==========================================
+   CLOUD DROPDOWN & HOVER PERSISTENCE STYLES
+   ========================================== */
+
+.dropdown-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(8px);
+  min-width: 280px;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  box-shadow: var(--shadow-dark), 0 10px 30px rgba(0, 0, 0, 0.7);
+  z-index: 1000;
+  padding: 0.5rem 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+}
+
+/* Smooth dropdown reveal on hover */
+.dropdown-wrapper:hover .dropdown-menu {
+  display: block;
+  opacity: 1;
+  transform: translateX(-50%) translateY(4px);
+  pointer-events: auto;
+}
+
+.dropdown-header {
+  padding: 0.4rem 1rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  margin-bottom: 0.35rem;
+}
+
+.dropdown-item-session {
+  display: flex;
+  flex-direction: column;
+  padding: 0.5rem 1rem;
+  color: #fff;
+  text-decoration: none;
+  transition: background var(--transition-fast);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+}
+
+.dropdown-item-session:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.dropdown-item-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dropdown-item-meta {
+  font-size: 0.62rem;
+  color: var(--color-text-muted);
+  margin-top: 0.15rem;
+  display: flex;
+  justify-content: space-between;
+}
+
+.dropdown-item-placeholder {
+  padding: 0.8rem 1rem;
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  text-align: center;
+  font-style: italic;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 0.35rem 0;
+}
+
+.dropdown-item-action {
+  display: block;
+  padding: 0.45rem 1rem;
+  color: #fff;
+  text-decoration: none;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: center;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.dropdown-item-action:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-primary);
+}
+
+/* Table layout inside cloud management modal */
+.cloud-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+}
+
+.cloud-table th {
+  text-align: left;
+  padding: 0.5rem;
+  border-bottom: 2px solid var(--border-light);
+  color: var(--color-text-muted);
+}
+
+.cloud-table td {
+  padding: 0.65rem 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  vertical-align: middle;
+}
+
+.cloud-table tr:hover td {
+  background: rgba(255, 255, 255, 0.01);
+}

@@ -45,10 +45,20 @@
           Salva Cloud ☁️
         </button>
 
-        <button id="btn-cloud-load" class="btn" style="background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%); border-color: rgba(13, 148, 136, 0.4);" data-tooltip="Carica l'ultima sessione salvata dal Cloud Redis di Upstash">
-          <svg style="width:16px; height:16px; fill:none; stroke:currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" /></svg>
-          Carica Cloud ☁️
-        </button>
+        <div class="dropdown-wrapper" id="cloud-load-dropdown-wrapper">
+          <button id="btn-cloud-load" class="btn" style="background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%); border-color: rgba(13, 148, 136, 0.4);" data-tooltip="Carica una sessione salvata dal Cloud Redis di Upstash">
+            <svg style="width:16px; height:16px; fill:none; stroke:currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" /></svg>
+            Carica Cloud ☁️
+          </button>
+          <div class="dropdown-menu" id="cloud-load-dropdown-menu">
+            <div class="dropdown-header">Sessioni Cloud</div>
+            <div id="cloud-load-dropdown-list">
+              <div class="dropdown-item-placeholder">Caricamento...</div>
+            </div>
+            <div class="dropdown-divider"></div>
+            <a href="#" id="btn-manage-cloud-sessions" class="dropdown-item-action">Gestisci Sessioni ⚙️</a>
+          </div>
+        </div>
         
         <button id="btn-reset-all" class="btn btn-danger" data-tooltip="Azzera tutti gli acquisti dell'asta mantenendo i giocatori e le squadre">
           Reset Asta
@@ -292,6 +302,61 @@
       <h4 style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; color: var(--color-text-muted); margin-bottom: 0.5rem; border-bottom: 1px solid var(--border-light); padding-bottom: 0.25rem; letter-spacing: 0.05em;">Panchina</h4>
       <div id="pitch-bench-container" style="display: flex; flex-wrap: wrap; gap: 0.5rem; min-height: 40px; align-items: center;">
         <!-- Bench players list populated via JS -->
+      </div>
+    </div>
+  </dialog>
+
+  <!-- MODAL DIALOG FOR CLOUD SAVE CONFIGURATION -->
+  <dialog id="cloud-save-dialog" closedby="any" aria-labelledby="cloudSaveTitle" style="max-width: 450px; width: 95%;">
+    <div class="modal-header">
+      <h3 id="cloudSaveTitle">Salva Sessione Cloud ☁️</h3>
+      <button class="btn" style="padding: 0.35rem 0.65rem;" onclick="document.getElementById('cloud-save-dialog').close()">Chiudi</button>
+    </div>
+    
+    <div style="margin-top: 1rem;">
+      <div class="form-group">
+        <label for="cloud-save-mode">Modalità di Salvataggio</label>
+        <select id="cloud-save-mode" class="input-control">
+          <option value="new">-- Crea Nuova Sessione --</option>
+          <!-- Existing sessions populated dynamically -->
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="cloud-save-title">Titolo Sessione</label>
+        <input type="text" id="cloud-save-title" class="input-control" placeholder="es. Asta con Amici di Scuola">
+      </div>
+
+      <div class="form-group">
+        <label for="cloud-save-author">Autore</label>
+        <input type="text" id="cloud-save-author" class="input-control" placeholder="Il tuo nome">
+      </div>
+
+      <div class="form-group">
+        <label for="cloud-save-date">Data</label>
+        <input type="date" id="cloud-save-date" class="input-control">
+      </div>
+      
+      <button id="btn-cloud-save-confirm" class="btn btn-primary" style="width: 100%; margin-top: 1.25rem; padding: 0.75rem; background: linear-gradient(135deg, var(--color-primary) 0%, #4f46e5 100%);">
+        Salva Sessione sul Cloud 🚀
+      </button>
+    </div>
+  </dialog>
+
+  <!-- MODAL DIALOG FOR CLOUD CATALOG MANAGEMENT -->
+  <dialog id="cloud-load-dialog" closedby="any" aria-labelledby="cloudLoadTitle" style="max-width: 550px; width: 95%;">
+    <div class="modal-header">
+      <h3 id="cloudLoadTitle">Gestione Sessioni Cloud ☁️</h3>
+      <button class="btn" style="padding: 0.35rem 0.65rem;" onclick="document.getElementById('cloud-load-dialog').close()">Chiudi</button>
+    </div>
+    
+    <p style="font-size:0.8rem; color:var(--color-text-muted); margin-top: 0.5rem; margin-bottom: 1rem;">
+      Qui puoi eliminare i salvataggi d'asta cloud obsoleti per mantenere pulito il database.
+    </p>
+
+    <div style="margin-top: 0.5rem;">
+      <div id="cloud-load-list-container" style="max-height: 300px; overflow-y: auto; margin-bottom: 0.5rem;">
+        <!-- Dynamically loaded list of sessions for deletion -->
       </div>
     </div>
   </dialog>
