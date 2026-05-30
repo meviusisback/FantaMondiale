@@ -93,7 +93,8 @@ let state = {
     status: 'free' // 'all', 'free', 'taken'
   },
   aiCache: {},
-  teamIdealLineups: {}
+  teamIdealLineups: {},
+  activeCloudSessionMetadata: null
 };
 
 // --- DOM ELEMENTS CACHE & SELECTORS ---
@@ -175,6 +176,12 @@ document.addEventListener('DOMContentLoaded', () => {
   loadAutoSave(); // Attempt to load previous state from localStorage
   setupEventListeners();
   renderAll();
+
+  // Check if there was an active cloud session last used
+  const lastCloudId = localStorage.getItem('fantamondiale_last_cloud_session_id');
+  if (lastCloudId) {
+    autoLoadCloudSession(lastCloudId);
+  }
 });
 
 function initDOM() {
@@ -670,14 +677,61 @@ function resetSession() {
 
 // --- LOCAL STORAGE AUTOSAVE ---
 
+let cloudSaveTimeout = null;
+
 function autoSave() {
   try {
-    localStorage.setItem('fantamondiale_state', JSON.stringify({
-      settings: state.settings,
-      teams: state.teams,
-      players: state.players,
-      teamIdealLineups: state.teamIdealLineups || {}
-    }));
+    if (state.activeCloudSessionId) {
+      // Clear any pending cloud autosave timeout
+      if (cloudSaveTimeout) {
+        clearTimeout(cloudSaveTimeout);
+      }
+
+      // Debounce cloud save by 1 second to optimize network usage and avoid race conditions
+      cloudSaveTimeout = setTimeout(() => {
+        const metadata = state.activeCloudSessionMetadata || {
+          id: state.activeCloudSessionId,
+          title: "Sessione Attiva",
+          author: localStorage.getItem('fantamondiale_last_author') || "FantaIA",
+          date: new Date().toISOString().substring(0, 10)
+        };
+
+        fetch('/api/save', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            metadata: metadata,
+            state: {
+              settings: state.settings,
+              teams: state.teams,
+              players: state.players,
+              teamIdealLineups: state.teamIdealLineups || {}
+            }
+          })
+        })
+        .then(res => {
+          if (res.ok) {
+            console.log('Background cloud autosave complete.');
+          } else {
+            console.warn('Background cloud autosave failed with status:', res.status);
+          }
+        })
+        .catch(err => {
+          console.error('Background cloud autosave failed:', err);
+        });
+      }, 1000);
+
+    } else {
+      // Normal local storage save
+      localStorage.setItem('fantamondiale_state', JSON.stringify({
+        settings: state.settings,
+        teams: state.teams,
+        players: state.players,
+        teamIdealLineups: state.teamIdealLineups || {}
+      }));
+    }
   } catch (e) {
     console.error('Failed to autosave', e);
   }
@@ -720,6 +774,76 @@ function loadAutoSave() {
     }
   } catch (e) {
     console.error('Failed to load autosave', e);
+  }
+}
+
+async function autoLoadCloudSession(id) {
+  try {
+    showToast('Caricamento dell\'ultima sessione cloud... ☁️', 'info');
+    
+    // 1. Fetch sessions catalog first to retrieve correct metadata
+    const catRes = await fetch('/api/load');
+    if (catRes.ok) {
+      cloudSessionsCatalog = await catRes.json();
+      const meta = cloudSessionsCatalog.find(s => s.id === id);
+      if (meta) {
+        state.activeCloudSessionMetadata = meta;
+      }
+    }
+
+    // 2. Fetch actual session state
+    const response = await fetch(`/api/load?id=${id}`);
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || 'Errore durante il caricamento automatico.');
+    }
+
+    // Load state
+    state.settings = result.settings;
+    state.teams = result.teams;
+    state.teams.forEach(t => {
+      if (!t.module) t.module = '4-3-3';
+    });
+    state.players = result.players;
+    state.teamIdealLineups = result.teamIdealLineups || {};
+    state.activeCloudSessionId = id;
+
+    if (!state.activeCloudSessionMetadata) {
+      state.activeCloudSessionMetadata = {
+        id: id,
+        title: "Sessione Autocaricata",
+        author: localStorage.getItem('fantamondiale_last_author') || "FantaIA",
+        date: new Date().toISOString().substring(0, 10)
+      };
+    }
+
+    // Fill config inputs in settings tab
+    dom.configBudget.value = state.settings.budget;
+    dom.configSlotPOR.value = state.settings.slots.POR;
+    dom.configSlotDIF.value = state.settings.slots.DIF;
+    dom.configSlotCEN.value = state.settings.slots.CEN;
+    dom.configSlotATT.value = state.settings.slots.ATT;
+    dom.teamListInput.value = state.teams.map(t => t.name).join('\n');
+
+    // Restore AI settings
+    if (dom.configAIProvider) dom.configAIProvider.value = state.settings.aiProvider || 'openrouter';
+    if (dom.configOpenRouterModel) dom.configOpenRouterModel.value = state.settings.openRouterModel || 'openai/gpt-oss-120b:free';
+    const isOR = (state.settings.aiProvider || 'openrouter') === 'openrouter';
+    const divORModel = document.getElementById('div-openrouter-model');
+    if (divORModel) divORModel.style.display = isOR ? 'block' : 'none';
+
+    if (state.teams.length > 0) {
+      state.activeTeamId = state.teams[0].id;
+    } else {
+      state.activeTeamId = null;
+    }
+
+    renderAll();
+    showToast(`Sessione cloud "${state.activeCloudSessionMetadata.title}" caricata automaticamente! ☁️`, 'success');
+  } catch (error) {
+    console.error('Failed to autoload cloud session:', error);
+    showToast('Impossibile caricare la sessione cloud. Utilizzo autosave locale.', 'warning');
   }
 }
 
@@ -1720,7 +1844,8 @@ async function confirmCloudSave() {
         state: {
           settings: state.settings,
           teams: state.teams,
-          players: state.players
+          players: state.players,
+          teamIdealLineups: state.teamIdealLineups || {}
         }
       })
     });
@@ -1733,8 +1858,10 @@ async function confirmCloudSave() {
     // Save author for next pre-fills
     localStorage.setItem('fantamondiale_last_author', author);
     
-    // Set active session ID
+    // Set active session ID and metadata
     state.activeCloudSessionId = result.id;
+    state.activeCloudSessionMetadata = result.session;
+    localStorage.setItem('fantamondiale_last_cloud_session_id', result.id);
 
     showToast('Sessione d\'asta salvata con successo sul Cloud Redis! ☁️', 'success');
     if (dom.cloudSaveDialog) dom.cloudSaveDialog.close();
@@ -1869,7 +1996,27 @@ async function loadSpecificCloudSession(id) {
       if (!t.module) t.module = '4-3-3';
     });
     state.players = result.players;
+    state.teamIdealLineups = result.teamIdealLineups || {};
     state.activeCloudSessionId = id;
+
+    // Cache metadata from catalog or create a fallback
+    const selectedSession = cloudSessionsCatalog.find(s => s.id === id);
+    if (selectedSession) {
+      state.activeCloudSessionMetadata = {
+        id: id,
+        title: selectedSession.title,
+        author: selectedSession.author,
+        date: selectedSession.date
+      };
+    } else {
+      state.activeCloudSessionMetadata = {
+        id: id,
+        title: "Sessione Ripristinata",
+        author: localStorage.getItem('fantamondiale_last_author') || "FantaIA",
+        date: new Date().toISOString().substring(0, 10)
+      };
+    }
+    localStorage.setItem('fantamondiale_last_cloud_session_id', id);
 
     // Fill config inputs in settings tab
     dom.configBudget.value = state.settings.budget;
@@ -1927,6 +2074,8 @@ async function deleteSpecificCloudSession(id) {
     // Clear active ID if we deleted the currently active session
     if (state.activeCloudSessionId === id) {
       state.activeCloudSessionId = null;
+      state.activeCloudSessionMetadata = null;
+      localStorage.removeItem('fantamondiale_last_cloud_session_id');
     }
 
     // Update catalog cache and re-render catalog table in modal
@@ -2666,3 +2815,4 @@ window.showTeamAIAnalysis = showTeamAIAnalysis;
 window.closeAIPopover = closeAIPopover;
 window.copyLineupToClipboard = copyLineupToClipboard;
 window.recalculateIdealLineup = recalculateIdealLineup;
+window.autoLoadCloudSession = autoLoadCloudSession;
