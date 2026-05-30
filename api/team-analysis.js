@@ -59,6 +59,11 @@ Struttura rigidamente l'output in 3 brevissimi punti elenco (usa il grassetto pe
               role: 'user',
               content: systemPrompt
             }
+          ],
+          tools: [
+            {
+              type: 'openrouter:web_search'
+            }
           ]
         })
       });

@@ -23,7 +23,7 @@ export default async function handler(req, res) {
 
     const prompt = `Sei un esperto analista calcistico e fantallenatore specializzato nel torneo "FantaMondiale" (il fantacalcio basato sulla fase finale dei Mondiali di calcio).
 Fornisci un'analisi strategica dettagliata e accurata in lingua italiana per il calciatore: ${name} (Nazionale: ${country}, Ruolo: ${role}).
-Esegui una ricerca online in tempo reale tramite Google Search per ottenere le informazioni calcistiche reali più recenti ed aggiornate ad oggi (squadra di club attuale, ultimo stato di forma, infortuni o convocazioni recenti, presenze e gol in stagione).
+Esegui una ricerca online in tempo reale tramite Google Search / Web Search per ottenere le informazioni calcistiche reali più recenti ed aggiornate ad oggi (squadra di club attuale, ultimo stato di forma, infortuni o convocazioni recenti, presenze e gol nella stagione 2025/2026).
 
 Regole FantaMondiale per formulare la tua risposta:
 1. Impatto in relazione alla Nazionale di appartenenza:
@@ -35,7 +35,7 @@ Regole FantaMondiale per formulare la tua risposta:
 
 Fornisci i dati strutturati RIGOROSAMENTE in formato JSON con le seguenti chiavi:
 - club: la squadra di club attuale in cui gioca (es. "Inter Miami", "Real Madrid")
-- appearances: le presenze e gol/assist registrati nell'ultima stagione di club e nazionale (es. "34 presenze, 12 gol")
+- appearances: le presenze e gol/assist registrati nella stagione calcistica più recente 2025/2026 di club e nazionale (es. "34 presenze, 12 gol nella stagione 25/26")
 - starterProbability: stima percentuale (es. "85%" o "30%") che giochi effettivamente come titolare durante questo Mondiale.
 - impactScore: un valore numerico intero da 0 a 100 che indica l'impatto fantacalcistico totale atteso al FantaMondiale. Questo punteggio DEVE essere calcolato tenendo conto sia della forza individuale del giocatore sia del cammino previsto e della forza della sua Nazionale (country: ${country}). Nazionali favorite = punteggio potenziale molto più alto.
 - valueForMoney: valutazione sintetica del rapporto qualità/prezzo all'asta FantaMondiale (scegli rigorosamente tra: "Ottimo", "Buono", "Rischioso", "Sopravvalutato"). Ad esempio, un ottimo giocatore in una nazionale debole potrebbe essere "Sopravvalutato" o "Rischioso" perché uscirà presto.
@@ -66,7 +66,12 @@ Rispondi esclusivamente con il codice JSON, senza alcun blocco di codice markdow
           ],
           response_format: {
             type: 'json_object'
-          }
+          },
+          tools: [
+            {
+              type: 'openrouter:web_search'
+            }
+          ]
         })
       });
 
