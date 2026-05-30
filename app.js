@@ -177,11 +177,8 @@ document.addEventListener('DOMContentLoaded', () => {
   setupEventListeners();
   renderAll();
 
-  // Check if there was an active cloud session last used
-  const lastCloudId = localStorage.getItem('fantamondiale_last_cloud_session_id');
-  if (lastCloudId) {
-    autoLoadCloudSession(lastCloudId);
-  }
+  // Open the startup onboarding cloud dialog modal
+  openStartupDialog();
 });
 
 function initDOM() {
@@ -845,6 +842,78 @@ async function autoLoadCloudSession(id) {
     console.error('Failed to autoload cloud session:', error);
     showToast('Impossibile caricare la sessione cloud. Utilizzo autosave locale.', 'warning');
   }
+}
+
+async function openStartupDialog() {
+  const startupDlg = document.getElementById('startup-cloud-dialog');
+  const sessionsListContainer = document.getElementById('startup-sessions-list');
+  if (!startupDlg) return;
+
+  // Render loading placeholder in list
+  if (sessionsListContainer) {
+    sessionsListContainer.innerHTML = `
+      <div style="text-align: center; padding: 1.5rem; color: var(--color-text-muted); font-size: 0.75rem; font-style: italic;">
+        Caricamento elenco sessioni... ☁️
+      </div>
+    `;
+  }
+
+  // Show startup modal
+  startupDlg.showModal();
+
+  try {
+    const response = await fetch('/api/load');
+    if (!response.ok) throw new Error('Failed to load session catalog');
+
+    const sessions = await response.json();
+    cloudSessionsCatalog = sessions; // Sync catalog cache
+
+    if (sessionsListContainer) {
+      if (!Array.isArray(sessions) || sessions.length === 0) {
+        sessionsListContainer.innerHTML = `
+          <div style="text-align: center; padding: 1.5rem; color: var(--color-text-muted); font-size: 0.75rem; font-style: italic;">
+            Nessuna sessione salvata nel cloud. Creane una nuova!
+          </div>
+        `;
+        return;
+      }
+
+      let itemsHtml = '';
+      sessions.forEach(s => {
+        itemsHtml += `
+          <div class="dropdown-item-session" style="padding: 0.65rem; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer;" onclick="loadStartupCloudSession('${s.id}')">
+            <div style="font-weight: 700; color: #fff; font-size: 0.78rem; margin-bottom: 0.15rem;">${s.title}</div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.68rem; color: var(--color-text-muted);">
+              <span>Autore: <strong>${s.author}</strong></span>
+              <span>${s.date}</span>
+            </div>
+          </div>
+        `;
+      });
+      sessionsListContainer.innerHTML = itemsHtml;
+    }
+  } catch (error) {
+    console.error(error);
+    if (sessionsListContainer) {
+      sessionsListContainer.innerHTML = `
+        <div style="text-align: center; padding: 1.5rem; color: var(--color-danger); font-size: 0.75rem; font-style: italic;">
+          Errore di connessione al Cloud.
+        </div>
+      `;
+    }
+  }
+}
+
+function openNewSessionFromStartup() {
+  const startupDlg = document.getElementById('startup-cloud-dialog');
+  if (startupDlg) startupDlg.close();
+  openCloudSaveModal();
+}
+
+function loadStartupCloudSession(id) {
+  const startupDlg = document.getElementById('startup-cloud-dialog');
+  if (startupDlg) startupDlg.close();
+  loadSpecificCloudSession(id, true);
 }
 
 // --- DIRECT INLINE ASSIGNMENT ENGINE ---
@@ -1976,8 +2045,8 @@ function renderCloudLoadCatalogTable(sessions) {
   dom.cloudLoadListContainer.innerHTML = tableHtml;
 }
 
-async function loadSpecificCloudSession(id) {
-  if (!confirm('Sei sicuro di voler caricare questa sessione dal Cloud? Sostituirà la sessione d\'asta corrente.')) {
+async function loadSpecificCloudSession(id, skipConfirm = false) {
+  if (!skipConfirm && !confirm('Sei sicuro di voler caricare questa sessione dal Cloud? Sostituirà la sessione d\'asta corrente.')) {
     return;
   }
 
@@ -2816,3 +2885,6 @@ window.closeAIPopover = closeAIPopover;
 window.copyLineupToClipboard = copyLineupToClipboard;
 window.recalculateIdealLineup = recalculateIdealLineup;
 window.autoLoadCloudSession = autoLoadCloudSession;
+window.openStartupDialog = openStartupDialog;
+window.openNewSessionFromStartup = openNewSessionFromStartup;
+window.loadStartupCloudSession = loadStartupCloudSession;

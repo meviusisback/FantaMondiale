@@ -404,6 +404,44 @@
     </div>
   </dialog>
 
+  <!-- MODAL DIALOG FOR STARTUP ACTION CHOICE -->
+  <dialog id="startup-cloud-dialog" closedby="any" aria-labelledby="startupTitle" style="max-width: 500px; width: 95%;">
+    <div class="modal-header" style="border-bottom: none; padding-bottom: 0;">
+      <h3 id="startupTitle" style="font-size: 1.15rem; font-weight: 800; display: flex; align-items: center; gap: 0.5rem; background: linear-gradient(135deg, #a855f7 0%, #38bdf8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+        🔮 FantaMondiale d'Asta
+      </h3>
+    </div>
+    
+    <div style="margin-top: 0.5rem; text-align: center; padding: 0.5rem 0;">
+      <p style="font-size: 0.8rem; color: var(--color-text-muted); margin: 0 0 1.25rem 0; line-height: 1.4;">
+        Benvenuto su FantaMondiale! Scegli come iniziare la tua sessione d'asta. Puoi creare una nuova sessione sul Cloud Redis oppure caricarne una tra quelle già esistenti.
+      </p>
+
+      <!-- Action: Create New Session -->
+      <button class="btn btn-primary" style="width: 100%; padding: 0.65rem; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; gap: 0.35rem; background: linear-gradient(135deg, #a855f7 0%, #6366f1 100%); margin-bottom: 1.25rem;" onclick="openNewSessionFromStartup()">
+        ➕ Crea Nuova Sessione in Cloud
+      </button>
+
+      <!-- Section: Load Existing Cloud Sessions -->
+      <h4 style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--color-text-muted); text-align: left; margin: 1.25rem 0 0.5rem 0; border-bottom: 1px solid var(--border-light); padding-bottom: 0.25rem; letter-spacing: 0.05em;">
+        Carica Sessione in Cloud ☁️
+      </h4>
+      
+      <div id="startup-sessions-list" style="max-height: 180px; overflow-y: auto; text-align: left; border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; background: rgba(0,0,0,0.2); padding: 0.25rem;">
+        <div style="text-align: center; padding: 1.5rem; color: var(--color-text-muted); font-size: 0.75rem; font-style: italic;">
+          Caricamento elenco sessioni...
+        </div>
+      </div>
+
+      <!-- Action: Continue Locally -->
+      <div style="margin-top: 1.25rem; border-top: 1px solid var(--border-light); padding-top: 0.75rem;">
+        <button class="btn btn-secondary" style="width: 100%; padding: 0.5rem; font-size: 0.75rem;" onclick="document.getElementById('startup-cloud-dialog').close()">
+          🏠 Continua in Locale (Autosave offline)
+        </button>
+      </div>
+    </div>
+  </dialog>
+
   <!-- FLOATING TOAST NOTIFIER -->
   <div id="toast-notification" class="toast">
     <!-- Managed inside app.js -->
