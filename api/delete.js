@@ -43,7 +43,7 @@ export default async function handler(req, res) {
     updatedList = updatedList.filter(s => s.id !== id);
 
     // 2. Perform atomic delete of the specific session key and list update
-    const responseDel = await fetch(url, {
+    const responseDel = await fetch(`${url}/pipeline`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,

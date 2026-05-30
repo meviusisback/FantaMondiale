@@ -61,7 +61,7 @@ export default async function handler(req, res) {
     }
 
     // 3. Perform Pipeline atomic SETs for both state and updated catalog
-    const responsePipe = await fetch(url, {
+    const responsePipe = await fetch(`${url}/pipeline`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
