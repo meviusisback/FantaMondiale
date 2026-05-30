@@ -17,17 +17,25 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Dati incompleti: name, country e role sono obbligatori.' });
     }
 
-    const prompt = `Sei un esperto giornalista sportivo e analista calcistico internazionale. 
-Fornisci un'analisi dettagliata e accurata in lingua italiana per il calciatore: ${name} (Nazionale: ${country}, Ruolo: ${role}).
-Esegui una ricerca online tramite Google Search per ottenere le informazioni calcistiche reali più recenti ed aggiornate ad oggi (squadra attuale di club, presenze e gol nell'ultima stagione, probabilità stimate per la sua titolarità nei prossimi mondiali o competizioni internazionali).
+    const prompt = `Sei un esperto analista calcistico e fantallenatore specializzato nel torneo "FantaMondiale" (il fantacalcio basato sulla fase finale dei Mondiali di calcio).
+Fornisci un'analisi strategica dettagliata e accurata in lingua italiana per il calciatore: ${name} (Nazionale: ${country}, Ruolo: ${role}).
+Esegui una ricerca online in tempo reale tramite Google Search per ottenere le informazioni calcistiche reali più recenti ed aggiornate ad oggi (squadra di club attuale, ultimo stato di forma, infortuni o convocazioni recenti, presenze e gol in stagione).
+
+Regole FantaMondiale per formulare la tua risposta:
+1. Impatto in relazione alla Nazionale di appartenenza:
+   Nel FantaMondiale, un calciatore che gioca per una Nazionale favorita (es. Francia, Brasile, Argentina) ha un impatto fantacalcistico nettamente superiore rispetto a uno altrettanto bravo che gioca in una Nazionale con scarse probabilità di superare i gironi o avanzare nel torneo (es. Marocco, Canada). Questo perché chi va avanti nel tabellone gioca più partite e accumula più punteggi. Ad esempio: un portiere del Marocco, per quanto talentuoso, avrà un "impactScore" ridotto poiché la sua squadra giocherà verosimilmente meno partite rispetto a un portiere della Francia. Pesa fortemente le reali probabilità di avanzamento della sua Nazionale nei Mondiali.
+2. Stato di Forma e Probabilità di Giocare:
+   Considera l'ultimo stato di forma (prestazioni recenti con il club o con la nazionale nelle amichevoli/qualificazioni) e la probabilità effettiva che il giocatore parta da titolare o subentri con regolarità durante il Mondiale.
+3. Descrizione Strategica:
+   La descrizione deve essere fatta in relazione alle sue recenti performance storiche e alle aspettative/ruolo all'interno di questo specifico Mondiale, evidenziando se è il fulcro del gioco, un rigorista, o se rischia il posto in favore di altri titolari.
 
 Fornisci i dati strutturati RIGOROSAMENTE in formato JSON con le seguenti chiavi:
 - club: la squadra di club attuale in cui gioca (es. "Inter Miami", "Real Madrid")
-- appearances: le presenze e gol registrate nell'ultima stagione di club o nazionale (es. "34 presenze, 12 gol" o "42 presenze, 2 assist")
-- starterProbability: stima percentuale (es. "85%" o "40%") che giochi come titolare nel Mondiale / competizioni internazionali
-- impactScore: un valore numerico intero da 0 a 100 che indica l'impatto tecnico e fantacalcistico del giocatore (es. 92)
-- valueForMoney: valutazione sintetica del rapporto qualità/prezzo (scegli rigorosamente tra: "Ottimo", "Buono", "Rischioso", "Sopravvalutato")
-- description: una breve descrizione qualitativa del profilo del giocatore, i suoi punti di forza ed il suo ruolo tattico (circa 2-3 frasi).
+- appearances: le presenze e gol/assist registrati nell'ultima stagione di club e nazionale (es. "34 presenze, 12 gol")
+- starterProbability: stima percentuale (es. "85%" o "30%") che giochi effettivamente come titolare durante questo Mondiale.
+- impactScore: un valore numerico intero da 0 a 100 che indica l'impatto fantacalcistico totale atteso al FantaMondiale. Questo punteggio DEVE essere calcolato tenendo conto sia della forza individuale del giocatore sia del cammino previsto e della forza della sua Nazionale (country: ${country}). Nazionali favorite = punteggio potenziale molto più alto.
+- valueForMoney: valutazione sintetica del rapporto qualità/prezzo all'asta FantaMondiale (scegli rigorosamente tra: "Ottimo", "Buono", "Rischioso", "Sopravvalutato"). Ad esempio, un ottimo giocatore in una nazionale debole potrebbe essere "Sopravvalutato" o "Rischioso" perché uscirà presto.
+- description: descrizione del profilo del calciatore, valutando le performance recenti e le aspettative/performance al Mondiale in ottica FantaMondiale (2-3 frasi chiare).
 
 Rispondi esclusivamente con il codice JSON, senza alcun blocco di codice markdown o testo introduttivo.`;
 
