@@ -907,13 +907,19 @@ function renderActiveTeamConsole() {
         item.style.borderRadius = '6px';
         item.style.marginBottom = '0.25rem';
 
+        const escapedName = p.name.replace(/'/g, "\\'");
+        const escapedCountry = p.country.replace(/'/g, "\\'");
+
         item.innerHTML = `
           <div class="mini-player-name" style="font-size: 0.75rem; display: flex; align-items: center; gap: 0.35rem;">
             <span style="display:inline-block; width: 6px; height: 6px; border-radius:50%; background: var(--color-${p.role.toLowerCase()})"></span>
             <span style="color: #fff; font-weight: 500;">${p.name} <span style="color: var(--color-text-muted); font-size: 0.65rem;">(${p.country})</span></span>
           </div>
-          <div style="display: flex; align-items: center; gap: 0.5rem;">
-            <span class="mini-player-cost" style="font-weight: 700; color: var(--color-primary); font-size: 0.75rem;">${p.purchaseCost} cr</span>
+          <div style="display: flex; align-items: center; gap: 0.4rem;">
+            <span class="mini-player-cost" style="font-weight: 700; color: var(--color-primary); font-size: 0.75rem; margin-right: 0.15rem;">${p.purchaseCost} cr</span>
+            <button class="btn-ai-sparkle" style="width: 20px; height: 20px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; font-size: 0.65rem; padding: 0;" onclick="showPlayerAIAnalysis('${p.id}', '${escapedName}', '${escapedCountry}', '${p.role}', this); event.stopPropagation();" title="Analisi IA ✨">
+              ✨
+            </button>
             <button class="btn btn-danger" style="padding: 0.1rem 0.35rem; font-size: 0.65rem; border-radius: 4px; line-height: 1;" onclick="releasePlayer('${p.id}')">
               ✕
             </button>
