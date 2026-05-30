@@ -663,9 +663,12 @@ function resetSession() {
   });
   
   state.teams.forEach(t => {
-    t.budget = state.settings.budget;
+    t.budget = state.settings.budget || 500;
     t.players = [];
+    t.module = '4-3-3';
   });
+
+  state.teamIdealLineups = {};
 
   autoSave();
   renderAll();
@@ -904,9 +907,32 @@ async function openStartupDialog() {
   }
 }
 
+function resetSessionClean() {
+  state.players.forEach(p => {
+    p.ownerId = null;
+    p.purchaseCost = null;
+  });
+  
+  state.teams.forEach(t => {
+    t.budget = state.settings.budget || 500;
+    t.players = [];
+    t.module = '4-3-3';
+  });
+
+  state.teamIdealLineups = {};
+  state.activeCloudSessionId = null;
+  state.activeCloudSessionMetadata = null;
+  localStorage.removeItem('fantamondiale_last_cloud_session_id');
+}
+
 function openNewSessionFromStartup() {
   const startupDlg = document.getElementById('startup-cloud-dialog');
   if (startupDlg) startupDlg.close();
+
+  // Reset to a completely fresh auction session state
+  resetSessionClean();
+  renderAll();
+
   openCloudSaveModal();
 }
 
@@ -2888,3 +2914,4 @@ window.autoLoadCloudSession = autoLoadCloudSession;
 window.openStartupDialog = openStartupDialog;
 window.openNewSessionFromStartup = openNewSessionFromStartup;
 window.loadStartupCloudSession = loadStartupCloudSession;
+window.resetSessionClean = resetSessionClean;
