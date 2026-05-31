@@ -178,7 +178,7 @@ const dom = {
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', () => {
   initDOM();
-  loadAutoSave(); // Attempt to load previous state from localStorage
+  loadAutoSave(); // Local storage state loading is disabled as requested by user
   setupEventListeners();
 
   // Initialize admin state
@@ -711,7 +711,7 @@ function resetSession() {
   showToast('Asta resettata completamente.', 'warning');
 }
 
-// --- LOCAL STORAGE AUTOSAVE ---
+// --- CLOUD AUTOSAVE ENGINE ---
 
 let cloudSaveTimeout = null;
 
@@ -842,7 +842,7 @@ async function autoLoadCloudSession(id) {
     showToast(`Sessione cloud "${state.activeCloudSessionMetadata.title}" caricata automaticamente! ☁️`, 'success');
   } catch (error) {
     console.error('Failed to autoload cloud session:', error);
-    showToast('Impossibile caricare la sessione cloud. Utilizzo autosave locale.', 'warning');
+    showToast('Impossibile caricare la sessione cloud. Verrà avviata una sessione pulita.', 'warning');
   }
 }
 
@@ -951,7 +951,7 @@ function resetSessionClean() {
   localStorage.removeItem('fantamondiale_last_cloud_session_id');
   sessionStorage.clear();
 
-  // Commit this clean state immediately to local storage autosave
+  // Trigger autosave to sync this clean state to the cloud if active
   autoSave();
 }
 
@@ -2428,7 +2428,7 @@ async function loginAsAdmin() {
 
 function logoutCloudSession() {
   if (state.activeCloudSessionId) {
-    if (!confirm('Sei sicuro di voler uscire da questa sessione cloud? Lo stato corrente verrà preservato offline in locale.')) {
+    if (!confirm('Sei sicuro di voler uscire da questa sessione cloud? Eventuali modifiche non salvate in cloud o scaricate su file andranno perse.')) {
       return;
     }
   }
