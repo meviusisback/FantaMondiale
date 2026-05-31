@@ -71,7 +71,7 @@ Fornisci la risposta RIGOROSAMENTE in formato JSON con la seguente struttura esa
   "tacticalJustification": "Spiega chiaramente e in dettaglio quali scelte precise hai preso per produrre questa formazione, evidenziando lo stato di forma recente considerato, chi hai escluso o inserito a causa di squalifiche, infortuni o dubbi di titolarità, e perché questo modulo e questi titolari sono ottimali (massimo 120 parole)."
 }
 
-Rispondi esclusivamente con il codice JSON, senza alcun blocco di codice markdown o testo introduttivo.`;ivo.`;
+Rispondi esclusivamente con il codice JSON, senza alcun blocco di codice markdown o testo introduttivo.`;
 
     let text = '';
 
