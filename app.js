@@ -403,6 +403,11 @@ function setupEventListeners() {
     startupDlg.addEventListener('cancel', (e) => {
       e.preventDefault();
     });
+    startupDlg.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+      }
+    });
   }
 
   // Filters & Search
