@@ -95,6 +95,7 @@ let state = {
   },
   aiCache: {},
   teamIdealLineups: {},
+  isAdmin: false,
   activeCloudSessionMetadata: null
 };
 
@@ -120,6 +121,7 @@ const dom = {
   // Cloud Storage Controls
   btnCloudSave: null,
   btnCloudLoad: null,
+  btnCloudLogout: null,
 
   // Cloud Persistence Dialog Elements
   cloudSaveDialog: null,
@@ -178,6 +180,16 @@ document.addEventListener('DOMContentLoaded', () => {
   initDOM();
   loadAutoSave(); // Attempt to load previous state from localStorage
   setupEventListeners();
+
+  // Initialize admin state
+  if (localStorage.getItem('fantamondiale_is_admin') === 'true') {
+    state.isAdmin = true;
+    if (dom.btnManageCloudSessions) dom.btnManageCloudSessions.style.display = 'block';
+  } else {
+    state.isAdmin = false;
+    if (dom.btnManageCloudSessions) dom.btnManageCloudSessions.style.display = 'none';
+  }
+
   renderAll();
 
   // Open the startup onboarding cloud dialog modal
@@ -202,6 +214,7 @@ function initDOM() {
 
   dom.btnCloudSave = document.getElementById('btn-cloud-save');
   dom.btnCloudLoad = document.getElementById('btn-cloud-load');
+  dom.btnCloudLogout = document.getElementById('btn-cloud-logout');
 
   // Cloud Persistence Dialog Cache
   dom.cloudSaveDialog = document.getElementById('cloud-save-dialog');
@@ -314,6 +327,11 @@ function setupEventListeners() {
   if (dom.btnCloudSave) dom.btnCloudSave.addEventListener('click', (e) => {
     e.preventDefault();
     openCloudSaveModal();
+  });
+
+  if (dom.btnCloudLogout) dom.btnCloudLogout.addEventListener('click', (e) => {
+    e.preventDefault();
+    logoutCloudSession();
   });
   
   if (dom.btnCloudSaveConfirm) dom.btnCloudSaveConfirm.addEventListener('click', confirmCloudSave);
@@ -2421,7 +2439,11 @@ async function loginAsAdmin() {
     // Success!
     cloudPasswordFailedAttempts['admin_login'] = 0;
     state.cloudSessionPassword = password; // Set admin password in memory
+    state.isAdmin = true;
+    localStorage.setItem('fantamondiale_is_admin', 'true');
     localStorage.setItem('fantamondiale_last_cloud_session_password', password); // Persist password
+    if (dom.btnManageCloudSessions) dom.btnManageCloudSessions.style.display = 'block';
+
     showToast('Accesso Amministratore eseguito con successo! 👑 Gestisci tutte le sessioni.', 'success');
     
     // Open manage sessions modal directly so the admin can start editing/deleting!
@@ -2431,6 +2453,35 @@ async function loginAsAdmin() {
     showToast(error.message, 'danger');
     openStartupDialog();
   }
+}
+
+function logoutCloudSession() {
+  if (state.activeCloudSessionId) {
+    if (!confirm('Sei sicuro di voler uscire da questa sessione cloud? Lo stato corrente verrà preservato offline in locale.')) {
+      return;
+    }
+  }
+
+  // Clear memory credentials
+  state.activeCloudSessionId = null;
+  state.cloudSessionPassword = null;
+  state.activeCloudSessionMetadata = null;
+  
+  // Clear admin status as well on logout
+  state.isAdmin = false;
+  localStorage.removeItem('fantamondiale_is_admin');
+  if (dom.btnManageCloudSessions) dom.btnManageCloudSessions.style.display = 'none';
+
+  // Clear local storage cache
+  localStorage.removeItem('fantamondiale_last_cloud_session_id');
+  localStorage.removeItem('fantamondiale_last_cloud_session_password');
+
+  // Trigger DOM updates
+  renderAll();
+  showToast('Sessione cloud disconnessa con successo! 🔓', 'success');
+
+  // Reopen startup choices dialog onboarding modal
+  openStartupDialog();
 }
 
 // --- DYNAMIC AI SPEECH BUBBLE OVERLAY LOGIC ---
@@ -3162,3 +3213,4 @@ window.openNewSessionFromStartup = openNewSessionFromStartup;
 window.loadStartupCloudSession = loadStartupCloudSession;
 window.resetSessionClean = resetSessionClean;
 window.loginAsAdmin = loginAsAdmin;
+window.logoutCloudSession = logoutCloudSession;
