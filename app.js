@@ -397,6 +397,14 @@ function setupEventListeners() {
     dom.cloudSaveMode.addEventListener('change', handleSaveModeChange);
   }
 
+  // Prevent escape key dismissal on the onboarding dialog modal
+  const startupDlg = document.getElementById('startup-cloud-dialog');
+  if (startupDlg) {
+    startupDlg.addEventListener('cancel', (e) => {
+      e.preventDefault();
+    });
+  }
+
   // Filters & Search
   dom.searchInput.addEventListener('input', (e) => {
     state.filters.search = e.target.value.toLowerCase();
@@ -748,13 +756,7 @@ function autoSave() {
       }, 1000);
 
     } else {
-      // Normal local storage save
-      localStorage.setItem('fantamondiale_state', JSON.stringify({
-        settings: state.settings,
-        teams: state.teams,
-        players: state.players,
-        teamIdealLineups: state.teamIdealLineups || {}
-      }));
+      // Local storage offline save disabled as requested by user
     }
   } catch (e) {
     console.error('Failed to autosave', e);
@@ -762,43 +764,7 @@ function autoSave() {
 }
 
 function loadAutoSave() {
-  try {
-    const saved = localStorage.getItem('fantamondiale_state');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      state.settings = parsed.settings;
-      state.teams = parsed.teams;
-      state.teamIdealLineups = parsed.teamIdealLineups || {};
-      state.teams.forEach(t => {
-        if (!t.module) t.module = '4-3-3';
-      });
-      state.players = parsed.players;
-      
-      dom.configBudget.value = state.settings.budget;
-      dom.configSlotPOR.value = state.settings.slots.POR;
-      dom.configSlotDIF.value = state.settings.slots.DIF;
-      dom.configSlotCEN.value = state.settings.slots.CEN;
-      dom.configSlotATT.value = state.settings.slots.ATT;
-      dom.teamListInput.value = state.teams.map(t => t.name).join('\n');
-
-      // Restore AI settings
-      if (dom.configAIProvider) dom.configAIProvider.value = state.settings.aiProvider || 'openrouter';
-      if (dom.configOpenRouterModel) dom.configOpenRouterModel.value = state.settings.openRouterModel || 'openai/gpt-oss-120b:free';
-      const isOR = (state.settings.aiProvider || 'openrouter') === 'openrouter';
-      const divORModel = document.getElementById('div-openrouter-model');
-      if (divORModel) divORModel.style.display = isOR ? 'block' : 'none';
-      
-      if (state.teams.length > 0) {
-        state.activeTeamId = state.teams[0].id;
-      } else {
-        state.activeTeamId = null;
-      }
-      
-      showToast('Ripristinata ultima sessione dall\'autosave locale.', 'success');
-    }
-  } catch (e) {
-    console.error('Failed to load autosave', e);
-  }
+  // Local storage state loading disabled as requested by user
 }
 
 async function autoLoadCloudSession(id) {
