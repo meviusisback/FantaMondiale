@@ -23,6 +23,8 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Dati incompleti: name, country e role sono obbligatori.' });
     }
 
+    const ELIMINATED_COUNTRIES = await getEliminatedCountries(apiKey, provider, openRouterModel);
+
     const prompt = `Sei un esperto analista calcistico e fantallenatore specializzato nel torneo "FantaMondiale" (il fantacalcio basato sulla fase finale dei Mondiali di calcio).
 Fornisci un'analisi strategica dettagliata e accurata in lingua italiana per il calciatore: ${name} (Nazionale: ${country}, Ruolo: ${role}).
 Esegui una ricerca online in tempo reale tramite Google Search / Web Search per ottenere le informazioni calcistiche reali più recenti ed aggiornate ad oggi (squadra di club attuale, ultimo stato di forma, infortuni o convocazioni recenti, presenze e gol nella stagione 2025/2026).
@@ -39,11 +41,12 @@ Regole FantaMondiale per formulare la tua risposta:
 3. Descrizione Strategica:
    La descrizione deve essere fatta in relazione alle sue recenti performance storiche e alle aspettative/ruolo all'interno di questo specifico Mondiale, evidenziando se è il fulcro del gioco, un rigorista, o se rischia il posto in favore di altri titolari.
 4. **VERIFICA CONVOCAZIONE ED ELIMINAZIONE MONDIALE (MANDATORIA E CRUCIALE):**
-   Esegui una ricerca web mirata e verifica con assoluta certezza se la nazionale del calciatore (${country}) partecipa a questo Mondiale e se non è già stata eliminata dal torneo ad oggi. Se la sua nazionale NON partecipa o è GIÀ STATA ELIMINATA:
-   - Imposta la chiave `starterProbability` tassativamente a `"0%"`.
-   - Imposta la chiave `playerCategory` tassativamente a `"scarso"`.
-   - Imposta la chiave `valueForMoney` tassativamente a `"Sopravvalutato"`.
-   - Modifica la chiave `description` iniziando obbligatoriamente con la dicitura in maiuscolo: "ELIMINATO: [Spiegazione del fatto che la nazionale non partecipa o è stata eliminata]". Il resto della descrizione deve riflettere questa inutilizzabilità fantacalcistica.
+   Nazioni attualmente eliminate o assenti dal Mondiale ad oggi: ${ELIMINATED_COUNTRIES.join(', ')}.
+   Verifica se la nazionale del calciatore (${country}) partecipa o è stata eliminata dal torneo. Se la sua nazionale è inclusa nell'elenco di quelle eliminate o non partecipa:
+   - Imposta la chiave 'starterProbability' tassativamente a '0%'.
+   - Imposta la chiave 'playerCategory' tassativamente a 'scarso'.
+   - Imposta la chiave 'valueForMoney' tassativamente a 'Sopravvalutato'.
+   - Modifica la chiave 'description' iniziando obbligatoriamente con la dicitura in maiuscolo: "ELIMINATO: [Spiegazione del fatto che la nazionale non partecipa o è stata eliminata]". Il resto della descrizione deve riflettere questa inutilizzabilità fantacalcistica.
 
 Fornisci i dati strutturati RIGOROSAMENTE in formato JSON con le seguenti chiavi:
 - club: la squadra di club attuale in cui gioca (es. "Inter Miami", "Real Madrid")
@@ -155,7 +158,6 @@ Rispondi esclusivamente con il codice JSON, senza alcun blocco di codice markdow
     }
 
     // Programmatic override for eliminated/absent countries (automated daily AI check)
-    const ELIMINATED_COUNTRIES = await getEliminatedCountries(apiKey, provider, openRouterModel);
     if (ELIMINATED_COUNTRIES.includes(country)) {
       parsedData.starterProbability = "0%";
       parsedData.playerCategory = "scarso";

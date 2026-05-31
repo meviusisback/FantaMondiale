@@ -23,6 +23,8 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Dati incompleti: la lista dei calciatori è obbligatoria ed è richiesto un array.' });
     }
 
+    const ELIMINATED_COUNTRIES = await getEliminatedCountries(apiKey, provider, openRouterModel);
+
     // Format roster for the AI model
     const playersListText = players.map(p => 
       `- ID: ${p.id} | Ruolo: ${p.role} | Nome: ${p.name} | Nazionale: ${p.country} | Costo d'acquisto: ${p.purchaseCost || 0} cr`
@@ -45,7 +47,7 @@ REGOLE DI SELEZIONE E SCHIERAMENTO (MANDATORIE E STRICHE):
 4. I giocatori titolari schierati e quelli in panchina devono corrispondere ESATTAMENTE ai calciatori presenti nella rosa fornita. Non inventare o aggiungere nuovi calciatori.
 5. Fai ricerche web in tempo reale (Google Search / Web Search) per verificare le notizie reali di questa settimana relative a infortuni, squalifiche, titolarità o stato di forma recente per ciascuno di questi calciatori per escludere o inserire le persone giuste!
 6. **Mandatorio per lo schieramento:** La formazione DEVE basarsi rigorosamente sullo stato di forma recente. Devi escludere dai titolari i giocatori infortunati, squalificati o non dati come probabili titolari reali nelle ultime notizie. Preferisci sempre giocatori in salute e con altissima probabilità di essere titolari e portare bonus.
-7. **VERIFICA CONVOCAZIONE ED ELIMINAZIONE MONDIALE (MANDATORIA E CRUCIALE):** Devi obbligatoriamente eseguire ricerche web reali e mirate per ciascuna delle nazionali dei calciatori presenti in rosa (es. se hai Barella dell'Italia, cerca 'Italia qualificata qualificazioni convocati eliminata mondiale 2026' o 'Italia fuori dai mondiali 2026'). Verifica con assoluta certezza se la nazionale partecipa a questo Mondiale e non è già stata eliminata dal torneo ad oggi. Se la nazionale di un calciatore è assente o è GIÀ STATA ELIMINATA dal Mondiale:
+7. **VERIFICA CONVOCAZIONE ED ELIMINAZIONE MONDIALE (MANDATORIA E CRUCIALE):** Nazioni attualmente eliminate o assenti dal Mondiale ad oggi: ${ELIMINATED_COUNTRIES.join(', ')}. Verifica se la nazionale partecipa a questo Mondiale e non è già stata eliminata dal torneo ad oggi. Se la nazionale di un calciatore è assente o è GIÀ STATA ELIMINATA dal Mondiale:
    - È assolutamente vietato inserire il calciatore negli 11 titolari ('starters'), anche se si tratta di un top player assoluto (es. Barella).
    - Devi inserirlo obbligatoriamente in fondo all'elenco dei panchinari ('bench').
    - Nella chiave 'playersAnalysis' per quel calciatore, imposta 'starterProbability' tassativamente a '0%', 'playerCategory' tassativamente a 'scarso', e descrivi questo stato in 'formState' inserendo obbligatoriamente all'inizio: "ELIMINATO: [Spiegazione dettagliata dell'assenza o dell'eliminazione della nazionale dal Mondiale]". Non affidarti a conoscenze pregresse, esegui sempre ricerche web attive ad oggi per ogni singola nazionale rappresentata in rosa!
@@ -173,7 +175,6 @@ Rispondi esclusivamente con il codice JSON, senza alcun blocco di codice markdow
     }
 
     // Programmatic override for eliminated/absent countries (automated daily AI check)
-    const ELIMINATED_COUNTRIES = await getEliminatedCountries(apiKey, provider, openRouterModel);
     const eliminatedPlayerIds = players.filter(p => ELIMINATED_COUNTRIES.includes(p.country)).map(p => p.id);
     
     if (eliminatedPlayerIds.length > 0) {

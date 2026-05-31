@@ -96,7 +96,8 @@ let state = {
   aiCache: {},
   teamIdealLineups: {},
   isAdmin: false,
-  activeCloudSessionMetadata: null
+  activeCloudSessionMetadata: null,
+  eliminatedCountries: ['Italia', 'Egitto', 'Nigeria']
 };
 
 // --- DOM ELEMENTS CACHE & SELECTORS ---
@@ -189,6 +190,17 @@ document.addEventListener('DOMContentLoaded', () => {
     state.isAdmin = false;
     if (dom.btnManageCloudSessions) dom.btnManageCloudSessions.style.display = 'none';
   }
+
+  // Initialize dynamic eliminated countries list from server JSON
+  fetch('/api/eliminated-countries.json')
+    .then(res => res.json())
+    .then(data => {
+      if (data && Array.isArray(data.eliminatedCountries)) {
+        state.eliminatedCountries = data.eliminatedCountries;
+        renderAll();
+      }
+    })
+    .catch(err => console.log('Could not fetch eliminated countries, using defaults.'));
 
   renderAll();
 
@@ -1189,7 +1201,10 @@ function renderActiveTeamConsole() {
         item.innerHTML = `
           <div class="mini-player-name" style="font-size: 0.75rem; display: flex; align-items: center; gap: 0.35rem;">
             <span style="display:inline-block; width: 6px; height: 6px; border-radius:50%; background: var(--color-${p.role.toLowerCase()})"></span>
-            <span style="color: #fff; font-weight: 500;">${p.name} <span style="color: var(--color-text-muted); font-size: 0.65rem;">(${p.country})</span></span>
+            <span style="color: #fff; font-weight: 500;">
+              ${p.name} <span style="color: var(--color-text-muted); font-size: 0.65rem;">(${p.country})</span>
+              ${state.eliminatedCountries.includes(p.country) ? ' <span style="font-size: 0.6rem; color: var(--color-danger); font-weight: 700;">[ELIMINATO]</span>' : ''}
+            </span>
           </div>
           <div style="display: flex; align-items: center; gap: 0.4rem;">
             <span class="mini-player-cost" style="font-weight: 700; color: var(--color-primary); font-size: 0.75rem; margin-right: 0.15rem;">${p.purchaseCost} cr</span>
@@ -1305,6 +1320,7 @@ function renderPlayerList() {
     tr.innerHTML = `
       <td style="font-weight: 700; white-space: nowrap;">
         ${p.name}
+        ${state.eliminatedCountries.includes(p.country) ? ' <span class="badge badge-danger" style="font-size: 0.6rem; padding: 0.15rem 0.35rem; background: var(--color-danger); color: #fff;">❌ ELIMINATO</span>' : ''}
         <button class="btn-ai-sparkle" onclick="showPlayerAIAnalysis('${p.id}', '${escapedName}', '${escapedCountry}', '${p.role}', this); event.stopPropagation();" title="Analisi IA ✨">✨</button>
       </td>
       <td><span class="badge badge-${p.role.toLowerCase()}">${p.role}</span></td>
@@ -1356,8 +1372,8 @@ function renderTeamDashboard() {
         rosterHtml += `
           <div class="mini-player-item">
             <span class="mini-player-name">
-              <span style="display:inline-block; width: 6px; height: 6px; border-radius:50%; background: var(--color-${p.role.toLowerCase()}); margin-right: 0.35rem;"></span>
               ${p.name} <span style="color: var(--color-text-muted); font-size: 0.7rem;">(${p.country})</span>
+              ${state.eliminatedCountries.includes(p.country) ? ' <span style="font-size: 0.6rem; color: var(--color-danger); font-weight: 700;">[ELIMINATO]</span>' : ''}
             </span>
             <span class="mini-player-cost" style="font-weight: 700; color: #fff;">${p.purchaseCost} cr</span>
           </div>
@@ -1718,10 +1734,10 @@ function renderPitch() {
         node.setAttribute('data-tooltip', `${player.name} (${player.purchaseCost} cr)`);
 
         node.innerHTML = `
-          <div class="pitch-player-shirt" style="background: var(--color-${player.role.toLowerCase()})">
+          <div class="pitch-player-shirt" style="background: var(--color-${player.role.toLowerCase()}); ${state.eliminatedCountries.includes(player.country) ? 'opacity: 0.55; border: 2px dashed var(--color-danger);' : ''}">
             ${player.purchaseCost}
           </div>
-          <div class="pitch-player-name">${player.name.split(' ').pop()}</div>
+          <div class="pitch-player-name" style="${state.eliminatedCountries.includes(player.country) ? 'color: var(--color-danger); text-decoration: line-through;' : ''}">${player.name.split(' ').pop()}</div>
         `;
 
         // Wire drag and drop events
@@ -1767,7 +1783,8 @@ function renderPitch() {
       el.setAttribute('data-player-id', p.id);
       el.innerHTML = `
         <span class="dot" style="background: var(--color-${p.role.toLowerCase()})"></span>
-        <span>${p.name} (${p.role}) - <strong>${p.purchaseCost} cr</strong></span>
+        <span style="${state.eliminatedCountries.includes(p.country) ? 'text-decoration: line-through; color: var(--color-text-muted);' : ''}">${p.name} (${p.role}) - <strong>${p.purchaseCost} cr</strong></span>
+        ${state.eliminatedCountries.includes(p.country) ? ' <span style="font-size: 0.55rem; color: var(--color-danger); font-weight: 700; border: 1px solid var(--color-danger); padding: 0.05rem 0.2rem; border-radius: 4px; line-height: 1;">ELIMINATO</span>' : ''}
       `;
 
       el.addEventListener('dragstart', handleDragStart);
