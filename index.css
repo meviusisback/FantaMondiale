@@ -265,15 +265,110 @@ header {
    RESPONSIVE & MOBILE FRIENDLY ADAPTATIONS
    ========================================== */
 
+/* --- Mobile Section Toggle & Collapsible ---
+   On desktop these are invisible; content is always expanded.
+   On mobile (<=1024px) these become interactive accordions. */
+
+.mobile-section-toggle {
+  display: none; /* Hidden on desktop */
+}
+
+/* Desktop: collapsible wrappers always visible */
+.mobile-collapsible {
+  display: block;
+}
+
 @media (max-width: 1024px) {
   .dashboard-grid {
     grid-template-columns: 1fr;
   }
   main.tab-container {
-    order: 2; /* Render player database & filters below players list */
+    order: 2;
   }
   aside.panel {
-    order: 1; /* Render team roster cockpit on top */
+    order: 1;
+  }
+
+  /* --- Toggle Button Styling --- */
+  .mobile-section-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0.7rem 0.85rem;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, rgba(168, 85, 247, 0.08) 0%, rgba(99, 102, 241, 0.08) 100%);
+    border: 1px solid rgba(168, 85, 247, 0.2);
+    border-radius: var(--radius-md);
+    color: var(--color-text);
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .mobile-section-toggle:active {
+    transform: scale(0.985);
+  }
+
+  .mobile-section-toggle:hover {
+    background: linear-gradient(135deg, rgba(168, 85, 247, 0.14) 0%, rgba(99, 102, 241, 0.14) 100%);
+    border-color: rgba(168, 85, 247, 0.35);
+  }
+
+  .mobile-section-toggle .toggle-chevron {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    color: var(--color-primary);
+    flex-shrink: 0;
+  }
+
+  .mobile-section-toggle.open .toggle-chevron {
+    transform: rotate(180deg);
+  }
+
+  .mobile-section-toggle.open {
+    background: linear-gradient(135deg, rgba(168, 85, 247, 0.15) 0%, rgba(99, 102, 241, 0.15) 100%);
+    border-color: rgba(168, 85, 247, 0.4);
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    margin-bottom: 0;
+  }
+
+  /* --- Collapsible Content Wrapper --- */
+  .mobile-collapsible {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+  }
+
+  .mobile-collapsible > * {
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  .mobile-collapsible.open {
+    grid-template-rows: 1fr;
+  }
+
+  .mobile-collapsible.open > * {
+    overflow: visible;
+  }
+
+  /* Remove nested scroll containers on mobile */
+  .mobile-collapsible .console-roster-container {
+    max-height: none;
+    overflow-y: visible;
+    border-top: none;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+  }
+
+  .mobile-collapsible .player-table-container {
+    max-height: none;
+    overflow-y: visible;
+    overflow-x: visible;
   }
 }
 

@@ -135,9 +135,14 @@
 
         <!-- Mini roster of the active team -->
         <div class="form-group" style="margin-bottom: 0;">
-          <label id="console-roster-title" style="margin-bottom: 0.4rem;">Rosa Attuale (0 giocatori)</label>
-          <div id="console-team-roster" class="console-roster-container">
-            <!-- Roster lists populated dynamically -->
+          <button id="toggle-roster-mobile" class="mobile-section-toggle" onclick="this.classList.toggle('open'); document.getElementById('roster-collapsible-wrapper').classList.toggle('open');">
+            <span id="console-roster-title">Rosa Attuale (0 giocatori)</span>
+            <svg class="toggle-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </button>
+          <div id="roster-collapsible-wrapper" class="mobile-collapsible">
+            <div id="console-team-roster" class="console-roster-container">
+              <!-- Roster lists populated dynamically -->
+            </div>
           </div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.75rem;">
             <button id="btn-team-ai-analysis" class="btn btn-team-ai-sparkle" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.35rem; padding: 0.55rem 0.4rem; font-size: 0.75rem;">
@@ -200,22 +205,28 @@
             </div>
 
             <!-- Players Table -->
-            <div class="player-table-container">
-              <table class="player-table">
-                <thead>
-                  <tr>
-                    <th>Nome Calciatore</th>
-                    <th style="width: 80px;">Ruolo</th>
-                    <th>Nazionale</th>
-                    <th style="width: 100px; text-align: center;">Quotazione</th>
-                    <th style="width: 110px; text-align: center;">Costo (cr)</th>
-                    <th style="text-align: right; width: 230px;">Azione</th>
-                  </tr>
-                </thead>
-                <tbody id="players-table-body">
-                  <!-- Rows populated in app.js -->
-                </tbody>
-              </table>
+            <button id="toggle-players-mobile" class="mobile-section-toggle" onclick="this.classList.toggle('open'); document.getElementById('players-collapsible-wrapper').classList.toggle('open');">
+              <span>Lista Calciatori</span>
+              <svg class="toggle-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div id="players-collapsible-wrapper" class="mobile-collapsible">
+              <div class="player-table-container">
+                <table class="player-table">
+                  <thead>
+                    <tr>
+                      <th>Nome Calciatore</th>
+                      <th style="width: 80px;">Ruolo</th>
+                      <th>Nazionale</th>
+                      <th style="width: 100px; text-align: center;">Quotazione</th>
+                      <th style="width: 110px; text-align: center;">Costo (cr)</th>
+                      <th style="text-align: right; width: 230px;">Azione</th>
+                    </tr>
+                  </thead>
+                  <tbody id="players-table-body">
+                    <!-- Rows populated in app.js -->
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </section>
