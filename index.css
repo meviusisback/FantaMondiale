@@ -1352,7 +1352,6 @@ body.ai-modal-open {
   box-shadow: var(--shadow-dark), 0 10px 30px rgba(0, 0, 0, 0.7);
   z-index: 999999 !important; /* Bring to absolute front over all dialogues and panels */
   padding: 0.5rem 0;
-  overflow: hidden;
   opacity: 0;
   transition: opacity 0.15s ease;
   pointer-events: none;
@@ -1467,12 +1466,16 @@ body.ai-modal-open {
   background: rgba(255, 255, 255, 0.01);
 }
 
-/* Unified Actions Dropdown block item styles */
 .dropdown-item-action-wrapper {
   display: block !important;
   width: 100% !important;
   position: relative !important;
-  overflow: hidden !important;
+}
+
+.dropdown-item-action-wrapper:hover,
+.dropdown-item-action-link:hover {
+  position: relative !important;
+  z-index: 99999999 !important;
 }
 
 .dropdown-item-action-link {

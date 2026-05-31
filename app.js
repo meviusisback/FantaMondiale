@@ -1148,11 +1148,11 @@ function updateAISettingsEditability() {
   if (dom.btnAdminLoginToggle) {
     if (state.isAdmin) {
       dom.btnAdminLoginToggle.innerHTML = 'Disconnetti Admin 🔒';
-      dom.btnAdminLoginToggle.style.color = 'var(--color-warning)';
+      dom.btnAdminLoginToggle.style.color = '#fff';
       dom.btnAdminLoginToggle.setAttribute('data-tooltip', 'Esci dalla sessione amministratore');
     } else {
       dom.btnAdminLoginToggle.innerHTML = 'Accedi come Admin 🔑';
-      dom.btnAdminLoginToggle.style.color = 'var(--color-primary)';
+      dom.btnAdminLoginToggle.style.color = '#fff';
       dom.btnAdminLoginToggle.setAttribute('data-tooltip', 'Accedi come amministratore per sbloccare le impostazioni AI');
     }
   }
