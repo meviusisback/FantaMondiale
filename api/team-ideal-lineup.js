@@ -26,13 +26,9 @@ export default async function handler(req, res) {
       `- ID: ${p.id} | Ruolo: ${p.role} | Nome: ${p.name} | Nazionale: ${p.country} | Costo d'acquisto: ${p.purchaseCost || 0} cr`
     ).join('\n');
 
-    const prompt = `Sei un esperto analista calcistico e fantallenatore specializzato nel torneo "FantaMondiale" (il fantacalcio basato sulla fase finale dei Mondiali di calcio).
-Il tuo compito è analizzare la rosa completa dei calciatori a disposizione della squadra "${teamName || 'Mia Squadra'}" e schierare la FORMAZIONE IDEALE da bonus per massimizzare i punteggi basandoti sulle ultime notizie reali (infortuni, convocazioni, stato di forma attuale) e sulle regole del FantaMondiale.
+    const prompt = `Sei un esperto analista calcistico e fantallenatore specializzato nel torneo "FantaMondiale" (il fantacalcio basato sulla fase finale dei Mondiali di calcio)Il tuo compito è analizzare la rosa completa dei calciatori a disposizione della squadra "${teamName || 'Mia Squadra'}" e schierare la FORMAZIONE IDEALE da bonus per massimizzare i punteggi.
 
-Ecco la rosa completa dei calciatori della squadra suddivisi per ruolo, ciascuno con il suo ID unico, ruolo, nome, nazione di appartenenza e costo d'acquisto:
-${playersListText}
-
-REGOLE DI SELEZIONE E SCHIERAMENTO (MANDATORIE):
+REGOLE DI SELEZIONE E SCHIERAMENTO (MANDATORIE E STRICHE):
 1. Devi scegliere la migliore formazione possibile (esattamente 11 Titolari) ed i restanti giocatori andranno in panchina.
 2. Scegli il modulo tattico migliore (tra: "4-3-3", "4-4-2", "3-5-2", "3-4-3", "5-3-2") che valorizzi al massimo i tuoi migliori giocatori da bonus.
 3. Rispetta rigorosamente i ruoli del FantaMondiale per i titolari in base al modulo scelto:
@@ -43,10 +39,11 @@ REGOLE DI SELEZIONE E SCHIERAMENTO (MANDATORIE):
    - "5-3-2": 1 POR, 5 DIF, 3 CEN, 2 ATT
 4. I giocatori titolari schierati e quelli in panchina devono corrispondere ESATTAMENTE ai calciatori presenti nella rosa fornita. Non inventare o aggiungere nuovi calciatori.
 5. Fai ricerche web in tempo reale (Google Search / Web Search) per verificare le notizie reali di questa settimana relative a infortuni, squalifiche, titolarità o stato di forma recente per ciascuno di questi calciatori per escludere o inserire le persone giuste!
+6. **Mandatorio per lo schieramento:** La formazione DEVE basarsi rigorosamente sullo stato di forma recente. Devi escludere dai titolari i giocatori infortunati, squalificati o non dati come probabili titolari reali nelle ultime notizie. Preferisci sempre giocatori in salute e con altissima probabilità di essere titolari e portare bonus.
 
 REGOLE DI VALUTAZIONE E CATEGORIA (CRUCIALE):
 Assegna a ciascun calciatore della rosa una valutazione 'playerCategory' rigorosamente tra questi 5 valori in base alle sue ultime performance reali e prospettive nel Mondiale:
-- "scarso": gioca poco o niente, pochi bonus, nazionale debole.
+- "scarso": gioca poco o niente, pochi bonus, nazionale debole o attualmente infortunato/squalificato di lungo corso.
 - "accettabile": titolare in nazionale debole, pochi bonus.
 - "buono": titolare in nazionale forte, qualche bonus, pochi malus.
 - "ottimo": titolare fisso con ottimi bonus (gol/assist) e pochi malus.
@@ -71,10 +68,10 @@ Fornisci la risposta RIGOROSAMENTE in formato JSON con la seguente struttura esa
       ...
     }
   },
-  "tacticalJustification": "Una breve e impattante spiegazione tattica (massimo 120 parole) in lingua italiana del perché hai scelto questo modulo e questi giocatori specifici in base alle ultime notizie reali (infortuni, convocazioni) per massimizzare i bonus."
+  "tacticalJustification": "Spiega chiaramente e in dettaglio quali scelte precise hai preso per produrre questa formazione, evidenziando lo stato di forma recente considerato, chi hai escluso o inserito a causa di squalifiche, infortuni o dubbi di titolarità, e perché questo modulo e questi titolari sono ottimali (massimo 120 parole)."
 }
 
-Rispondi esclusivamente con il codice JSON, senza alcun blocco di codice markdown o testo introduttivo.`;
+Rispondi esclusivamente con il codice JSON, senza alcun blocco di codice markdown o testo introduttivo.`;ivo.`;
 
     let text = '';
 

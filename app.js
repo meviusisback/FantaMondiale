@@ -1450,17 +1450,27 @@ function handleDrop(e) {
 
   if (!p1 || !p2) return;
 
-  // Validation: Roles must match perfectly
-  if (p1.role !== p2.role) {
+  // Determine starter status in ideal mode
+  let isP1Starter = false;
+  let isP2Starter = false;
+  let ideal = null;
+  let isIdealMode = state.pitchShowIdeal && state.teamIdealLineups?.[team.id];
+  
+  if (isIdealMode) {
+    ideal = state.teamIdealLineups[team.id];
+    isP1Starter = ideal.starters.includes(p1.id);
+    isP2Starter = ideal.starters.includes(p2.id);
+  }
+
+  // Validation: Roles must match perfectly unless swapping two bench players in ideal mode
+  const isBenchSwap = isIdealMode && !isP1Starter && !isP2Starter;
+  if (!isBenchSwap && p1.role !== p2.role) {
     showToast(`Errore: puoi scambiare solo calciatori dello stesso ruolo (${p1.role}) per rispettare il modulo!`, 'danger');
     return;
   }
 
   // If in ideal lineup mode and team has a generated ideal lineup, swap them there
-  if (state.pitchShowIdeal && state.teamIdealLineups?.[team.id]) {
-    const ideal = state.teamIdealLineups[team.id];
-    const isP1Starter = ideal.starters.includes(p1.id);
-    const isP2Starter = ideal.starters.includes(p2.id);
+  if (isIdealMode) {
 
     if (isP1Starter !== isP2Starter) {
       // Swap positions in starters and bench arrays
@@ -1661,7 +1671,12 @@ function renderPitch() {
     attBench = attPlayers.slice(attNeeded);
   }
 
-  const benchList = [...porBench, ...difBench, ...cenBench, ...attBench];
+  let benchList;
+  if (state.pitchShowIdeal && idealLineup) {
+    benchList = idealLineup.bench.map(id => team.players.find(p => p.id === id)).filter(Boolean);
+  } else {
+    benchList = [...porBench, ...difBench, ...cenBench, ...attBench];
+  }
 
   // Draw Football field lines vertically
   pitchContainer.innerHTML = `
@@ -1828,6 +1843,11 @@ function showTeamPitch(teamId, showIdeal = false) {
 
   renderPitch();
   document.getElementById('pitch-dialog').showModal();
+
+  // If showing Ideal for the first time and we have players, automatically trigger recalculate
+  if (showIdeal && (!state.teamIdealLineups || !state.teamIdealLineups[team.id]) && team.players.length > 0) {
+    recalculateIdealLineup(team);
+  }
 }
 
 function handlePitchModuleChange(e) {
@@ -3030,7 +3050,12 @@ function copyLineupToClipboard(team, isIdeal) {
     attBench = attPlayers.slice(attNeeded);
   }
 
-  const benchList = [...porBench, ...difBench, ...cenBench, ...attBench];
+  let benchList;
+  if (isIdeal && idealLineup) {
+    benchList = idealLineup.bench.map(id => team.players.find(p => p.id === id)).filter(Boolean);
+  } else {
+    benchList = [...porBench, ...difBench, ...cenBench, ...attBench];
+  }
 
   // Build the text to copy
   let textToCopy = `🔮 FANTAMONDIALE: Formazione per "${team.name}" (Modulo: ${module})\n\n`;
@@ -3047,11 +3072,7 @@ function copyLineupToClipboard(team, isIdeal) {
     textToCopy += `Nessuno in panchina\n`;
   }
 
-  if (isIdeal && idealLineup && idealLineup.tacticalJustification) {
-    textToCopy += `\n🔮 ANALISI TATTICA IA:\n"${idealLineup.tacticalJustification}"\n`;
-  }
-
-  textToCopy += `\nGenerato automaticamente dall'Analisi Tattica IA di FantaMondiale 🔮✨`;
+  textToCopy += `\nGenerato automaticamente dalle Scelte e Criteri Formazione IA di FantaMondiale 🔮✨`;
 
   navigator.clipboard.writeText(textToCopy)
     .then(() => {

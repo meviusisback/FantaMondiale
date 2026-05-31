@@ -1573,6 +1573,26 @@ body.ai-modal-open {
   overflow: hidden !important;
 }
 
+/* Glassmorphic blurred backdrop overlay behind the AI modal box */
+body.ai-modal-open::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(10, 15, 30, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 9999999; /* Positioned directly under the popover (which has 10000000) */
+  animation: aiBackdropFadeIn 0.25s ease-out;
+}
+
+@keyframes aiBackdropFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 @keyframes aiPopoverFadeIn {
   from {
     opacity: 0;
