@@ -2139,20 +2139,22 @@ function renderCloudLoadCatalogTable(sessions) {
   dom.cloudLoadListContainer.innerHTML = tableHtml;
 }
 
-function promptCloudPassword(id) {
+function promptCloudPassword(id, skipCache = false) {
   return new Promise((resolve) => {
-    // If the requested id is the active one and we already have the password in memory, use it!
-    if (state.activeCloudSessionId === id && state.cloudSessionPassword) {
-      resolve(state.cloudSessionPassword);
-      return;
-    }
-    
-    // Also check if there's a cached password in local storage for this session ID
-    const lastCachedId = localStorage.getItem('fantamondiale_last_cloud_session_id');
-    const lastCachedPwd = localStorage.getItem('fantamondiale_last_cloud_session_password');
-    if (lastCachedId === id && lastCachedPwd) {
-      resolve(lastCachedPwd);
-      return;
+    if (!skipCache) {
+      // If the requested id is the active one and we already have the password in memory, use it!
+      if (state.activeCloudSessionId === id && state.cloudSessionPassword) {
+        resolve(state.cloudSessionPassword);
+        return;
+      }
+      
+      // Also check if there's a cached password in local storage for this session ID
+      const lastCachedId = localStorage.getItem('fantamondiale_last_cloud_session_id');
+      const lastCachedPwd = localStorage.getItem('fantamondiale_last_cloud_session_password');
+      if (lastCachedId === id && lastCachedPwd) {
+        resolve(lastCachedPwd);
+        return;
+      }
     }
 
     const dlg = document.getElementById('cloud-password-prompt-dialog');
@@ -2328,7 +2330,7 @@ async function deleteSpecificCloudSession(id) {
     return;
   }
 
-  const password = await promptCloudPassword(id);
+  const password = await promptCloudPassword(id, true);
   if (password === null) {
     return;
   }
