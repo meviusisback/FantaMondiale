@@ -336,6 +336,14 @@ function setupEventListeners() {
   
   if (dom.btnCloudSaveConfirm) dom.btnCloudSaveConfirm.addEventListener('click', confirmCloudSave);
   
+  if (dom.cloudSaveDialog) {
+    dom.cloudSaveDialog.addEventListener('close', () => {
+      if (!state.activeCloudSessionId) {
+        openStartupDialog();
+      }
+    });
+  }
+  
   // Toggle Actions Dropdown on Click/Tap (for mobile support and persistent click triggers)
   if (dom.btnActionsMenu) {
     dom.btnActionsMenu.addEventListener('click', (e) => {
@@ -2198,11 +2206,17 @@ async function loadSpecificCloudSession(id, skipConfirm = false) {
   const attempts = cloudPasswordFailedAttempts[id] || 0;
   if (attempts >= 4) {
     showToast('Hai superato il limite di 4 tentativi per questa sessione. Accesso bloccato! 🔒', 'danger');
+    if (!state.activeCloudSessionId) {
+      openStartupDialog();
+    }
     return;
   }
 
   const password = await promptCloudPassword(id, true);
   if (password === null) {
+    if (!state.activeCloudSessionId) {
+      openStartupDialog();
+    }
     return;
   }
 
@@ -2219,6 +2233,9 @@ async function loadSpecificCloudSession(id, skipConfirm = false) {
         localStorage.removeItem('fantamondiale_last_cloud_session_password');
         if (state.activeCloudSessionId === id) {
           state.cloudSessionPassword = null;
+        }
+        if (!state.activeCloudSessionId) {
+          openStartupDialog();
         }
         return;
       }
@@ -2301,6 +2318,9 @@ async function loadSpecificCloudSession(id, skipConfirm = false) {
   } catch (error) {
     console.error(error);
     showToast(error.message, 'danger');
+    if (!state.activeCloudSessionId) {
+      openStartupDialog();
+    }
   }
 }
 
