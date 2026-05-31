@@ -586,45 +586,9 @@ header {
   .dropdown-wrapper.open .dropdown-menu {
     transform: translateX(-50%) translateY(0) !important;
   }
-
-  /* Center Player & Team AI Popovers as premium fixed modal on mobile */
-  .ai-bubble-popover {
-    position: fixed !important;
-    top: 50% !important;
-    left: 50% !important;
-    transform: translate(-50%, -50%) scale(1) !important;
-    width: calc(100vw - 24px) !important;
-    max-width: 340px !important;
-    margin: 0 !important;
-    box-shadow: var(--shadow-dark), 0 0 35px rgba(168, 85, 247, 0.25) !important;
-    animation: mobileAiFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
-  }
-  
-  .ai-bubble-popover::after {
-    display: none !important; /* Hide indicator arrow */
-  }
-
-  @keyframes mobileAiFadeIn {
-    from {
-      opacity: 0;
-      transform: translate(-50%, -46%) scale(0.96);
-    }
-    to {
-      opacity: 1;
-      transform: translate(-50%, -50%) scale(1);
-    }
-  }
 }
 
-@media (max-width: 480px) {
-  .ai-bubble-popover {
-    width: calc(100vw - 20px) !important;
-    max-width: 320px;
-  }
-  .ai-bubble-popover::after {
-    left: var(--arrow-left, 24px) !important;
-  }
-}
+/* AI Popover System */
 
 /* Card / Glassmorphism Panel */
 .panel {
@@ -1283,9 +1247,11 @@ dialog::backdrop {
   backdrop-filter: blur(8px);
 }
 
-/* Prevent background scrolling when onboarding dialog is open */
-body:has(#startup-cloud-dialog[open]) {
-  overflow: hidden;
+/* Prevent background scrolling when onboarding dialog or any modal is open */
+body:has(#startup-cloud-dialog[open]),
+body:has(dialog[open]),
+body.ai-modal-open {
+  overflow: hidden !important;
 }
 
 .modal-header {
@@ -1575,62 +1541,50 @@ body:has(#startup-cloud-dialog[open]) {
   transform: scale(0.95);
 }
 
-/* Glassmorphism Speech Bubble Popover */
+/* Always Centered glassmorphism modal popup for Player & Team AI details */
 .ai-bubble-popover {
-  position: absolute;
-  width: 320px;
-  max-width: calc(100vw - 20px);
-  box-sizing: border-box;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%;
+  max-width: 400px;
+  max-height: 95vh;
+  height: auto;
+  overflow-y: auto;
   overflow-x: hidden;
-  background: rgba(15, 23, 42, 0.96);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-sizing: border-box;
+  background: rgba(15, 23, 42, 0.98);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
-  padding: 1rem;
-  box-shadow: var(--shadow-dark), 0 0 25px rgba(168, 85, 247, 0.12);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-dark), 0 0 35px rgba(168, 85, 247, 0.25);
   z-index: 10000000 !important;
   color: var(--color-text);
   font-family: inherit;
   pointer-events: auto;
-  transform-origin: top left;
-  animation: aiPopoverFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: aiPopoverFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Prevent page body scrolling when AI modal popup is active */
+body.ai-modal-open {
+  overflow: hidden !important;
 }
 
 @keyframes aiPopoverFadeIn {
   from {
     opacity: 0;
-    transform: scale(0.95) translateY(4px);
+    transform: translate(-50%, -46%) scale(0.96);
   }
   to {
     opacity: 1;
-    transform: scale(1) translateY(0);
+    transform: translate(-50%, -50%) scale(1);
   }
 }
 
-/* Triangle Pointer / Arrow pointing to trigger button */
-.ai-bubble-popover::after {
-  content: '';
-  position: absolute;
-  border-width: 8px;
-  border-style: solid;
-  border-color: transparent;
-  pointer-events: none;
-}
-
-/* When popover is displayed below the button */
-.ai-bubble-popover.ai-bubble-below::after {
-  bottom: 100%;
-  left: var(--arrow-left, 24px);
-  border-bottom-color: rgba(15, 23, 42, 0.96);
-}
-
-/* When popover is displayed above the button */
-.ai-bubble-popover.ai-bubble-above::after {
-  top: 100%;
-  left: var(--arrow-left, 24px);
-  border-top-color: rgba(15, 23, 42, 0.96);
-}
+/* Arrows are disabled as the popover functions as a true centered modal dialog */
 
 /* Popover Content Structure */
 .ai-popover-header {

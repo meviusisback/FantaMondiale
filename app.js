@@ -2497,15 +2497,8 @@ async function showPlayerAIAnalysis(playerId, name, country, role, buttonEl, for
   // Append to body immediately to calculate dimensions, but keep invisible or positioned offscreen
   document.body.appendChild(popover);
 
-  // If buttonEl is missing (e.g. from dynamic refresh callback), find it in the DOM
-  if (!buttonEl) {
-    buttonEl = document.querySelector(`.btn-ai-sparkle[onclick*="${playerId}"]`);
-  }
-
-  // 4. Position Popover relative to buttonEl
-  if (buttonEl) {
-    positionPopover(popover, buttonEl);
-  }
+  // Add modal-open class to lock background scrolling
+  document.body.classList.add('ai-modal-open');
 
   // 5. Render Loading State (Skeleton Loader)
   renderPopoverLoading(popover, name);
@@ -2573,6 +2566,7 @@ function closeAIPopover() {
   if (activeAIPopover) {
     activeAIPopover.remove();
     activeAIPopover = null;
+    document.body.classList.remove('ai-modal-open');
   }
 }
 
@@ -2728,11 +2722,6 @@ function renderPopoverData(popover, name, country, role, data, buttonEl) {
       showPlayerAIAnalysis(popover.dataset.playerId, name, country, role, buttonEl, true);
     });
   }
-
-  // Re-adjust height dynamically in case text is longer
-  if (buttonEl) {
-    positionPopover(popover, buttonEl);
-  }
 }
 
 function renderPopoverFallback(popover, errorMsg) {
@@ -2804,10 +2793,8 @@ async function showTeamAIAnalysis(buttonEl, forceRefresh = false) {
   // Append to body immediately to calculate dimensions
   document.body.appendChild(popover);
 
-  // 4. Position Popover relative to buttonEl
-  if (buttonEl) {
-    positionPopover(popover, buttonEl);
-  }
+  // Add modal-open class to lock background scrolling
+  document.body.classList.add('ai-modal-open');
 
   // 5. Render Loading State (Skeleton Loader)
   popover.innerHTML = `
@@ -2914,11 +2901,6 @@ function renderTeamAnalysisPopoverData(popover, team, analysisText, buttonEl) {
       e.stopPropagation();
       showTeamAIAnalysis(buttonEl, true);
     });
-  }
-
-  // Re-adjust height dynamically
-  if (buttonEl) {
-    positionPopover(popover, buttonEl);
   }
 }
 
