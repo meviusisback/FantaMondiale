@@ -1,3 +1,5 @@
+import { getEliminatedCountries } from './utils.js';
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -167,6 +169,55 @@ Rispondi esclusivamente con il codice JSON, senza alcun blocco di codice markdow
       return res.status(500).json({ 
         error: 'Errore nel parsing del JSON restituito dal modello.', 
         rawText: text 
+      });
+    }
+
+    // Programmatic override for eliminated/absent countries (automated daily AI check)
+    const ELIMINATED_COUNTRIES = await getEliminatedCountries(apiKey, provider, openRouterModel);
+    const eliminatedPlayerIds = players.filter(p => ELIMINATED_COUNTRIES.includes(p.country)).map(p => p.id);
+    
+    if (eliminatedPlayerIds.length > 0) {
+      // 1. Move eliminated players from starters to bench, substituting them with active players of the same role
+      const startersList = parsedData.starters || [];
+      const benchList = parsedData.bench || [];
+      
+      const activeStarters = startersList.filter(id => !eliminatedPlayerIds.includes(id));
+      const removedStarters = startersList.filter(id => eliminatedPlayerIds.includes(id));
+      
+      if (removedStarters.length > 0) {
+        const activeBench = benchList.filter(id => !eliminatedPlayerIds.includes(id));
+        const activeBenchPlayers = players.filter(p => activeBench.includes(p.id));
+        
+        removedStarters.forEach(removedId => {
+          const pRemoved = players.find(p => p.id === removedId);
+          if (pRemoved) {
+            const idxReplace = activeBenchPlayers.findIndex(p => p.role === pRemoved.role);
+            if (idxReplace !== -1) {
+              const pReplace = activeBenchPlayers[idxReplace];
+              activeStarters.push(pReplace.id);
+              activeBenchPlayers.splice(idxReplace, 1);
+            } else {
+              activeStarters.push(removedId); // Fallback
+            }
+          }
+        });
+        parsedData.starters = activeStarters;
+      }
+      
+      // 2. Place eliminated players at the absolute bottom of the bench
+      const remainingBench = benchList.filter(id => !eliminatedPlayerIds.includes(id));
+      parsedData.bench = [...remainingBench, ...eliminatedPlayerIds];
+      
+      // 3. Force playersAnalysis values
+      if (!parsedData.playersAnalysis) parsedData.playersAnalysis = {};
+      eliminatedPlayerIds.forEach(id => {
+        const p = players.find(x => x.id === id);
+        if (!parsedData.playersAnalysis[id]) {
+          parsedData.playersAnalysis[id] = {};
+        }
+        parsedData.playersAnalysis[id].starterProbability = "0%";
+        parsedData.playersAnalysis[id].playerCategory = "scarso";
+        parsedData.playersAnalysis[id].formState = `ELIMINATO: La nazionale dell'${p ? p.country : 'giocatore'} è eliminata o non partecipa al Mondiale 2026.`;
       });
     }
 

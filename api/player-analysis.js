@@ -1,3 +1,5 @@
+import { getEliminatedCountries } from './utils.js';
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -150,6 +152,16 @@ Rispondi esclusivamente con il codice JSON, senza alcun blocco di codice markdow
         error: 'Errore nel parsing del JSON restituito dal modello.', 
         rawText: text 
       });
+    }
+
+    // Programmatic override for eliminated/absent countries (automated daily AI check)
+    const ELIMINATED_COUNTRIES = await getEliminatedCountries(apiKey, provider, openRouterModel);
+    if (ELIMINATED_COUNTRIES.includes(country)) {
+      parsedData.starterProbability = "0%";
+      parsedData.playerCategory = "scarso";
+      parsedData.valueForMoney = "Sopravvalutato";
+      parsedData.description = `ELIMINATO: La nazionale dell'${country} non partecipa o è stata eliminata da questo Mondiale. Il calciatore non è utilizzabile fantacalcisticamente.`;
+      parsedData.formState = `La nazionale dell'${country} è esclusa dal Mondiale.`;
     }
 
     return res.status(200).json(parsedData);

@@ -1,3 +1,5 @@
+import { getEliminatedCountries } from './utils.js';
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -21,8 +23,12 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Dati incompleti: roster è obbligatorio.' });
     }
 
+    const ELIMINATED_COUNTRIES = await getEliminatedCountries(apiKey, provider, openRouterModel);
+
     const systemPrompt = `Tu sei un esperto analista di Fantacalcio specializzato nel Fantamondiale. Il tuo compito è analizzare il roster attuale dell'utente e generare un'analisi strategica ultra-concisa, adatta a essere letta in un piccolo box/fumetto UI (massimo 120-150 parole totali). Usa un tono diretto, esperto e fortemente focalizzato sul gioco FantaMondiale.
 L'analisi DEVE essere interamente centrata sulle dinamiche del FantaMondiale, con lo scopo primario di indicare le soluzioni migliori per ottenere BONUS (gol, assist, reti inviolate) e MASSIMIZZARE I PUNTEGGI, evitando commenti generici sul calcio reale.
+
+Nazioni attualmente ELIMINATE o ASSENTI dal Mondiale ad oggi: ${ELIMINATED_COUNTRIES.join(', ')}
 
 Input ricevuti:
 - Nome Squadra: ${teamName || 'Mia Squadra'}
