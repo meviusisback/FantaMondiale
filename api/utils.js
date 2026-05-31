@@ -1,9 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const localFilePath = path.join(__dirname, 'eliminated-countries.json');
+const localFilePath = path.join(process.cwd(), 'api', 'eliminated-countries.json');
 const tempFilePath = path.join('/tmp', 'eliminated-countries.json');
 
 function readCacheFile() {
