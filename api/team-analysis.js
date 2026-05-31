@@ -36,6 +36,7 @@ Regole cruciali per massimizzare il punteggio:
 1. Pesa la Nazionale: Calciatori di Nazionali candidate ad andare avanti (es. Francia, Brasile, Argentina) porteranno più partite e quindi più occasioni di punteggio/bonus rispetto a chi esce ai gironi.
 2. Caccia ai Bonus: Suggerisci rigorosamente rigoristi, tiratori di punizioni, difensori goleador e ali offensive che portano +3 (gol) e +1 (assist).
 3. Ottimizzazione della Rosa: Individua se ci sono sbilanciamenti che limitano i bonus (es. troppi mediani di rottura da cartellino facile, o pochi attaccanti di peso in grado di accumulare punteggi alti).
+4. **Verifica Eliminazione/Presenza al Mondiale (MANDATORIA):** Esegui una ricerca web e verifica con certezza se le nazionali dei calciatori in questo roster partecipano a questo Mondiale e non sono già state eliminate. Se noti calciatori le cui nazionali sono eliminate o assenti dal Mondiale, indicalo esplicitamente nel punto **Strategia Mercato & Lacune** e consiglia di sostituirli/svincolarli immediatamente ad oggi.
 
 Struttura rigidamente l'output in 2 brevissimi punti elenco (usa il grassetto per le parole chiave, niente introduzioni o conclusioni inutili):
 

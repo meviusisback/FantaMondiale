@@ -36,6 +36,12 @@ Regole FantaMondiale per formulare la tua risposta:
    Considera l'ultimo stato di forma (prestazioni recenti con il club o con la nazionale nelle amichevoli/qualificazioni) e la probabilità effettiva che il giocatore parta da titolare o subentri con regolarità durante il Mondiale.
 3. Descrizione Strategica:
    La descrizione deve essere fatta in relazione alle sue recenti performance storiche e alle aspettative/ruolo all'interno di questo specifico Mondiale, evidenziando se è il fulcro del gioco, un rigorista, o se rischia il posto in favore di altri titolari.
+4. **VERIFICA CONVOCAZIONE ED ELIMINAZIONE MONDIALE (MANDATORIA E CRUCIALE):**
+   Esegui una ricerca web mirata e verifica con assoluta certezza se la nazionale del calciatore (${country}) partecipa a questo Mondiale e se non è già stata eliminata dal torneo ad oggi. Se la sua nazionale NON partecipa o è GIÀ STATA ELIMINATA:
+   - Imposta la chiave `starterProbability` tassativamente a `"0%"`.
+   - Imposta la chiave `playerCategory` tassativamente a `"scarso"`.
+   - Imposta la chiave `valueForMoney` tassativamente a `"Sopravvalutato"`.
+   - Modifica la chiave `description` iniziando obbligatoriamente con la dicitura in maiuscolo: "ELIMINATO: [Spiegazione del fatto che la nazionale non partecipa o è stata eliminata]". Il resto della descrizione deve riflettere questa inutilizzabilità fantacalcistica.
 
 Fornisci i dati strutturati RIGOROSAMENTE in formato JSON con le seguenti chiavi:
 - club: la squadra di club attuale in cui gioca (es. "Inter Miami", "Real Madrid")

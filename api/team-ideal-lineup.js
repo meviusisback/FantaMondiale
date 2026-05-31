@@ -43,6 +43,10 @@ REGOLE DI SELEZIONE E SCHIERAMENTO (MANDATORIE E STRICHE):
 4. I giocatori titolari schierati e quelli in panchina devono corrispondere ESATTAMENTE ai calciatori presenti nella rosa fornita. Non inventare o aggiungere nuovi calciatori.
 5. Fai ricerche web in tempo reale (Google Search / Web Search) per verificare le notizie reali di questa settimana relative a infortuni, squalifiche, titolarità o stato di forma recente per ciascuno di questi calciatori per escludere o inserire le persone giuste!
 6. **Mandatorio per lo schieramento:** La formazione DEVE basarsi rigorosamente sullo stato di forma recente. Devi escludere dai titolari i giocatori infortunati, squalificati o non dati come probabili titolari reali nelle ultime notizie. Preferisci sempre giocatori in salute e con altissima probabilità di essere titolari e portare bonus.
+7. **VERIFICA CONVOCAZIONE ED ELIMINAZIONE MONDIALE (MANDATORIA E CRUCIALE):** Esegui ricerche web mirate per verificare con assoluta certezza se la nazionale di appartenenza di ogni calciatore partecipa a questo Mondiale e se non è già stata eliminata dal torneo ad oggi. Se la nazionale di un calciatore è assente o è GIÀ STATA ELIMINATA:
+   - Non inserire assolutamente il calciatore negli 11 titolari (`starters`).
+   - Devi inserirlo obbligatoriamente alla fine dell'elenco dei panchinari (`bench`).
+   - Nella chiave `playersAnalysis` per quel calciatore, imposta `starterProbability` tassativamente a `"0%"`, `playerCategory` tassativamente a `"scarso"`, e descrivi questo stato in `formState` inserendo obbligatoriamente all'inizio: "ELIMINATO: [Spiegazione dell'assenza o dell'eliminazione della nazionale dal Mondiale ad oggi]".
 
 REGOLE DI VALUTAZIONE E CATEGORIA (CRUCIALE):
 Assegna a ciascun calciatore della rosa una valutazione 'playerCategory' rigorosamente tra questi 5 valori in base alle sue ultime performance reali e prospettive nel Mondiale:
