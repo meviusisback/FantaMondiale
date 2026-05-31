@@ -1875,6 +1875,7 @@ function showToast(message, type = 'success') {
 // --- CLOUD STORAGE IMPLEMENTATION ---
 
 let cloudSessionsCatalog = []; // Cache list of sessions metadata globally inside file
+let cloudPasswordFailedAttempts = {}; // Track failed password attempts (max 4)
 
 async function openCloudSaveModal() {
   if (!dom.cloudSaveDialog) return;
@@ -2202,6 +2203,13 @@ async function loadSpecificCloudSession(id, skipConfirm = false) {
     return;
   }
 
+  // Enforce 4 attempt limit
+  const attempts = cloudPasswordFailedAttempts[id] || 0;
+  if (attempts >= 4) {
+    showToast('Hai superato il limite di 4 tentativi per questa sessione. Accesso bloccato! 🔒', 'danger');
+    return;
+  }
+
   const password = await promptCloudPassword(id);
   if (password === null) {
     return;
@@ -2212,7 +2220,20 @@ async function loadSpecificCloudSession(id, skipConfirm = false) {
     const result = await response.json();
 
     if (!response.ok) {
-      showToast(result.error || 'Errore durante il caricamento della sessione.', 'danger');
+      cloudPasswordFailedAttempts[id] = (cloudPasswordFailedAttempts[id] || 0) + 1;
+      const remaining = 4 - cloudPasswordFailedAttempts[id];
+      
+      if (cloudPasswordFailedAttempts[id] >= 4) {
+        showToast('Hai inserito una password errata per 4 volte. Accesso bloccato! 🔒', 'danger');
+        localStorage.removeItem('fantamondiale_last_cloud_session_password');
+        if (state.activeCloudSessionId === id) {
+          state.cloudSessionPassword = null;
+        }
+        return;
+      }
+      
+      showToast(`${result.error || 'Errore durante il caricamento.'} Rimangono ${remaining} tentativi.`, 'danger');
+      
       // Re-prompt on invalid password so they can try again
       setTimeout(() => {
         // Clear memory cache so they actually get prompted again
@@ -2226,6 +2247,7 @@ async function loadSpecificCloudSession(id, skipConfirm = false) {
     }
 
     // Load state
+    cloudPasswordFailedAttempts[id] = 0; // Reset counter on success!
     state.settings = result.settings;
     state.teams = result.teams;
     state.teams.forEach(t => {
@@ -2299,6 +2321,13 @@ async function deleteSpecificCloudSession(id) {
     return;
   }
 
+  // Enforce attempts check for deletion as well
+  const attempts = cloudPasswordFailedAttempts[id] || 0;
+  if (attempts >= 4) {
+    showToast('Hai superato il limite di 4 tentativi per questa sessione. Operazione bloccata! 🔒', 'danger');
+    return;
+  }
+
   const password = await promptCloudPassword(id);
   if (password === null) {
     return;
@@ -2311,8 +2340,17 @@ async function deleteSpecificCloudSession(id) {
 
     const result = await response.json();
     if (!response.ok) {
-      throw new Error(result.error || 'Impossibile eliminare la sessione.');
+      cloudPasswordFailedAttempts[id] = (cloudPasswordFailedAttempts[id] || 0) + 1;
+      const remaining = 4 - cloudPasswordFailedAttempts[id];
+      if (cloudPasswordFailedAttempts[id] >= 4) {
+        showToast('Troppi tentativi falliti. Operazione bloccata! 🔒', 'danger');
+        return;
+      }
+      throw new Error(`${result.error || 'Impossibile eliminare la sessione.'} Rimangono ${remaining} tentativi.`);
     }
+
+    // Success! Reset counter
+    cloudPasswordFailedAttempts[id] = 0;
 
     // Clear active ID if we deleted the currently active session
     if (state.activeCloudSessionId === id) {
@@ -2321,6 +2359,8 @@ async function deleteSpecificCloudSession(id) {
       state.activeCloudSessionMetadata = null;
       localStorage.removeItem('fantamondiale_last_cloud_session_id');
       localStorage.removeItem('fantamondiale_last_cloud_session_password');
+      // Reopen onboarding startup dialog
+      openStartupDialog();
     }
 
     // Update catalog cache and re-render catalog table in modal
@@ -2334,6 +2374,60 @@ async function deleteSpecificCloudSession(id) {
   } catch (error) {
     console.error(error);
     showToast(error.message, 'danger');
+  }
+}
+
+async function loginAsAdmin() {
+  const attempts = cloudPasswordFailedAttempts['admin_login'] || 0;
+  if (attempts >= 4) {
+    showToast('Hai superato il limite di 4 tentativi per l\'amministratore. Accesso bloccato! 🔒', 'danger');
+    return;
+  }
+
+  // Hide startup dialog temporarily
+  const startupDlg = document.getElementById('startup-cloud-dialog');
+  if (startupDlg) startupDlg.close();
+
+  // Ask for password using promptCloudPassword with ID 'admin_login'
+  const password = await promptCloudPassword('admin_login');
+  if (password === null) {
+    // If they cancel, open startup dialog again
+    openStartupDialog();
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/load?id=admin_verify&password=${encodeURIComponent(password)}`);
+    const result = await response.json();
+
+    if (!response.ok) {
+      cloudPasswordFailedAttempts['admin_login'] = (cloudPasswordFailedAttempts['admin_login'] || 0) + 1;
+      const remaining = 4 - cloudPasswordFailedAttempts['admin_login'];
+      
+      if (cloudPasswordFailedAttempts['admin_login'] >= 4) {
+        showToast('Hai inserito una password errata per 4 volte. Accesso bloccato! 🔒', 'danger');
+        return;
+      }
+
+      showToast(`Password errata. Rimangono ${remaining} tentativi.`, 'danger');
+      setTimeout(() => {
+        loginAsAdmin();
+      }, 500);
+      return;
+    }
+
+    // Success!
+    cloudPasswordFailedAttempts['admin_login'] = 0;
+    state.cloudSessionPassword = password; // Set admin password in memory
+    localStorage.setItem('fantamondiale_last_cloud_session_password', password); // Persist password
+    showToast('Accesso Amministratore eseguito con successo! 👑 Gestisci tutte le sessioni.', 'success');
+    
+    // Open manage sessions modal directly so the admin can start editing/deleting!
+    openCloudLoadModal();
+  } catch (error) {
+    console.error(error);
+    showToast(error.message, 'danger');
+    openStartupDialog();
   }
 }
 
@@ -3065,3 +3159,4 @@ window.openStartupDialog = openStartupDialog;
 window.openNewSessionFromStartup = openNewSessionFromStartup;
 window.loadStartupCloudSession = loadStartupCloudSession;
 window.resetSessionClean = resetSessionClean;
+window.loginAsAdmin = loginAsAdmin;

@@ -43,6 +43,14 @@ export default async function handler(req, res) {
         sessionsList = JSON.parse(rawList);
       }
       return res.status(200).json(sessionsList);
+    } else if (id === 'admin_verify') {
+      const { password } = req.query;
+      const isAdmin = process.env.ADMIN_PASSWORD && password === process.env.ADMIN_PASSWORD;
+      if (isAdmin) {
+        return res.status(200).json({ success: true, isAdmin: true });
+      } else {
+        return res.status(401).json({ error: 'Password amministratore non corretta. Accesso negato.' });
+      }
     } else {
       // Scenario B: Retrieve specific session state & verify password
       const response = await fetch(`${url}/pipeline`, {

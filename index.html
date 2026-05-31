@@ -425,9 +425,14 @@
         <label for="cloud-prompt-password-input">Password Sessione</label>
         <input type="password" id="cloud-prompt-password-input" class="input-control" placeholder="Digita la password qui...">
       </div>
-      <button id="btn-cloud-password-prompt-confirm" class="btn btn-primary" style="width: 100%; padding: 0.75rem; background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%); border-color: rgba(13, 148, 136, 0.3);">
-        Sblocca e Carica 📥
-      </button>
+      <div style="display: flex; gap: 0.5rem; width: 100%;">
+        <button id="btn-cloud-password-prompt-confirm" class="btn btn-primary" style="flex: 1; padding: 0.75rem; background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%); border-color: rgba(13, 148, 136, 0.3);">
+          Sblocca e Carica 📥
+        </button>
+        <button class="btn btn-secondary" style="flex: 1; padding: 0.75rem;" onclick="document.getElementById('cloud-password-prompt-dialog').close(); openStartupDialog();">
+          Torna Indietro ↩️
+        </button>
+      </div>
     </div>
   </dialog>
 
@@ -461,10 +466,13 @@
         </div>
       </div>
 
-      <!-- Action: Continue Locally -->
-      <div style="margin-top: 1.25rem; border-top: 1px solid var(--border-light); padding-top: 0.75rem;">
-        <button class="btn btn-secondary" style="width: 100%; padding: 0.5rem; font-size: 0.75rem;" onclick="document.getElementById('startup-cloud-dialog').close()">
-          🏠 Continua in Locale (Autosave offline)
+      <!-- Action: Continue Locally & Admin Login -->
+      <div style="margin-top: 1.25rem; border-top: 1px solid var(--border-light); padding-top: 0.75rem; display: flex; gap: 0.5rem;">
+        <button class="btn btn-secondary" style="flex: 1; padding: 0.5rem; font-size: 0.75rem;" onclick="document.getElementById('startup-cloud-dialog').close()">
+          🏠 Continua in Locale (Offline)
+        </button>
+        <button class="btn btn-secondary" style="flex: 1; padding: 0.5rem; font-size: 0.75rem; border-color: rgba(168, 85, 247, 0.4); color: #c084fc; font-weight: 700;" onclick="loginAsAdmin()">
+          👑 Accedi come Admin
         </button>
       </div>
     </div>
