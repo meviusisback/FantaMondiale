@@ -1,3 +1,9 @@
+import crypto from 'crypto';
+
+function getHash(pwd) {
+  return crypto.createHash('sha256').update(pwd).digest('hex');
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -13,7 +19,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { metadata, state } = req.body;
+    const { metadata, state, password } = req.body;
     if (!metadata || !metadata.title || !metadata.author || !metadata.date || !state) {
       return res.status(400).json({ error: 'Dati incompleti: metadati o stato assenti.' });
     }
@@ -24,6 +30,38 @@ export default async function handler(req, res) {
       id = `s-${Date.now()}`;
     }
 
+    // 1. Password verification for existing session or requirements for new session
+    if (isNew) {
+      if (!password || password.trim() === '') {
+        return res.status(400).json({ error: 'Password obbligatoria per creare una nuova sessione.' });
+      }
+    } else {
+      // Fetch existing password hash from Upstash Redis
+      const responsePwd = await fetch(url, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(['GET', `fantamondiale_password:${id}`])
+      });
+      const resultPwd = await responsePwd.json();
+      const existingHash = responsePwd.ok && resultPwd.result ? resultPwd.result : null;
+
+      if (existingHash) {
+        if (!password) {
+          return res.status(401).json({ error: 'Password richiesta per aggiornare questa sessione.' });
+        }
+        const isCorrectAdmin = process.env.ADMIN_PASSWORD && password === process.env.ADMIN_PASSWORD;
+        if (!isCorrectAdmin) {
+          const providedHash = getHash(password);
+          if (providedHash !== existingHash) {
+            return res.status(401).json({ error: 'Password della sessione errata. Accesso negato.' });
+          }
+        }
+      }
+    }
+
     const sessionMetadata = {
       id: id,
       title: metadata.title.trim(),
@@ -31,7 +69,7 @@ export default async function handler(req, res) {
       date: metadata.date
     };
 
-    // 1. Fetch existing catalog of sessions
+    // 2. Fetch existing catalog of sessions
     const responseList = await fetch(url, {
       method: 'POST',
       headers: {
@@ -52,7 +90,7 @@ export default async function handler(req, res) {
       }
     }
 
-    // 2. Update catalog array
+    // 3. Update catalog array
     const existingIndex = sessionsList.findIndex(s => s.id === id);
     if (existingIndex !== -1) {
       sessionsList[existingIndex] = sessionMetadata;
@@ -60,17 +98,22 @@ export default async function handler(req, res) {
       sessionsList.push(sessionMetadata);
     }
 
-    // 3. Perform Pipeline atomic SETs for both state and updated catalog
+    // 4. Perform Pipeline atomic SETs
+    const pipelineCommands = [
+      ['SET', `fantamondiale_session:${id}`, JSON.stringify(state)],
+      ['SET', 'fantamondiale_sessions_list', JSON.stringify(sessionsList)]
+    ];
+    if (password) {
+      pipelineCommands.push(['SET', `fantamondiale_password:${id}`, getHash(password)]);
+    }
+
     const responsePipe = await fetch(`${url}/pipeline`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify([
-        ['SET', `fantamondiale_session:${id}`, JSON.stringify(state)],
-        ['SET', 'fantamondiale_sessions_list', JSON.stringify(sessionsList)]
-      ])
+      body: JSON.stringify(pipelineCommands)
     });
 
     const resultPipe = await responsePipe.json();
@@ -83,3 +126,4 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: error.message });
   }
 }
+

@@ -84,6 +84,7 @@ let state = {
   activeTab: 'giocatori', // default tab is players list
   activeTeamId: 't-1', // Selected team for quick assignments
   activeCloudSessionId: null, // Track currently loaded cloud session ID
+  cloudSessionPassword: null, // Keep active session password in memory
   activePitchTeamId: null, // Stores ID of the team visualized on the pitch
   pitchShowIdeal: false, // Flag to sort starting line-up by AI Form score
   draggedPlayerId: null, // Stores ID of the player being dragged
@@ -126,6 +127,8 @@ const dom = {
   cloudSaveTitle: null,
   cloudSaveAuthor: null,
   cloudSaveDate: null,
+  cloudSavePassword: null,
+  cloudSavePasswordLabel: null,
   btnCloudSaveConfirm: null,
   btnActionsMenu: null,
   cloudLoadDropdownWrapper: null,
@@ -206,6 +209,8 @@ function initDOM() {
   dom.cloudSaveTitle = document.getElementById('cloud-save-title');
   dom.cloudSaveAuthor = document.getElementById('cloud-save-author');
   dom.cloudSaveDate = document.getElementById('cloud-save-date');
+  dom.cloudSavePassword = document.getElementById('cloud-save-password');
+  dom.cloudSavePasswordLabel = document.getElementById('cloud-save-password-label');
   dom.btnCloudSaveConfirm = document.getElementById('btn-cloud-save-confirm');
   dom.btnActionsMenu = document.getElementById('btn-actions-menu');
   dom.cloudLoadDropdownWrapper = document.getElementById('actions-dropdown-wrapper');
@@ -703,6 +708,7 @@ function autoSave() {
           },
           body: JSON.stringify({
             metadata: metadata,
+            password: state.cloudSessionPassword || '',
             state: {
               settings: state.settings,
               teams: state.teams,
@@ -780,6 +786,7 @@ function loadAutoSave() {
 async function autoLoadCloudSession(id) {
   try {
     showToast('Caricamento dell\'ultima sessione cloud... ☁️', 'info');
+    const cachedPassword = localStorage.getItem('fantamondiale_last_cloud_session_password') || '';
     
     // 1. Fetch sessions catalog first to retrieve correct metadata
     const catRes = await fetch('/api/load');
@@ -792,10 +799,12 @@ async function autoLoadCloudSession(id) {
     }
 
     // 2. Fetch actual session state
-    const response = await fetch(`/api/load?id=${id}`);
+    const response = await fetch(`/api/load?id=${id}&password=${encodeURIComponent(cachedPassword)}`);
     const result = await response.json();
 
     if (!response.ok) {
+      localStorage.removeItem('fantamondiale_last_cloud_session_id');
+      localStorage.removeItem('fantamondiale_last_cloud_session_password');
       throw new Error(result.error || 'Errore durante il caricamento automatico.');
     }
 
@@ -808,6 +817,7 @@ async function autoLoadCloudSession(id) {
     state.players = result.players;
     state.teamIdealLineups = result.teamIdealLineups || {};
     state.activeCloudSessionId = id;
+    state.cloudSessionPassword = cachedPassword;
 
     if (!state.activeCloudSessionMetadata) {
       state.activeCloudSessionMetadata = {
@@ -1869,6 +1879,9 @@ let cloudSessionsCatalog = []; // Cache list of sessions metadata globally insid
 async function openCloudSaveModal() {
   if (!dom.cloudSaveDialog) return;
 
+  // Clear password input
+  if (dom.cloudSavePassword) dom.cloudSavePassword.value = '';
+
   // Pre-fill today's date if empty or not set
   if (dom.cloudSaveDate && !dom.cloudSaveDate.value) {
     dom.cloudSaveDate.value = new Date().toISOString().substring(0, 10);
@@ -1925,14 +1938,24 @@ function handleSaveModeChange() {
 
   if (mode === 'new') {
     if (dom.cloudSaveTitle) dom.cloudSaveTitle.value = '';
-    // Keep author as is or prefill
     if (dom.cloudSaveDate) dom.cloudSaveDate.value = new Date().toISOString().substring(0, 10);
+    if (dom.cloudSavePasswordLabel) dom.cloudSavePasswordLabel.innerHTML = 'Imposta Password della Sessione (obbligatoria)';
+    if (dom.cloudSavePassword) {
+      dom.cloudSavePassword.value = '';
+      dom.cloudSavePassword.placeholder = 'Digita una nuova password';
+    }
   } else {
     const selectedSession = cloudSessionsCatalog.find(s => s.id === mode);
     if (selectedSession) {
       if (dom.cloudSaveTitle) dom.cloudSaveTitle.value = selectedSession.title;
       if (dom.cloudSaveAuthor) dom.cloudSaveAuthor.value = selectedSession.author;
       if (dom.cloudSaveDate) dom.cloudSaveDate.value = selectedSession.date;
+    }
+    if (dom.cloudSavePasswordLabel) dom.cloudSavePasswordLabel.innerHTML = 'Password Sessione (richiesta per sovrascrivere)';
+    if (dom.cloudSavePassword) {
+      // Prefill with active session password if it's the current session, to avoid having to re-type it
+      dom.cloudSavePassword.value = (mode === state.activeCloudSessionId) ? (state.cloudSessionPassword || '') : '';
+      dom.cloudSavePassword.placeholder = 'Inserisci password esistente';
     }
   }
 }
@@ -1942,9 +1965,19 @@ async function confirmCloudSave() {
   const author = dom.cloudSaveAuthor?.value?.trim();
   const date = dom.cloudSaveDate?.value;
   const mode = dom.cloudSaveMode?.value || 'new';
+  const password = dom.cloudSavePassword?.value || '';
 
   if (!title || !author || !date) {
     showToast('Compila tutti i campi obbligatori (Titolo, Autore e Data)!', 'warning');
+    return;
+  }
+
+  if (!password) {
+    if (mode === 'new') {
+      showToast('Imposta una password per proteggere questa nuova sessione!', 'warning');
+    } else {
+      showToast('Inserisci la password corretta per poter sovrascrivere la sessione!', 'warning');
+    }
     return;
   }
 
@@ -1967,6 +2000,7 @@ async function confirmCloudSave() {
       },
       body: JSON.stringify({
         metadata: metadata,
+        password: password,
         state: {
           settings: state.settings,
           teams: state.teams,
@@ -1986,8 +2020,10 @@ async function confirmCloudSave() {
     
     // Set active session ID and metadata
     state.activeCloudSessionId = result.id;
+    state.cloudSessionPassword = password; // Store active password in memory
     state.activeCloudSessionMetadata = result.session;
     localStorage.setItem('fantamondiale_last_cloud_session_id', result.id);
+    localStorage.setItem('fantamondiale_last_cloud_session_password', password);
 
     showToast('Sessione d\'asta salvata con successo sul Cloud Redis! ☁️', 'success');
     if (dom.cloudSaveDialog) dom.cloudSaveDialog.close();
@@ -2102,17 +2138,91 @@ function renderCloudLoadCatalogTable(sessions) {
   dom.cloudLoadListContainer.innerHTML = tableHtml;
 }
 
+function promptCloudPassword(id) {
+  return new Promise((resolve) => {
+    // If the requested id is the active one and we already have the password in memory, use it!
+    if (state.activeCloudSessionId === id && state.cloudSessionPassword) {
+      resolve(state.cloudSessionPassword);
+      return;
+    }
+    
+    // Also check if there's a cached password in local storage for this session ID
+    const lastCachedId = localStorage.getItem('fantamondiale_last_cloud_session_id');
+    const lastCachedPwd = localStorage.getItem('fantamondiale_last_cloud_session_password');
+    if (lastCachedId === id && lastCachedPwd) {
+      resolve(lastCachedPwd);
+      return;
+    }
+
+    const dlg = document.getElementById('cloud-password-prompt-dialog');
+    const input = document.getElementById('cloud-prompt-password-input');
+    const confirmBtn = document.getElementById('btn-cloud-password-prompt-confirm');
+
+    if (!dlg || !input || !confirmBtn) {
+      resolve(null);
+      return;
+    }
+
+    input.value = '';
+    dlg.showModal();
+    input.focus();
+
+    const handleConfirm = () => {
+      const pwd = input.value;
+      dlg.close();
+      cleanup();
+      resolve(pwd);
+    };
+
+    const handleKeyPress = (e) => {
+      if (e.key === 'Enter') {
+        handleConfirm();
+      }
+    };
+
+    const handleClose = () => {
+      cleanup();
+      resolve(null);
+    };
+
+    const cleanup = () => {
+      confirmBtn.removeEventListener('click', handleConfirm);
+      input.removeEventListener('keypress', handleKeyPress);
+      dlg.removeEventListener('close', handleClose);
+    };
+
+    confirmBtn.addEventListener('click', handleConfirm);
+    input.addEventListener('keypress', handleKeyPress);
+    dlg.addEventListener('close', handleClose);
+  });
+}
+
 async function loadSpecificCloudSession(id, skipConfirm = false) {
   if (!skipConfirm && !confirm('Sei sicuro di voler caricare questa sessione dal Cloud? Sostituirà la sessione d\'asta corrente.')) {
     return;
   }
 
+  const password = await promptCloudPassword(id);
+  if (password === null) {
+    return;
+  }
+
   try {
-    const response = await fetch(`/api/load?id=${id}`);
+    const response = await fetch(`/api/load?id=${id}&password=${encodeURIComponent(password)}`);
     const result = await response.json();
 
     if (!response.ok) {
-      throw new Error(result.error || 'Errore durante il caricamento della sessione.');
+      showToast(result.error || 'Errore durante il caricamento della sessione.', 'danger');
+      // Re-prompt on invalid password so they can try again
+      setTimeout(() => {
+        // Clear memory cache so they actually get prompted again
+        if (state.activeCloudSessionId === id) {
+          state.cloudSessionPassword = null;
+        }
+        localStorage.removeItem('fantamondiale_last_cloud_session_password');
+        loadSpecificCloudSession(id, skipConfirm);
+      }, 500);
+      return;
     }
 
     // Load state
@@ -2124,6 +2234,7 @@ async function loadSpecificCloudSession(id, skipConfirm = false) {
     state.players = result.players;
     state.teamIdealLineups = result.teamIdealLineups || {};
     state.activeCloudSessionId = id;
+    state.cloudSessionPassword = password;
 
     // Cache metadata from catalog or create a fallback
     const selectedSession = cloudSessionsCatalog.find(s => s.id === id);
@@ -2143,6 +2254,7 @@ async function loadSpecificCloudSession(id, skipConfirm = false) {
       };
     }
     localStorage.setItem('fantamondiale_last_cloud_session_id', id);
+    localStorage.setItem('fantamondiale_last_cloud_session_password', password);
 
     // Fill config inputs in settings tab
     dom.configBudget.value = state.settings.budget;
@@ -2187,8 +2299,13 @@ async function deleteSpecificCloudSession(id) {
     return;
   }
 
+  const password = await promptCloudPassword(id);
+  if (password === null) {
+    return;
+  }
+
   try {
-    const response = await fetch(`/api/delete?id=${id}`, {
+    const response = await fetch(`/api/delete?id=${id}&password=${encodeURIComponent(password)}`, {
       method: 'DELETE'
     });
 
@@ -2200,8 +2317,10 @@ async function deleteSpecificCloudSession(id) {
     // Clear active ID if we deleted the currently active session
     if (state.activeCloudSessionId === id) {
       state.activeCloudSessionId = null;
+      state.cloudSessionPassword = null;
       state.activeCloudSessionMetadata = null;
       localStorage.removeItem('fantamondiale_last_cloud_session_id');
+      localStorage.removeItem('fantamondiale_last_cloud_session_password');
     }
 
     // Update catalog cache and re-render catalog table in modal

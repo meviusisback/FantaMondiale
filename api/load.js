@@ -1,3 +1,9 @@
+import crypto from 'crypto';
+
+function getHash(pwd) {
+  return crypto.createHash('sha256').update(pwd).digest('hex');
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -16,7 +22,7 @@ export default async function handler(req, res) {
 
   try {
     if (!id) {
-      // Scenario A: Retrieve catalog of sessions
+      // Scenario A: Retrieve catalog of sessions (public view)
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -38,14 +44,17 @@ export default async function handler(req, res) {
       }
       return res.status(200).json(sessionsList);
     } else {
-      // Scenario B: Retrieve specific session state
-      const response = await fetch(url, {
+      // Scenario B: Retrieve specific session state & verify password
+      const response = await fetch(`${url}/pipeline`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(['GET', `fantamondiale_session:${id}`])
+        body: JSON.stringify([
+          ['GET', `fantamondiale_session:${id}`],
+          ['GET', `fantamondiale_password:${id}`]
+        ])
       });
 
       const result = await response.json();
@@ -53,9 +62,27 @@ export default async function handler(req, res) {
         return res.status(response.status).json({ error: `Errore durante il recupero della sessione ${id}.` });
       }
 
-      const rawData = result.result;
+      // Upstash pipeline returns responses inside an array
+      const rawData = result[0] ? result[0].result : null;
+      const existingHash = result[1] ? result[1].result : null;
+
       if (!rawData) {
         return res.status(404).json({ error: 'Sessione non trovata su Redis.' });
+      }
+
+      // Password check if session is protected
+      if (existingHash) {
+        const { password } = req.query;
+        if (!password) {
+          return res.status(401).json({ error: 'Password richiesta per accedere a questa sessione.' });
+        }
+        const isCorrectAdmin = process.env.ADMIN_PASSWORD && password === process.env.ADMIN_PASSWORD;
+        if (!isCorrectAdmin) {
+          const providedHash = getHash(password);
+          if (providedHash !== existingHash) {
+            return res.status(401).json({ error: 'Password della sessione errata. Accesso negato.' });
+          }
+        }
       }
 
       const sessionData = JSON.parse(rawData);
@@ -65,3 +92,4 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: error.message });
   }
 }
+
