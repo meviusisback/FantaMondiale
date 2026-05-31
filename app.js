@@ -1096,6 +1096,35 @@ function renderAll() {
   renderActiveTeamConsole();
   renderPlayerList();
   renderTeamDashboard();
+  updateAISettingsEditability();
+}
+
+function updateAISettingsEditability() {
+  if (dom.configAIProvider) {
+    dom.configAIProvider.disabled = !state.isAdmin;
+  }
+  if (dom.configOpenRouterModel) {
+    dom.configOpenRouterModel.disabled = !state.isAdmin;
+  }
+
+  // Update label visual hints based on admin privilege
+  const providerLabel = document.querySelector('label[for="config-ai-provider"]');
+  if (providerLabel) {
+    if (!state.isAdmin) {
+      providerLabel.innerHTML = 'Provider Intelligenza Artificiale <span style="font-size: 0.65rem; color: var(--color-warning); font-weight: normal; text-transform: none;">(Sola lettura - Accedi come Admin per modificare 🔒)</span>';
+    } else {
+      providerLabel.innerHTML = 'Provider Intelligenza Artificiale <span style="font-size: 0.65rem; color: var(--color-success); font-weight: normal; text-transform: none;">(Abilitato - Amministratore 👑)</span>';
+    }
+  }
+
+  const modelLabel = document.querySelector('label[for="config-openrouter-model"]');
+  if (modelLabel) {
+    if (!state.isAdmin) {
+      modelLabel.innerHTML = 'Modello OpenRouter <span style="font-size: 0.65rem; color: var(--color-warning); font-weight: normal; text-transform: none;">(Sola lettura - Accedi come Admin per modificare 🔒)</span>';
+    } else {
+      modelLabel.innerHTML = 'Modello OpenRouter <span style="font-size: 0.65rem; color: var(--color-success); font-weight: normal; text-transform: none;">(Abilitato - Amministratore 👑)</span>';
+    }
+  }
 }
 
 function renderActiveTeamConsole() {
