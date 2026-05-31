@@ -118,6 +118,7 @@ const dom = {
   fileSessionInput: null,
   btnExportSession: null,
   btnResetAll: null,
+  btnAdminLoginToggle: null,
 
   // Cloud Storage Controls
   btnCloudSave: null,
@@ -223,6 +224,7 @@ function initDOM() {
   dom.fileSessionInput = document.getElementById('file-import-session');
   dom.btnExportSession = document.getElementById('btn-export-session');
   dom.btnResetAll = document.getElementById('btn-reset-all');
+  dom.btnAdminLoginToggle = document.getElementById('btn-admin-login-toggle');
 
   dom.btnCloudSave = document.getElementById('btn-cloud-save');
   dom.btnCloudLoad = document.getElementById('btn-cloud-load');
@@ -334,6 +336,23 @@ function setupEventListeners() {
     e.preventDefault();
     resetSession();
   });
+
+  if (dom.btnAdminLoginToggle) {
+    dom.btnAdminLoginToggle.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (state.isAdmin) {
+        if (confirm('Sei sicuro di voler uscire dalla modalità amministratore? Le impostazioni AI torneranno in sola lettura.')) {
+          state.isAdmin = false;
+          localStorage.removeItem('fantamondiale_is_admin');
+          if (dom.btnManageCloudSessions) dom.btnManageCloudSessions.style.display = 'none';
+          showToast('Modalità amministratore disattivata! 🔒', 'warning');
+          renderAll();
+        }
+      } else {
+        loginAsAdmin();
+      }
+    });
+  }
 
   // Cloud Persistence Sync Event Listeners
   if (dom.btnCloudSave) dom.btnCloudSave.addEventListener('click', (e) => {
@@ -1123,6 +1142,18 @@ function updateAISettingsEditability() {
       modelLabel.innerHTML = 'Modello OpenRouter <span style="font-size: 0.65rem; color: var(--color-warning); font-weight: normal; text-transform: none;">(Sola lettura - Accedi come Admin per modificare 🔒)</span>';
     } else {
       modelLabel.innerHTML = 'Modello OpenRouter <span style="font-size: 0.65rem; color: var(--color-success); font-weight: normal; text-transform: none;">(Abilitato - Amministratore 👑)</span>';
+    }
+  }
+
+  if (dom.btnAdminLoginToggle) {
+    if (state.isAdmin) {
+      dom.btnAdminLoginToggle.innerHTML = 'Disconnetti Admin 🔒';
+      dom.btnAdminLoginToggle.style.color = 'var(--color-warning)';
+      dom.btnAdminLoginToggle.setAttribute('data-tooltip', 'Esci dalla sessione amministratore');
+    } else {
+      dom.btnAdminLoginToggle.innerHTML = 'Accedi come Admin 🔑';
+      dom.btnAdminLoginToggle.style.color = 'var(--color-primary)';
+      dom.btnAdminLoginToggle.setAttribute('data-tooltip', 'Accedi come amministratore per sbloccare le impostazioni AI');
     }
   }
 }
@@ -2503,6 +2534,7 @@ async function loginAsAdmin() {
 
     showToast('Accesso Amministratore eseguito con successo! 👑 Gestisci tutte le sessioni.', 'success');
     
+    renderAll();
     // Open manage sessions modal directly so the admin can start editing/deleting!
     openCloudLoadModal();
   } catch (error) {
