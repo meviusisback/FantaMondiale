@@ -2212,7 +2212,7 @@ async function loadSpecificCloudSession(id, skipConfirm = false) {
     return;
   }
 
-  const password = await promptCloudPassword(id);
+  const password = await promptCloudPassword(id, true);
   if (password === null) {
     return;
   }
