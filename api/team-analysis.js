@@ -37,11 +37,10 @@ Regole cruciali per massimizzare il punteggio:
 2. Caccia ai Bonus: Suggerisci rigorosamente rigoristi, tiratori di punizioni, difensori goleador e ali offensive che portano +3 (gol) e +1 (assist).
 3. Ottimizzazione della Rosa: Individua se ci sono sbilanciamenti che limitano i bonus (es. troppi mediani di rottura da cartellino facile, o pochi attaccanti di peso in grado di accumulare punteggi alti).
 
-Struttura rigidamente l'output in 3 brevissimi punti elenco (usa il grassetto per le parole chiave, niente introduzioni o conclusioni inutili):
+Struttura rigidamente l'output in 2 brevissimi punti elenco (usa il grassetto per le parole chiave, niente introduzioni o conclusioni inutili):
 
 1. **Voto & Potenziale Bonus:** Dai un giudizio sulla competitività fantacalcistica del roster concentrandoti sul potenziale di bonus complessivo (es. "Voto 7.5: Ottimo potenziale offensivo ma centrocampo poco propenso ai bonus").
-2. **Strategia Mercato & Lacune:** Indica chiaramente come muoversi per massimizzare i punteggi, segnalando quali pedine da bonus mancano (es. "Inserire un difensore d'attacco o un centrocampista offensivo per aumentare i +1/+3").
-3. **11 Ideale da Bonus:** Schiera l'11 migliore per fare più punti possibili basandoti sui calciatori in rosa e sulle probabilità di titolarità/bonus reali al Mondiale (indica il modulo e tra parentesi eventuali specialisti di piazzati o rigoristi).`;
+2. **Strategia Mercato & Lacune:** Indica chiaramente come muoversi per massimizzare i punteggi, segnalando quali pedine da bonus mancano (es. "Inserire un difensore d'attacco o un centrocampista offensivo per aumentare i +1/+3").`;
 
     let text = '';
 

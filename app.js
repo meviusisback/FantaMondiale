@@ -2904,9 +2904,7 @@ function renderTeamAnalysisPopoverData(popover, team, analysisText, buttonEl) {
       Roster: <span style="color:#c084fc;">${team.name}</span>
     </div>
 
-    <div style="max-height: 310px; overflow-y: auto; padding-right: 0.25rem;">
-      ${parsedHtml}
-    </div>
+    ${parsedHtml}
   `;
 
   // Bind refresh click programmatically using closure variables
@@ -2957,9 +2955,6 @@ function parseMarkdown(text) {
       } else if (cardIndex === 2) {
         icon = '🎯';
         if (!title) title = 'Strategia & Mercato';
-      } else if (cardIndex === 3) {
-        icon = '🏆';
-        if (!title) title = '11 Ideale da Bonus';
       }
       
       parsedHtml += `

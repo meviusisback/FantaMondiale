@@ -1579,6 +1579,9 @@ body:has(#startup-cloud-dialog[open]) {
 .ai-bubble-popover {
   position: absolute;
   width: 320px;
+  max-width: calc(100vw - 20px);
+  box-sizing: border-box;
+  overflow-x: hidden;
   background: rgba(15, 23, 42, 0.96);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -1948,10 +1951,7 @@ body:has(#startup-cloud-dialog[open]) {
   border-color: rgba(234, 179, 8, 0.25);
 }
 
-.card-step-3 .ai-card-badge {
-  background: rgba(168, 85, 247, 0.1);
-  border-color: rgba(168, 85, 247, 0.25);
-}
+
 
 .ai-card-icon {
   font-size: 0.9rem;
@@ -1960,6 +1960,8 @@ body:has(#startup-cloud-dialog[open]) {
 .ai-card-content {
   flex-grow: 1;
   min-width: 0;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .ai-card-title {
@@ -1977,13 +1979,13 @@ body:has(#startup-cloud-dialog[open]) {
   color: #facc15; /* yellow */
 }
 
-.card-step-3 .ai-card-title {
-  color: #c084fc; /* purple */
-}
+
 
 .ai-card-text {
   margin: 0;
   font-size: 0.72rem;
   line-height: 1.45;
   color: rgba(255, 255, 255, 0.85);
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
