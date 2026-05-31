@@ -59,23 +59,20 @@ Assegna a ciascun calciatore della rosa una valutazione 'playerCategory' rigoros
 REGOLE DI ESATTEZZA NUMERICA DELLE PRESENZE:
 - Per la chiave 'appearances' di ogni calciatore nella chiave 'playersAnalysis', devi identificare il numero REALE ed ESATTO di presenze, gol e assist effettuati specificamente nella stagione calcistica più recente 2025/2026, contando ESCLUSIVAMENTE e SOLO le partite in CAMPIONATO (al fine di uniformare i dati, escludendo coppe nazionali o nazionali). Se dopo molteplici tentativi non trovi dati certi, scrivi "Dati non disponibili nella stagione 25/26", ma fai ogni sforzo per trovare l'esatta statistica reale ad oggi.
 
-Fornisci la risposta RIGOROSAMENTE in formato JSON con la seguente struttura esatta:
+Fornisci la risposta RIGOROSAMENTE in formato JSON con la seguente struttura esatta (sostituendo le chiavi con i reali ID dei giocatori):
 {
-  "recommendedModule": "4-3-3", // Il modulo consigliato scelto tra i 5 disponibili
-  "starters": ["id_calciatore_1", "id_calciatore_2", ...], // Array degli ID dei calciatori titolari (devono essere esattamente 11 e rispettare il modulo)
-  "bench": ["id_calciatore_3", "id_calciatore_4", ...], // Array degli ID di tutti i restanti calciatori non titolari
+  "recommendedModule": "4-3-3",
+  "starters": ["id_del_giocatore_1", "id_del_giocatore_2"],
+  "bench": ["id_del_giocatore_3"],
   "playersAnalysis": {
-    "id_calciatore_1": {
-      "playerCategory": "stella", // scarso, accettabile, buono, ottimo, stella
+    "id_del_giocatore_1": {
+      "playerCategory": "stella",
       "starterProbability": "95%",
-      "appearances": "32 presenze, 10 gol in campionato nella stagione 25/26", // presenze/gol campionato reali 25/26
-      "formState": "In forma strepitosa, reduce da doppietta decisiva." // Breve notizia/stato di forma reale della settimana
-    },
-    "id_calciatore_2": {
-      ...
+      "appearances": "32 presenze, 10 gol in campionato nella stagione 25/26",
+      "formState": "In forma strepitosa."
     }
   },
-  "tacticalJustification": "Spiega chiaramente e in dettaglio quali scelte precise hai preso per produrre questa formazione, evidenziando lo stato di forma recente considerato, chi hai escluso o inserito a causa di squalifiche, infortuni o dubbi di titolarità, e perché questo modulo e questi titolari sono ottimali (massimo 120 parole)."
+  "tacticalJustification": "Spiegazione dettagliata delle scelte fatte per la formazione..."
 }
 
 Rispondi esclusivamente con il codice JSON, senza alcun blocco di codice markdown o testo introduttivo.`;
