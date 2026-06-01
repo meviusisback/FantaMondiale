@@ -90,8 +90,8 @@ Fornisci la risposta RIGOROSAMENTE in formato JSON con la seguente struttura esa
       },
       "alternatives": [
         {
-          "name": "Nome Competitore 1",
-          "playProbability": "35%"
+          "name": "Nome del concorrente reale nello stesso ruolo in Nazionale (es. Openda per Lukaku; Casteels per Courtois; Strand Larsen per Haaland) che andrà in panchina se gioca il titolare analizzato. Tassativamente 1 o 2 concorrenti reali.",
+          "playProbability": "Percentuale reale o stimata di impiego. REQUISITO MATEMATICO DEL 100% (CRUCIALE): La somma tra starterProbability del titolare analizzato (es. 85%) e le playProbability di queste alternative concorrenti (es. 15%) deve essere tassativamente pari al 100% in totale."
         }
       ]
     }

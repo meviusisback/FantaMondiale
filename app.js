@@ -1888,10 +1888,11 @@ function renderPitch() {
           strengthBadgeHtml = `<div class="pitch-player-strength-badge" title="Forza del turno: ${strVal}/100" style="position: absolute; top: -4px; right: -4px; width: 17px; height: 17px; border-radius: 50%; background: ${strBg}; color: ${strColor}; font-size: 0.58rem; font-weight: 800; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.25); box-shadow: 0 1px 3px rgba(0,0,0,0.4); z-index: 5;">${strVal}</div>`;
         }
 
+        const roleLetter = { POR: 'P', DIF: 'D', CEN: 'C', ATT: 'A' }[player.role] || player.role[0];
         node.innerHTML = `
           ${strengthBadgeHtml}
           <div class="pitch-player-shirt" style="background: var(--color-${player.role.toLowerCase()}); ${state.eliminatedCountries.includes(player.country) ? 'opacity: 0.55; border: 2px dashed var(--color-danger);' : ''}">
-            ${player.purchaseCost}
+            ${roleLetter}
           </div>
           <div class="pitch-player-name" style="${state.eliminatedCountries.includes(player.country) ? 'color: var(--color-danger); text-decoration: line-through;' : ''}">${player.name} (${player.country})</div>
         `;
