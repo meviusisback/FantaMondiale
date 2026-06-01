@@ -3009,13 +3009,41 @@ async function showPitchPlayerTooltip(playerId, triggerEl, isMobile) {
   const cachedDataRaw = state.aiCache[playerId] || JSON.parse(sessionStorage.getItem(`fantamondiale_ai_${playerId}`) || 'null');
   const cachedData = cachedDataRaw ? normalizePlayerAnalysis(cachedDataRaw) : null;
 
+  let shouldFetchInBg = false;
   if (cachedData) {
+    const opp = cachedData.matchAnalysis?.nextOpponent;
+    const isPlaceholderOpponent = !opp || 
+                                  opp === 'Da verificare' || 
+                                  opp === 'Da definire' || 
+                                  opp === 'Non disponibile' || 
+                                  opp === 'Da stabilire' ||
+                                  opp === 'N/D';
+    if (isPlaceholderOpponent) {
+      shouldFetchInBg = true;
+    }
+  }
+
+  if (cachedData && !shouldFetchInBg) {
     renderPitchPopoverData(popover, player.name, player.country, player.role, cachedData, triggerEl, isMobile);
     if (!isMobile) {
       positionPitchPopover(popover, triggerEl);
     }
   } else {
-    renderPitchPopoverLoading(popover, player.name, isMobile);
+    if (cachedData && shouldFetchInBg) {
+      renderPitchPopoverData(popover, player.name, player.country, player.role, cachedData, triggerEl, isMobile);
+      if (!isMobile) {
+        positionPitchPopover(popover, triggerEl);
+      }
+      // Add subtle background reload notification text near the opponent label
+      setTimeout(() => {
+        const oppLabel = popover.querySelector('span[style*="text-transform: uppercase"]');
+        if (oppLabel && !oppLabel.innerHTML.includes('Aggiornamento')) {
+          oppLabel.innerHTML += ' <span style="font-size:0.52rem; color:var(--color-primary); font-weight:800; animation: pulse 1.2s infinite; text-transform:none;">(Aggiornamento dati...)</span>';
+        }
+      }, 10);
+    } else {
+      renderPitchPopoverLoading(popover, player.name, isMobile);
+    }
     
     try {
       const response = await fetch('/api/player-analysis', {
@@ -3042,12 +3070,14 @@ async function showPitchPlayerTooltip(playerId, triggerEl, isMobile) {
           positionPitchPopover(popover, triggerEl);
         }
         renderPitch(); // Synchronize strength badge on the main pitch visualizer
-      } else {
+      } else if (!cachedData) {
         renderPitchPopoverError(popover, result.error || 'Errore API');
       }
     } catch (error) {
       if (activePitchPopover !== popover) return;
-      renderPitchPopoverError(popover, error.message);
+      if (!cachedData) {
+        renderPitchPopoverError(popover, error.message);
+      }
     }
   }
 }
@@ -3123,10 +3153,35 @@ async function showPlayerAIAnalysis(playerId, name, country, role, buttonEl, for
   }
   const cachedData = cachedDataRaw ? normalizePlayerAnalysis(cachedDataRaw) : null;
 
-  // If in cache and not force refreshing, render data immediately
-  if (cachedData && !forceRefresh) {
+  let shouldFetchInBg = false;
+  if (cachedData) {
+    const opp = cachedData.matchAnalysis?.nextOpponent;
+    const isPlaceholderOpponent = !opp || 
+                                  opp === 'Da verificare' || 
+                                  opp === 'Da definire' || 
+                                  opp === 'Non disponibile' || 
+                                  opp === 'Da stabilire' ||
+                                  opp === 'N/D';
+    if (isPlaceholderOpponent) {
+      shouldFetchInBg = true;
+    }
+  }
+
+  // If in cache, not force refreshing, and opponent is valid, render data immediately
+  if (cachedData && !forceRefresh && !shouldFetchInBg) {
     renderPopoverData(popover, name, country, role, cachedData, buttonEl);
     return;
+  }
+
+  // If we have cached placeholder data, render it first to give instant feedback
+  if (cachedData && shouldFetchInBg && !forceRefresh) {
+    renderPopoverData(popover, name, country, role, cachedData, buttonEl);
+    setTimeout(() => {
+      const titleEl = popover.querySelector('.ai-popover-title');
+      if (titleEl && !titleEl.innerHTML.includes('Aggiornamento')) {
+        titleEl.innerHTML += ' <span style="font-size:0.52rem; color:var(--color-primary); font-weight:800; animation: pulse 1.2s infinite; text-transform:none;">(Aggiornamento...)</span>';
+      }
+    }, 10);
   }
 
   // 7. Fetch from Serverless endpoint
@@ -3150,7 +3205,7 @@ async function showPlayerAIAnalysis(playerId, name, country, role, buttonEl, for
     if (!response.ok || result.error) {
       if (result.fallback) {
         renderPopoverFallback(popover, result.error);
-      } else {
+      } else if (!cachedData) {
         throw new Error(result.error || 'Errore di connessione API.');
       }
       return;
