@@ -2782,6 +2782,14 @@ function renderPitchPopoverData(popover, name, country, role, data, triggerEl, i
   }
 
   let alternativesHtml = '';
+  const selfProbability = data.starterProbability || '50%';
+  const selfRowHtml = `
+    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.68rem; margin-bottom: 0.25rem; background: rgba(168, 85, 247, 0.08); border: 1px solid rgba(168, 85, 247, 0.2); padding: 0.25rem 0.40rem; border-radius: 4px;">
+      <span style="color: #c084fc; font-weight: 700;">⭐ ${name} (Analizzato)</span>
+      <span style="color: #10b981; font-weight: 800;">Titolare: ${selfProbability}</span>
+    </div>
+  `;
+
   if (data.alternatives && Array.isArray(data.alternatives) && data.alternatives.length > 0) {
     const items = data.alternatives.map(alt => `
       <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.68rem; margin-bottom: 0.2rem; background: rgba(255, 255, 255, 0.02); padding: 0.2rem 0.4rem; border-radius: 4px;">
@@ -2792,14 +2800,15 @@ function renderPitchPopoverData(popover, name, country, role, data, triggerEl, i
     alternativesHtml = `
       <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.04); border-radius: 8px; padding: 0.4rem 0.5rem; margin-bottom: 0.5rem;">
         <span style="display: block; font-size: 0.6rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em; margin-bottom: 0.25rem;">Alternative in Nazionale 🔄</span>
+        ${selfRowHtml}
         ${items}
       </div>
     `;
   } else {
     alternativesHtml = `
       <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.04); border-radius: 8px; padding: 0.4rem 0.5rem; margin-bottom: 0.5rem;">
-        <span style="display: block; font-size: 0.6rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em; margin-bottom: 0.1rem;">Alternative in Nazionale 🔄</span>
-        <span style="font-size: 0.65rem; color: var(--color-text-muted); font-style: italic;">Nessuna insidia rilevata</span>
+        <span style="display: block; font-size: 0.6rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em; margin-bottom: 0.25rem;">Alternative in Nazionale 🔄</span>
+        ${selfRowHtml}
       </div>
     `;
   }
@@ -2909,6 +2918,7 @@ async function showPitchPlayerTooltip(playerId, triggerEl, isMobile) {
         if (!isMobile) {
           positionPitchPopover(popover, triggerEl);
         }
+        renderPitch(); // Synchronize strength badge on the main pitch visualizer
       } else {
         renderPitchPopoverError(popover, result.error || 'Errore API');
       }
@@ -2924,6 +2934,7 @@ async function refreshPitchPlayerTooltip(playerId) {
   // Clear cached data
   delete state.aiCache[playerId];
   sessionStorage.removeItem(`fantamondiale_ai_${playerId}`);
+  renderPitch(); // Clear/refresh the score badge in the UI immediately
 
   // Find original trigger node in the DOM
   let triggerEl = document.querySelector(`.pitch-player-node[data-player-id="${playerId}"]`) || 
@@ -3636,6 +3647,12 @@ async function recalculateIdealLineup(team) {
     showToast('Nessun giocatore in rosa da aggiornare!', 'warning');
     return;
   }
+
+  // Clear cached player analysis data for all players in this team
+  team.players.forEach(p => {
+    delete state.aiCache[p.id];
+    sessionStorage.removeItem(`fantamondiale_ai_${p.id}`);
+  });
 
   const pitchContainer = dom.pitchVisualizerContainer;
   const benchContainer = dom.pitchBenchContainer;
