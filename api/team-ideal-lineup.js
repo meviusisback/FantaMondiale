@@ -56,6 +56,11 @@ REGOLE DI SELEZIONE E SCHIERAMENTO (MANDATORIE E RIGIDE):
      * Devi inserirlo obbligatoriamente in fondo all'elenco dei panchinari ('bench').
      * Nella chiave 'playersAnalysis' per quel calciatore, imposta 'starterProbability' tassativamente a '0%', 'playerCategory' tassativamente a 'scarso', e descrivi questo stato in 'formState' inserendo obbligatoriamente all'inizio: "ELIMINATO: [Spiegazione dettagliata dell'assenza o dell'eliminazione della nazionale dal Mondiale]". Non affidarti a conoscenze pregresse, esegui sempre ricerche web attive ad oggi per ogni singola nazionale rappresentata in rosa!
 8. **Valutazione Forza Prossimo Turno (matchStrength):** Calcola per ciascun calciatore un valore numerico da 1 a 100 che indichi la forza relativa specifica per il prossimo turno. Questo valore deve rispecchiare in modo rigoroso la difficoltà del prossimo avversario reale del Mondiale (ad esempio, se si scontra contro una nazionale favorita assoluta, il punteggio deve scendere drasticamente). Considera: valore del giocatore, suo stato di forma recente, probabilità di bonus (gol/assist/porta inviolata) nel turno, importanza della partita e situazione del team.
+9. **VALUTAZIONE GLOBALE BASATA SU VOTO E BONUS (MANDATORIA - CRUCIALE):**
+   - Devi calcolare e valutare singolarmente TUTTI i calciatori in rosa prima di decidere chi far partire titolare.
+   - La scelta di chi schierare titolare deve basarsi esclusivamente e rigorosamente sul **voto in pagella stimato e sulle probabilità di portare BONUS** (gol +3, assist +1, rigori, clean sheet per i portieri) o MALUS.
+   - **IGNORA COMPLETAMENTE** considerazioni tattiche o di posizionamento del calcio reale (es. non ha alcuna utilità escludere un centrocampista ultra-offensivo da bonus perché "è un'ala e non garantisce equilibrio difensivo" o perché "lascia scoperto il centrocampo"). Nel FantaMondiale contano esclusivamente il voto e i bonus/malus. I centrocampisti e gli attaccanti più offensivi e prolifici devono essere schierati prioritariamente rispetto a centrocampisti difensivi di contenimento, a prescindere dal modulo reale.
+10. **DIVIETO ASSOLUTO DI DUPLICAZIONE (MANDATORIO E STRICHE):** Ciascun calciatore della rosa fornita deve apparire UNA SOLA VOLTA nell'intero schieramento: o nei titolari ('starters') o nei panchinari ('bench'), mai in entrambi! È assolutamente vietato che un giocatore (es. Bernardo Silva o chiunque altro) compaia contemporaneamente sia tra i titolari che in panchina.
 
 REGOLE DI VALUTAZIONE E CATEGORIA:
 Assegna a ciascun calciatore della rosa una valutazione 'playerCategory' rigorosamente tra questi 5 valori in base alle sue ultime performance reali e prospettive nel Mondiale:
@@ -193,6 +198,18 @@ Rispondi esclusivamente con il codice JSON, senza alcun blocco di codice markdow
         rawText: text 
       });
     }
+
+    // Programmatic sanitization: ensure no duplicates between starters and bench, and all roster players are present
+    let startersListClean = Array.from(new Set(parsedData.starters || []))
+      .filter(id => players.some(p => p.id === id));
+    
+    const starterIdsSet = new Set(startersListClean);
+    const benchListClean = players
+      .filter(p => !starterIdsSet.has(p.id))
+      .map(p => p.id);
+      
+    parsedData.starters = startersListClean;
+    parsedData.bench = benchListClean;
 
     // Programmatic override for eliminated/absent countries (automated daily AI check)
     const eliminatedPlayerIds = players.filter(p => ELIMINATED_COUNTRIES.includes(p.country)).map(p => p.id);
