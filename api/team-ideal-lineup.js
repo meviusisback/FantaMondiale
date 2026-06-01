@@ -90,7 +90,7 @@ Fornisci la risposta RIGOROSAMENTE in formato JSON con la seguente struttura esa
       "formState": "Descrizione reale e notizie freschissime su infortuni, convocazioni e forma di questa settimana (2 frasi max). **DIVIETO ASSOLUTO:** Non descrivere le caratteristiche generiche del giocatore o che tipo di giocatore è (es. NON scrivere 'è un attaccante tecnico', 'un terzino veloce', o simili). Devi indicare **esclusivamente e tassativamente** lo stato di forma fisica attuale, notizie reali su infortuni, convocazioni, allenamento, ultime prestazioni sul campo e se partirà titolare o meno (es. 'Fisicamente al top dopo l'ultimo gol in campionato', 'Recuperato dal risentimento muscolare, si allena regolarmente', 'In ottima forma ma partirà dalla panchina in questo turno'). ATTENZIONE: per i panchinari attivi NON scrivere 'ELIMINATO', ma scrivi semplicemente che non giocherà o partirà dalla panchina.",
       "matchStrength": 85,
       "matchAnalysis": {
-        "nextOpponent": "Spagna",
+        "nextOpponent": "Spagna (REGOLA CRUCIALE: Deve trattarsi tassativamente del nome proprio di una reale nazionale di calcio, ad es. 'Francia' o 'Spagna'. È totalmente ed assolutamente vietato usare diciture generiche o di gironi come 'Avversario Girone', 'Fase a gironi', 'Girone E', 'Avversario del girone' o 'TBD'. Se non trovi la partita esatta da ricerca web, indica come avversario uno degli altri 3 paesi reali presenti nello stesso girone mondiale di tale nazione nel Mondiale 2026).",
         "criteriaText": "Spiegazione dettagliata ed esplicita (in 2-3 frasi chiare) di chi il giocatore affronterà, un giudizio su come sta giocando e perché ha quel punteggio da 1 a 100 per questa specifica partita."
       },
       "alternatives": [
