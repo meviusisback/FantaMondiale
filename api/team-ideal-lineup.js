@@ -48,9 +48,10 @@ REGOLE DI SELEZIONE E SCHIERAMENTO (MANDATORIE E STRICHE):
 5. Fai ricerche web in tempo reale (Google Search / Web Search) per verificare le notizie reali di questa settimana relative a infortuni, squalifiche, titolarità o stato di forma recente per ciascuno di questi calciatori per escludere o inserire le persone giuste!
 6. **Mandatorio per lo schieramento:** La formazione DEVE basarsi rigorosamente sullo stato di forma recente. Devi escludere dai titolari i giocatori infortunati, squalificati o non dati come probabili titolari reali nelle ultime notizie. Preferisci sempre giocatori in salute e con altissima probabilità di essere titolari e portare bonus.
 7. **VERIFICA CONVOCAZIONE ED ELIMINAZIONE MONDIALE (MANDATORIA E CRUCIALE):** Nazioni attualmente eliminate o assenti dal Mondiale ad oggi: ${ELIMINATED_COUNTRIES.join(', ')}. Verifica se la nazionale partecipa a questo Mondiale e non è già stata eliminata dal torneo ad oggi. Se la nazionale di un calciatore è assente o è GIÀ STATA ELIMINATA dal Mondiale:
-   - È assolutamente vietato inserire il calciatore negli 11 titolari ('starters'), anche se si tratta di un top player assoluto (es. Barella).
+   - È assolutamente vietato inserire the calciatore negli 11 titolari ('starters'), anche se si tratta di un top player assoluto (es. Barella).
    - Devi inserirlo obbligatoriamente in fondo all'elenco dei panchinari ('bench').
    - Nella chiave 'playersAnalysis' per quel calciatore, imposta 'starterProbability' tassativamente a '0%', 'playerCategory' tassativamente a 'scarso', e descrivi questo stato in 'formState' inserendo obbligatoriamente all'inizio: "ELIMINATO: [Spiegazione dettagliata dell'assenza o dell'eliminazione della nazionale dal Mondiale]". Non affidarti a conoscenze pregresse, esegui sempre ricerche web attive ad oggi per ogni singola nazionale rappresentata in rosa!
+8. **Valutazione Forza Prossimo Turno (matchStrength):** Calcola per ciascun calciatore un valore numerico da 1 a 100 che indichi la forza relativa specifica per il prossimo turno. Questo valore deve rispecchiare in modo rigoroso la difficoltà del prossimo avversario reale del Mondiale (ad esempio, se si scontra contro una nazionale favorita assoluta, il punteggio deve scendere drasticamente). Considera: valore del giocatore, suo stato di forma recente, probabilità di bonus (gol/assist/porta inviolata) nel turno, importanza della partita e situazione del team.
 
 REGOLE DI VALUTAZIONE E CATEGORIA (CRUCIALE):
 Assegna a ciascun calciatore della rosa una valutazione 'playerCategory' rigorosamente tra questi 5 valori in base alle sue ultime performance reali e prospettive nel Mondiale:
@@ -73,7 +74,12 @@ Fornisci la risposta RIGOROSAMENTE in formato JSON con la seguente struttura esa
       "playerCategory": "stella",
       "starterProbability": "95%",
       "appearances": "32 presenze, 10 gol in campionato nella stagione 25/26",
-      "formState": "In forma strepitosa."
+      "formState": "In forma strepitosa.",
+      "matchStrength": 85,
+      "matchAnalysis": {
+        "nextOpponent": "Spagna",
+        "criteriaText": "Valutazione di 85/100 dovuta all'avversario abbordabile e all'elevata probabilità di porta inviolata, compensata da una forma fisica all'80%."
+      }
     }
   },
   "tacticalJustification": "Spiegazione dettagliata delle scelte fatte per la formazione..."
@@ -219,6 +225,11 @@ Rispondi esclusivamente con il codice JSON, senza alcun blocco di codice markdow
         parsedData.playersAnalysis[id].starterProbability = "0%";
         parsedData.playersAnalysis[id].playerCategory = "scarso";
         parsedData.playersAnalysis[id].formState = `ELIMINATO: La nazionale dell'${p ? p.country : 'giocatore'} è eliminata o non partecipa al Mondiale 2026.`;
+        parsedData.playersAnalysis[id].matchStrength = 0;
+        parsedData.playersAnalysis[id].matchAnalysis = {
+          nextOpponent: "Nessuno",
+          criteriaText: "La nazionale di appartenenza è stata eliminata o non partecipa al Mondiale."
+        };
       });
     }
 

@@ -75,10 +75,10 @@ let state = {
     openRouterModel: 'openai/gpt-oss-120b:free'
   },
   teams: [
-    { id: 't-1', name: 'Dream Team', budget: 500, players: [], module: '4-3-3' },
-    { id: 't-2', name: 'F.C. Fantasmi', budget: 500, players: [], module: '4-3-3' },
-    { id: 't-3', name: 'Galacticos', budget: 500, players: [], module: '4-3-3' },
-    { id: 't-4', name: 'Real Madrink', budget: 500, players: [], module: '4-3-3' }
+    { id: 't-1', name: 'Dream Team', budget: 500, players: [], module: '4-3-3', isUserTeam: false },
+    { id: 't-2', name: 'F.C. Fantasmi', budget: 500, players: [], module: '4-3-3', isUserTeam: false },
+    { id: 't-3', name: 'Galacticos', budget: 500, players: [], module: '4-3-3', isUserTeam: false },
+    { id: 't-4', name: 'Real Madrink', budget: 500, players: [], module: '4-3-3', isUserTeam: false }
   ],
   players: JSON.parse(JSON.stringify(SEED_PLAYERS)), // Clone seed data
   activeTab: 'giocatori', // default tab is players list
@@ -174,7 +174,8 @@ const dom = {
   pitchBenchContainer: null,
 
   // Notifications
-  toast: null
+  toast: null,
+  checkboxUserTeam: null
 };
 
 // --- INITIALIZATION ---
@@ -274,6 +275,7 @@ function initDOM() {
   dom.pitchBenchContainer = document.getElementById('pitch-bench-container');
   
   dom.toast = document.getElementById('toast-notification');
+  dom.checkboxUserTeam = document.getElementById('checkbox-user-team');
 
   // Fill config elements from state
   dom.configBudget.value = state.settings.budget;
@@ -320,6 +322,27 @@ function setupEventListeners() {
       state.activeTeamId = e.target.value;
       renderActiveTeamConsole();
       renderPlayerList();
+    });
+  }
+
+  // Checkbox Mia Squadra Change Listener
+  if (dom.checkboxUserTeam) {
+    dom.checkboxUserTeam.addEventListener('change', (e) => {
+      const activeId = state.activeTeamId;
+      if (!activeId) return;
+
+      const isChecked = e.target.checked;
+      state.teams.forEach(t => {
+        if (t.id === activeId) {
+          t.isUserTeam = isChecked;
+        } else if (isChecked) {
+          t.isUserTeam = false;
+        }
+      });
+
+      autoSave();
+      renderAll();
+      showToast(isChecked ? 'Squadra impostata come propria! ⭐' : 'Squadra rimossa dalle proprie squadre.', 'success');
     });
   }
 
@@ -1082,6 +1105,58 @@ function releasePlayer(playerId) {
 
 // --- FORMULAS & MATHS (REAL-WORLD ROSTER RULES) ---
 
+function getPlayerPerformanceRating(player) {
+  // Deterministic rating between 6.0 and 8.8 based on player name hash
+  let hash = 0;
+  for (let i = 0; i < player.name.length; i++) {
+    hash = player.name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return 6.0 + (Math.abs(hash) % 29) / 10; // 6.0 to 8.8
+}
+
+function calculateIdealBidRange(player) {
+  const performance = getPlayerPerformanceRating(player);
+  const base = player.initialValue;
+  
+  // Performance multiplier: 6.0 is 0.8x, 7.5 is 1.0x, 8.8 is 1.3x
+  const perfMult = 0.8 + ((performance - 6.0) / 2.8) * 0.5; // ranges from 0.8 to 1.3
+  
+  let minPrice = Math.round(base * perfMult * 0.9);
+  let maxPrice = Math.round(base * perfMult * 1.25);
+  
+  // Now let's adjust based on the "mia squadra" (user's team) situation!
+  const userTeam = state.teams.find(t => t.isUserTeam);
+  if (userTeam) {
+    const remainingCredits = userTeam.budget;
+    const playersCount = userTeam.players.length;
+    const playersNeeded = Math.max(1, 35 - playersCount);
+    const avgCreditsPerPlayer = remainingCredits / playersNeeded;
+    
+    // Standard average credits per player is ~15 cr
+    const budgetRatio = avgCreditsPerPlayer / 15;
+    const teamFactor = Math.min(2.0, Math.max(0.5, budgetRatio));
+    
+    // Also check role saturation
+    const roleCount = userTeam.players.filter(p => p.role === player.role).length;
+    let roleSaturationFactor = 1.0;
+    if (roleCount >= 8) {
+      roleSaturationFactor = 0.6; // already have plenty of this role, bid less!
+    } else if (roleCount >= 5) {
+      roleSaturationFactor = 0.8;
+    } else if (roleCount === 0) {
+      roleSaturationFactor = 1.2; // desperately need at least one, bid more!
+    }
+    
+    minPrice = Math.round(minPrice * teamFactor * roleSaturationFactor);
+    maxPrice = Math.round(maxPrice * teamFactor * roleSaturationFactor);
+  }
+  
+  minPrice = Math.max(1, minPrice);
+  maxPrice = Math.max(minPrice, maxPrice);
+  
+  return { min: minPrice, max: maxPrice };
+}
+
 function calculateMaxBid(team) {
   const emptySlots = countEmptySlots(team);
   if (emptySlots <= 0) return 0;
@@ -1089,24 +1164,11 @@ function calculateMaxBid(team) {
 }
 
 function countEmptySlots(team) {
-  let count = 0;
-  const porSlots = state.settings.slots.POR - team.players.filter(p => p.role === 'POR').length;
-  const difSlots = state.settings.slots.DIF - team.players.filter(p => p.role === 'DIF').length;
-  const cenSlots = state.settings.slots.CEN - team.players.filter(p => p.role === 'CEN').length;
-  const attSlots = state.settings.slots.ATT - team.players.filter(p => p.role === 'ATT').length;
-  
-  count += Math.max(0, porSlots);
-  count += Math.max(0, difSlots);
-  count += Math.max(0, cenSlots);
-  count += Math.max(0, attSlots);
-  
-  return count;
+  return Math.max(0, 35 - team.players.length);
 }
 
 function hasRoleSlotAvailable(team, role) {
-  const filled = team.players.filter(p => p.role === role).length;
-  const allowed = state.settings.slots[role] || 0;
-  return filled < allowed;
+  return team.players.length < 35;
 }
 
 // --- UI RENDERING WORKFLOW ---
@@ -1178,6 +1240,10 @@ function renderActiveTeamConsole() {
 
   const team = state.teams.find(t => t.id === state.activeTeamId);
 
+  if (dom.checkboxUserTeam) {
+    dom.checkboxUserTeam.checked = team ? !!team.isUserTeam : false;
+  }
+
   if (!team) {
     if (dom.consoleTeamCredits) dom.consoleTeamCredits.textContent = '0';
     if (dom.consoleTeamMaxBid) dom.consoleTeamMaxBid.textContent = '0';
@@ -1203,32 +1269,22 @@ function renderActiveTeamConsole() {
   const filledCEN = team.players.filter(p => p.role === 'CEN').length;
   const filledATT = team.players.filter(p => p.role === 'ATT').length;
 
-  const leftPOR = Math.max(0, state.settings.slots.POR - filledPOR);
-  const leftDIF = Math.max(0, state.settings.slots.DIF - filledDIF);
-  const leftCEN = Math.max(0, state.settings.slots.CEN - filledCEN);
-  const leftATT = Math.max(0, state.settings.slots.ATT - filledATT);
-
-  if (dom.consoleSlotPOR) dom.consoleSlotPOR.textContent = leftPOR;
-  if (dom.consoleSlotDIF) dom.consoleSlotDIF.textContent = leftDIF;
-  if (dom.consoleSlotCEN) dom.consoleSlotCEN.textContent = leftCEN;
-  if (dom.consoleSlotATT) dom.consoleSlotATT.textContent = leftATT;
+  if (dom.consoleSlotPOR) dom.consoleSlotPOR.textContent = filledPOR;
+  if (dom.consoleSlotDIF) dom.consoleSlotDIF.textContent = filledDIF;
+  if (dom.consoleSlotCEN) dom.consoleSlotCEN.textContent = filledCEN;
+  if (dom.consoleSlotATT) dom.consoleSlotATT.textContent = filledATT;
 
   // Color background based on slot availability
-  const colorBox = (boxEl, slotsLeft) => {
+  const colorBox = (boxEl) => {
     if (!boxEl) return;
-    if (slotsLeft === 0) {
-      boxEl.style.background = 'rgba(239, 68, 68, 0.1)';
-      boxEl.style.borderColor = 'rgba(239, 68, 68, 0.35)';
-    } else {
-      boxEl.style.background = 'rgba(255, 255, 255, 0.02)';
-      boxEl.style.borderColor = 'rgba(255, 255, 255, 0.08)';
-    }
+    boxEl.style.background = 'rgba(255, 255, 255, 0.02)';
+    boxEl.style.borderColor = 'rgba(255, 255, 255, 0.08)';
   };
 
-  colorBox(document.getElementById('console-slot-por')?.parentElement, leftPOR);
-  colorBox(document.getElementById('console-slot-dif')?.parentElement, leftDIF);
-  colorBox(document.getElementById('console-slot-cen')?.parentElement, leftCEN);
-  colorBox(document.getElementById('console-slot-att')?.parentElement, leftATT);
+  colorBox(document.getElementById('console-slot-por')?.parentElement);
+  colorBox(document.getElementById('console-slot-dif')?.parentElement);
+  colorBox(document.getElementById('console-slot-cen')?.parentElement);
+  colorBox(document.getElementById('console-slot-att')?.parentElement);
 
   // Roster Title
   if (dom.consoleRosterTitle) {
@@ -1377,6 +1433,20 @@ function renderPlayerList() {
 
     const escapedName = p.name.replace(/'/g, "\\'");
     const escapedCountry = p.country.replace(/'/g, "\\'");
+
+    let idealRangeHtml = '';
+    if (p.ownerId) {
+      idealRangeHtml = `<span style="color: var(--color-text-muted); font-size: 0.85rem;">-</span>`;
+    } else {
+      const hasAnalysis = !!state.aiCache[p.id];
+      if (hasAnalysis) {
+        const range = calculateIdealBidRange(p);
+        idealRangeHtml = `<span style="color: #f59e0b; font-weight: 800; font-size: 0.85rem;">${range.min} - ${range.max} cr</span>`;
+      } else {
+        idealRangeHtml = `<span style="color: var(--color-text-muted); font-size: 0.65rem; font-style: italic; border: 1px dashed rgba(255,255,255,0.06); padding: 0.15rem 0.35rem; border-radius: 4px; display: inline-flex; align-items: center; gap: 0.2rem;">Su richiesta ✨</span>`;
+      }
+    }
+
     tr.innerHTML = `
       <td style="font-weight: 700; white-space: nowrap;">
         ${p.name}
@@ -1386,6 +1456,7 @@ function renderPlayerList() {
       <td><span class="badge badge-${p.role.toLowerCase()}">${p.role}</span></td>
       <td>${p.country}</td>
       <td style="font-weight: 600; text-align: center;">${p.initialValue} cr</td>
+      <td style="text-align: center;">${idealRangeHtml}</td>
       <td style="text-align: center;">${costCellHtml}</td>
       <td style="text-align: right;">${actionCellHtml}</td>
     `;
@@ -1443,7 +1514,10 @@ function renderTeamDashboard() {
 
     card.innerHTML = `
       <div class="team-card-header">
-        <h3 class="team-name">${t.name}</h3>
+        <h3 class="team-name" style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
+          ${t.name}
+          ${t.isUserTeam ? '<span class="badge badge-user-team" style="background: rgba(16, 185, 129, 0.15); color: #10b981; font-size: 0.65rem; padding: 0.15rem 0.35rem; border-radius: 6px; border: 1px solid rgba(16, 185, 129, 0.25); font-weight: 700; white-space: nowrap; display: inline-flex; align-items: center; gap: 0.2rem;">⭐ MIA SQUADRA</span>' : ''}
+        </h3>
         <div class="team-credits">${t.budget} <span>cr</span></div>
       </div>
       
@@ -1454,24 +1528,24 @@ function renderTeamDashboard() {
       <div class="team-roles-progress">
         <div class="role-bar-container">
           <div class="role-bar-label">POR</div>
-          <div class="role-bar-value" style="color: var(--color-por)">${por}/${state.settings.slots.POR}</div>
+          <div class="role-bar-value" style="color: var(--color-por)">${por}</div>
         </div>
         <div class="role-bar-container">
           <div class="role-bar-label">DIF</div>
-          <div class="role-bar-value" style="color: var(--color-dif)">${dif}/${state.settings.slots.DIF}</div>
+          <div class="role-bar-value" style="color: var(--color-dif)">${dif}</div>
         </div>
         <div class="role-bar-container">
           <div class="role-bar-label">CEN</div>
-          <div class="role-bar-value" style="color: var(--color-cen)">${cen}/${state.settings.slots.CEN}</div>
+          <div class="role-bar-value" style="color: var(--color-cen)">${cen}</div>
         </div>
         <div class="role-bar-container">
           <div class="role-bar-label">ATT</div>
-          <div class="role-bar-value" style="color: var(--color-att)">${att}/${state.settings.slots.ATT}</div>
+          <div class="role-bar-value" style="color: var(--color-att)">${att}</div>
         </div>
       </div>
 
       <div class="team-players-mini">
-        <div style="font-size: 0.7rem; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase; margin-bottom: 0.25rem;">Roster (${totalCount} giocatori)</div>
+        <div style="font-size: 0.7rem; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase; margin-bottom: 0.25rem;">Roster (${totalCount}/35 giocatori)</div>
         ${rosterHtml}
       </div>
       <button class="btn btn-accent" style="width: 100%; margin-top: 0.75rem; font-size: 0.75rem; padding: 0.4rem 0.8rem;" onclick="showTeamPitch('${t.id}')">Visualizza Campo ⚽</button>
@@ -1789,11 +1863,28 @@ function renderPitch() {
         const player = starters[i];
         const node = document.createElement('div');
         node.className = 'pitch-player-node';
+        node.style.position = 'relative';
         node.setAttribute('draggable', 'true');
         node.setAttribute('data-player-id', player.id);
         node.setAttribute('data-tooltip', `${player.name} (${player.purchaseCost} cr)`);
 
+        const cachedAnalysis = state.aiCache[player.id] || JSON.parse(sessionStorage.getItem(`fantamondiale_ai_${player.id}`) || '{}');
+        const strength = cachedAnalysis.matchStrength;
+        let strengthBadgeHtml = '';
+        if (strength !== undefined && strength !== null) {
+          const strVal = parseInt(strength);
+          let strColor = '#fff';
+          let strBg = '#ef4444'; // Red
+          if (strVal >= 80) {
+            strBg = '#10b981'; // Emerald
+          } else if (strVal >= 50) {
+            strBg = '#f59e0b'; // Amber
+          }
+          strengthBadgeHtml = `<div class="pitch-player-strength-badge" title="Forza del turno: ${strVal}/100" style="position: absolute; top: -4px; right: -4px; width: 17px; height: 17px; border-radius: 50%; background: ${strBg}; color: ${strColor}; font-size: 0.58rem; font-weight: 800; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.25); box-shadow: 0 1px 3px rgba(0,0,0,0.4); z-index: 5;">${strVal}</div>`;
+        }
+
         node.innerHTML = `
+          ${strengthBadgeHtml}
           <div class="pitch-player-shirt" style="background: var(--color-${player.role.toLowerCase()}); ${state.eliminatedCountries.includes(player.country) ? 'opacity: 0.55; border: 2px dashed var(--color-danger);' : ''}">
             ${player.purchaseCost}
           </div>
@@ -1841,9 +1932,28 @@ function renderPitch() {
       el.className = 'bench-player-node';
       el.setAttribute('draggable', 'true');
       el.setAttribute('data-player-id', p.id);
+
+      const cachedAnalysis = state.aiCache[p.id] || JSON.parse(sessionStorage.getItem(`fantamondiale_ai_${p.id}`) || '{}');
+      const strength = cachedAnalysis.matchStrength;
+      let strengthBadgeHtml = '';
+      if (strength !== undefined && strength !== null) {
+        const strVal = parseInt(strength);
+        let strColor = '#ef4444'; // Red
+        let strBg = 'rgba(239, 68, 68, 0.12)';
+        if (strVal >= 80) {
+          strColor = '#10b981'; // Green
+          strBg = 'rgba(16, 185, 129, 0.12)';
+        } else if (strVal >= 50) {
+          strColor = '#f59e0b'; // Amber
+          strBg = 'rgba(245, 158, 11, 0.12)';
+        }
+        strengthBadgeHtml = `<span style="display: inline-flex; align-items: center; justify-content: center; width: 17px; height: 17px; border-radius: 50%; background: ${strBg}; border: 1px solid rgba(255,255,255,0.05); color: ${strColor}; font-size: 0.6rem; font-weight: 800; margin-left: 0.35rem;" title="Forza del turno: ${strVal}/100">${strVal}</span>`;
+      }
+
       el.innerHTML = `
         <span class="dot" style="background: var(--color-${p.role.toLowerCase()})"></span>
         <span style="${state.eliminatedCountries.includes(p.country) ? 'text-decoration: line-through; color: var(--color-text-muted);' : ''}">${p.name} (${p.role}) - <strong>${p.purchaseCost} cr</strong></span>
+        ${strengthBadgeHtml}
         ${state.eliminatedCountries.includes(p.country) ? ' <span style="font-size: 0.55rem; color: var(--color-danger); font-weight: 700; border: 1px solid var(--color-danger); padding: 0.05rem 0.2rem; border-radius: 4px; line-height: 1;">ELIMINATO</span>' : ''}
       `;
 
@@ -2654,6 +2764,9 @@ async function showPlayerAIAnalysis(playerId, name, country, role, buttonEl, for
 
     // Render Data
     renderPopoverData(popover, name, country, role, result, buttonEl);
+    
+    // Instantly update the main players table row with the calculated price range
+    renderPlayerList();
   } catch (error) {
     console.error(error);
     renderPopoverError(popover, error.message);
@@ -2755,6 +2868,74 @@ function renderPopoverData(popover, name, country, role, data, buttonEl) {
     categoryText = 'Stella';
   }
 
+  // 1. Calculate Ideal purchase cost range only if player is free
+  const playerObj = state.players.find(x => x.id === popover.dataset.playerId);
+  let bidRangeHtml = '';
+  if (playerObj && !playerObj.ownerId) {
+    const range = calculateIdealBidRange(playerObj);
+    bidRangeHtml = `
+      <div class="ai-bid-range-section" style="background: rgba(245, 158, 11, 0.06); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 8px; padding: 0.5rem 0.6rem; margin-bottom: 0.55rem; display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 0.62rem; color: #f59e0b; text-transform: uppercase; font-weight: 800; letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.25rem;">Offerta Ideale Consigliata 💡</span>
+        <span style="font-size: 0.8rem; font-weight: 800; color: #f59e0b; font-family: monospace;">${range.min} - ${range.max} cr</span>
+      </div>
+    `;
+  }
+
+  // 2. Format Next Match and 1-100 Strength Circle
+  const nextOpp = data.matchAnalysis?.nextOpponent || 'Non disponibile';
+  const strength = parseInt(data.matchStrength) || 50;
+  
+  let strengthColor = '#f43f5e'; // Red/Rose
+  let strengthBg = 'rgba(244, 63, 94, 0.12)';
+  let strengthBorder = 'rgba(244, 63, 94, 0.3)';
+  if (strength >= 80) {
+    strengthColor = '#10b981'; // Emerald
+    strengthBg = 'rgba(16, 185, 129, 0.12)';
+    strengthBorder = 'rgba(16, 185, 129, 0.3)';
+  } else if (strength >= 50) {
+    strengthColor = '#f59e0b'; // Amber
+    strengthBg = 'rgba(245, 158, 11, 0.12)';
+    strengthBorder = 'rgba(245, 158, 11, 0.3)';
+  }
+
+  const nextMatchHtml = `
+    <div class="ai-next-match-section" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.04); border-radius: 8px; padding: 0.5rem 0.6rem; margin-bottom: 0.55rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+        <span style="font-size: 0.62rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em;">Prossimo Turno: vs ${nextOpp} 📅</span>
+        <div style="width: 26px; height: 26px; border-radius: 50%; background: ${strengthBg}; border: 1px solid ${strengthBorder}; color: ${strengthColor}; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 800;" title="Forza relativa per il turno: ${strength}/100">
+          ${strength}
+        </div>
+      </div>
+      <div style="background: rgba(0, 0, 0, 0.2); border-left: 2px solid ${strengthColor}; padding: 0.4rem 0.5rem; border-radius: 4px; font-size: 0.68rem; color: var(--color-text-muted); line-height: 1.4; font-style: italic;">
+        ${data.matchAnalysis?.criteriaText || 'Criteri di calcolo della forza del turno non disponibili.'}
+      </div>
+    </div>
+  `;
+
+  // 3. Format Alternatives challenging starter status
+  let alternativesHtml = '';
+  if (data.alternatives && Array.isArray(data.alternatives) && data.alternatives.length > 0) {
+    const items = data.alternatives.map(alt => `
+      <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.68rem; margin-bottom: 0.2rem; background: rgba(255, 255, 255, 0.02); padding: 0.2rem 0.4rem; border-radius: 4px;">
+        <span style="color: #fff; font-weight: 500;">🔄 ${alt.name}</span>
+        <span style="color: #ef4444; font-weight: 700;">Chance impiego: ${alt.playProbability}</span>
+      </div>
+    `).join('');
+    alternativesHtml = `
+      <div class="ai-alternatives-section" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.04); border-radius: 8px; padding: 0.5rem 0.6rem; margin-bottom: 0.55rem;">
+        <span style="display: block; font-size: 0.62rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em; margin-bottom: 0.35rem;">Insidie di Ruolo & Alternative 🔄</span>
+        ${items}
+      </div>
+    `;
+  } else {
+    alternativesHtml = `
+      <div class="ai-alternatives-section" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.04); border-radius: 8px; padding: 0.5rem 0.6rem; margin-bottom: 0.55rem;">
+        <span style="display: block; font-size: 0.62rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em; margin-bottom: 0.15rem;">Insidie di Ruolo & Alternative 🔄</span>
+        <span style="font-size: 0.68rem; color: var(--color-text-muted); font-style: italic;">Nessun ballottaggio significativo rilevato.</span>
+      </div>
+    `;
+  }
+
   popover.innerHTML = `
     <div class="ai-popover-header">
       <span class="ai-popover-title">Analisi IA ✨</span>
@@ -2799,16 +2980,22 @@ function renderPopoverData(popover, name, country, role, data, buttonEl) {
       </div>
     </div>
 
-    <div class="ai-form-section" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.04); border-radius: 8px; padding: 0.5rem 0.6rem; margin-bottom: 0.6rem;">
-      <span class="ai-stat-label" style="display:block; margin-bottom:0.25rem; font-size: 0.6rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em;">Stato di Forma (Settimana Corrente) 📈</span>
-      <p class="ai-form-text" style="margin: 0; font-size: 0.72rem; line-height: 1.4; color: #fff; font-weight: 500;">
+    ${bidRangeHtml}
+
+    ${nextMatchHtml}
+
+    ${alternativesHtml}
+
+    <div class="ai-form-section" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.04); border-radius: 8px; padding: 0.5rem 0.6rem; margin-bottom: 0.55rem;">
+      <span class="ai-stat-label" style="display:block; margin-bottom:0.25rem; font-size: 0.6rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em;">Stato di Forma (Settimana) 📈</span>
+      <p class="ai-form-text" style="margin: 0; font-size: 0.68rem; line-height: 1.4; color: #fff; font-weight: 500;">
         ${data.formState || 'Nessun aggiornamento recente su questa settimana.'}
       </p>
     </div>
 
     <div class="ai-profile-section">
       <span class="ai-stat-label" style="display:block; margin-bottom:0.25rem">Profilo Calciatore</span>
-      <p class="ai-profile-text">${data.description || 'Nessuna descrizione disponibile.'}</p>
+      <p class="ai-profile-text" style="font-size: 0.68rem; line-height: 1.4; color: var(--color-text-muted); margin: 0;">${data.description || 'Nessuna descrizione disponibile.'}</p>
     </div>
   `;
 

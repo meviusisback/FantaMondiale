@@ -61,6 +61,11 @@ Fornisci i dati strutturati RIGOROSAMENTE in formato JSON con le seguenti chiavi
 - valueForMoney: valutazione sintetica del rapporto qualità/prezzo all'asta FantaMondiale (scegli rigorosamente tra: "Ottimo", "Buono", "Rischioso", "Sopravvalutato"). Ad esempio, un ottimo giocatore in una nazionale debole potrebbe essere "Sopravvalutato" o "Rischioso" perché uscirà presto.
 - formState: una breve descrizione testuale (1 riga o massimo 2 frasi) dello stato di forma e notizie reali del calciatore aggiornate a questa settimana (es. "In gran forma dopo il gol decisivo nel weekend", "In dubbio per affaticamento muscolare", "Reduce da ottime prestazioni").
 - description: descrizione del profilo del calciatore, valutando le performance recenti e le aspettative/performance al Mondiale in ottica FantaMondiale (2-3 frasi chiare).
+- alternatives: un array di massimo 2 oggetti reali rappresentanti i calciatori alternativi nello stesso ruolo che potrebbero insidiare la titolarità, con le chiavi: name (nome dell'alternativa) e playProbability (probabilità percentuale, es: "35%"). Se non ci sono insidie significative, restituisci un array vuoto [].
+- matchStrength: valore numerico (intero da 1 a 100) che indichi la forza relativa del calciatore in questo specifico prossimo turno in base a valore, forma recente, livello dell'avversario reale del prossimo turno, probabilità di bonus e importanza del match. NOTA: in caso di partita proibitiva o avversario durissimo, questo valore deve scendere drasticamente.
+- matchAnalysis: un oggetto strutturato con le seguenti chiavi:
+  - nextOpponent: la nazionale avversaria reale del prossimo turno (es: "Francia", "Spagna").
+  - criteriaText: spiegazione dettagliata ed esplicita (in 2-3 frasi chiare) dei criteri e dei parametri considerati per formulare il punteggio numerico di forza (es. spiegando come la forma e l'avversario prossimo influenzano il voto da 1 a 100).
 
 Rispondi esclusivamente con il codice JSON, senza alcun blocco di codice markdown o testo introduttivo.`;
 
@@ -164,6 +169,12 @@ Rispondi esclusivamente con il codice JSON, senza alcun blocco di codice markdow
       parsedData.valueForMoney = "Sopravvalutato";
       parsedData.description = `ELIMINATO: La nazionale dell'${country} non partecipa o è stata eliminata da questo Mondiale. Il calciatore non è utilizzabile fantacalcisticamente.`;
       parsedData.formState = `La nazionale dell'${country} è esclusa dal Mondiale.`;
+      parsedData.matchStrength = 0;
+      parsedData.alternatives = [];
+      parsedData.matchAnalysis = {
+        nextOpponent: "Nessuno",
+        criteriaText: "La nazionale di appartenenza è stata eliminata o non partecipa al Mondiale."
+      };
     }
 
     return res.status(200).json(parsedData);
