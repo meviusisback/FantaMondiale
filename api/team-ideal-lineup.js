@@ -28,16 +28,14 @@ export default async function handler(req, res) {
     // Format roster for the AI model
     const playersListText = players.map(p => 
       `- ID: ${p.id} | Ruolo: ${p.role} | Nome: ${p.name} | Nazionale: ${p.country} | Costo d'acquisto: ${p.purchaseCost || 0} cr`
-    ).join('\n');
-
-    const prompt = `Sei un esperto analista calcistico e fantallenatore specializzato nel torneo "FantaMondiale" (il fantacalcio basato sulla fase finale dei Mondiali di calcio). Il tuo compito è analizzare la rosa completa dei calciatori a disposizione della squadra "${teamName || 'Mia Squadra'}" e schierare la FORMAZIONE IDEALE da bonus per massimizzare i punteggi.
+    ).join('\n');    const prompt = `Sei un esperto analista calcistico e fantallenatore specializzato nel torneo "FantaMondiale" (il fantacalcio basato sulla fase finale dei Mondiali di calcio). Il tuo compito è analizzare la rosa completa dei calciatori a disposizione della squadra "${teamName || 'Mia Squadra'}" e schierare la FORMAZIONE IDEALE da bonus per massimizzare i punteggi.
 
 Ecco la rosa completa dei calciatori della squadra suddivisi per ruolo, ciascuno con il suo ID unico, ruolo, nome, nazione di appartenenza e costo d'acquisto:
 ${playersListText}
 
-REGOLE DI SELEZIONE E SCHIERAMENTO (MANDATORIE E STRICHE):
+REGOLE DI SELEZIONE E SCHIERAMENTO (MANDATORIE E RIGIDE):
 1. Devi scegliere la migliore formazione possibile (esattamente 11 Titolari) ed i restanti giocatori andranno in panchina.
-2. Scegli il modulo tattico migliore (tra: "4-3-3", "4-4-2", "3-5-2", "3-4-3", "5-3-2") che valorizzi al massimo i tuoi migliori giocatori da bonus.
+2. Scegli il modulo tattico migliore (tra: "4-3-3", "4-4-2", "3-5-2", "3-4-3", "5-3-2") che valorizzi al massimo i tuoi migliori giocatori da bonus nel FantaMondiale.
 3. Rispetta rigorosamente i ruoli del FantaMondiale per i titolari in base al modulo scelto:
    - "4-3-3": 1 POR, 4 DIF, 3 CEN, 3 ATT
    - "4-4-2": 1 POR, 4 DIF, 4 CEN, 2 ATT
@@ -45,15 +43,18 @@ REGOLE DI SELEZIONE E SCHIERAMENTO (MANDATORIE E STRICHE):
    - "3-4-3": 1 POR, 3 DIF, 4 CEN, 3 ATT
    - "5-3-2": 1 POR, 5 DIF, 3 CEN, 2 ATT
 4. I giocatori titolari schierati e quelli in panchina devono corrispondere ESATTAMENTE ai calciatori presenti nella rosa fornita. Non inventare o aggiungere nuovi calciatori.
-5. Fai ricerche web in tempo reale (Google Search / Web Search) per verificare le notizie reali di questa settimana relative a infortuni, squalifiche, titolarità o stato di forma recente per ciascuno di questi calciatori per escludere o inserire le persone giuste!
-6. **Mandatorio per lo schieramento:** La formazione DEVE basarsi rigorosamente sullo stato di forma recente. Devi escludere dai titolari i giocatori infortunati, squalificati o non dati come probabili titolari reali nelle ultime notizie. Preferisci sempre giocatori in salute e con altissima probabilità di essere titolari e portare bonus.
+5. **ACCURACY DELLE NOTIZIE, CONVOCAZIONI E INFORTUNI (MONDIALE 2026 - ANNO 2026):**
+   - Fai ricerche web in tempo reale per verificare convocazioni, infortuni, squalifiche e stato di forma per ciascun calciatore.
+   - **IMPORTANTE:** Le notizie e le convocazioni devono riferirsi TASSATIVAMENTE ed ESCLUSIVAMENTE alla fase finale del **Mondiale 2026 (World Cup 2026)** che si gioca nel corrente anno 2026.
+   - **IGNORA COMPLETAMENTE** notizie obsolete o esclusioni passate, come ad esempio l'assenza di Thibaut Courtois agli Europei 2024 (Euro 2024). Per il Mondiale 2026, Courtois è convocato e fa parte della rosa! Cerca solo notizie freschissime e aggiornate sul Mondiale 2026, verificando le date delle notizie. Usa solo fonti verificate e attendibili, effettuando controlli incrociati su più fonti.
+6. **Mandatorio per lo schieramento:** La formazione DEVE basarsi rigorosamente sullo stato di forma recente e la titolarità per il Mondiale 2026. Escludi dai titolari i giocatori infortunati, squalificati o non convocati reali per il Mondiale 2026. Preferisci giocatori attivi e con altissima probabilità di essere titolari e portare bonus.
 7. **VERIFICA CONVOCAZIONE ED ELIMINAZIONE MONDIALE (MANDATORIA E CRUCIALE):** Nazioni attualmente eliminate o assenti dal Mondiale ad oggi: ${ELIMINATED_COUNTRIES.join(', ')}. Verifica se la nazionale partecipa a questo Mondiale e non è già stata eliminata dal torneo ad oggi. Se la nazionale di un calciatore è assente o è GIÀ STATA ELIMINATA dal Mondiale:
-   - È assolutamente vietato inserire the calciatore negli 11 titolari ('starters'), anche se si tratta di un top player assoluto (es. Barella).
+   - È assolutamente vietato inserire il calciatore negli 11 titolari ('starters'), anche se si tratta di un top player assoluto.
    - Devi inserirlo obbligatoriamente in fondo all'elenco dei panchinari ('bench').
    - Nella chiave 'playersAnalysis' per quel calciatore, imposta 'starterProbability' tassativamente a '0%', 'playerCategory' tassativamente a 'scarso', e descrivi questo stato in 'formState' inserendo obbligatoriamente all'inizio: "ELIMINATO: [Spiegazione dettagliata dell'assenza o dell'eliminazione della nazionale dal Mondiale]". Non affidarti a conoscenze pregresse, esegui sempre ricerche web attive ad oggi per ogni singola nazionale rappresentata in rosa!
 8. **Valutazione Forza Prossimo Turno (matchStrength):** Calcola per ciascun calciatore un valore numerico da 1 a 100 che indichi la forza relativa specifica per il prossimo turno. Questo valore deve rispecchiare in modo rigoroso la difficoltà del prossimo avversario reale del Mondiale (ad esempio, se si scontra contro una nazionale favorita assoluta, il punteggio deve scendere drasticamente). Considera: valore del giocatore, suo stato di forma recente, probabilità di bonus (gol/assist/porta inviolata) nel turno, importanza della partita e situazione del team.
 
-REGOLE DI VALUTAZIONE E CATEGORIA (CRUCIALE):
+REGOLE DI VALUTAZIONE E CATEGORIA:
 Assegna a ciascun calciatore della rosa una valutazione 'playerCategory' rigorosamente tra questi 5 valori in base alle sue ultime performance reali e prospettive nel Mondiale:
 - "scarso": gioca poco o niente, pochi bonus, nazionale debole o attualmente infortunato/squalificato di lungo corso.
 - "accettabile": titolare in nazionale debole, pochi bonus.
@@ -67,6 +68,7 @@ REGOLE DI ESATTEZZA NUMERICA DELLE PRESENZE:
   * Per tutti gli altri ruoli, riporta presenze, gol segnati e assist (es. "32 presenze, 10 gol, 4 assist in campionato nella stagione 25/26").
 - Se dopo molteplici tentativi non trovi dati certi, scrivi "Dati non disponibili nella stagione 25/26", ma fai ogni sforzo per trovare l'esatta statistica reale ad oggi.
 
+FORMATO DELLA RISPOSTA (MANDATORIO):
 Fornisci la risposta RIGOROSAMENTE in formato JSON con la seguente struttura esatta (sostituendo le chiavi con i reali ID dei giocatori):
 {
   "recommendedModule": "4-3-3",
@@ -85,7 +87,7 @@ Fornisci la risposta RIGOROSAMENTE in formato JSON con la seguente struttura esa
       }
     }
   },
-  "tacticalJustification": "Spiegazione dettagliata ed esplicita in lingua italiana dei motivi tattici che ti hanno spinto a scegliere questi 11 titolari rispetto ai giocatori lasciati in panchina (ad esempio spiegando chiaramente se chi è in panchina affronta partite più difficili, ha uno stato di forma peggiore, è meno performante o rischia il posto). Fornisci anche in modo chiaro potenziali ballottaggi e/o alternative strategiche all'interno della rosa che il fantallenatore potrebbe prendere in considerazione."
+  "tacticalJustification": "Spiegazione dettagliata ed esplicita in lingua italiana incentrata ESCLUSIVAMENTE su strategie del FantaMondiale per massimizzare bonus (gol, assist, rigori, clean sheet per i portieri). NON parlare come un vero allenatore di calcio (niente commenti su equilibrio tattico reale della squadra o coperture difensive). Spiega in modo chiaro perché hai preferito gli 11 titolari rispetto a chi è rimasto in panchina (ad esempio chiarendo se chi è in panchina affronta partite più difficili nel prossimo turno del Mondiale, ha uno stato di forma peggiore, ha minori probabilità di portare bonus, o è meno performante). Fornisci anche in modo esplicito potenziali ballottaggi e/o alternative strategiche valide all'interno della rosa che il fantallenatore può adottare (es. ballottaggi tra titolari e panchina basati sul coefficiente di bonus o sulla difficoltà del match)."
 }
 
 Rispondi esclusivamente con il codice JSON, senza alcun blocco di codice markdown o testo introduttivo.`;

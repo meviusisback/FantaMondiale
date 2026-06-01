@@ -1904,21 +1904,10 @@ function renderPitch() {
         node.addEventListener('drop', handleDrop);
 
         // Wire rich popover events
-        node.addEventListener('mouseenter', (e) => {
-          if (window.innerWidth > 768) {
-            showPitchPlayerTooltip(player.id, node, false);
-          }
-        });
-        node.addEventListener('mouseleave', (e) => {
-          if (window.innerWidth > 768) {
-            closePitchPopover();
-          }
-        });
         node.addEventListener('click', (e) => {
-          if (window.innerWidth <= 768) {
-            e.stopPropagation();
-            showPitchPlayerTooltip(player.id, node, true);
-          }
+          e.stopPropagation();
+          const isMobile = window.innerWidth <= 768;
+          showPitchPlayerTooltip(player.id, node, isMobile);
         });
 
         rowElement.appendChild(node);
@@ -1987,21 +1976,10 @@ function renderPitch() {
       el.addEventListener('drop', handleDrop);
 
       // Wire rich popover events
-      el.addEventListener('mouseenter', (e) => {
-        if (window.innerWidth > 768) {
-          showPitchPlayerTooltip(p.id, el, false);
-        }
-      });
-      el.addEventListener('mouseleave', (e) => {
-        if (window.innerWidth > 768) {
-          closePitchPopover();
-        }
-      });
       el.addEventListener('click', (e) => {
-        if (window.innerWidth <= 768) {
-          e.stopPropagation();
-          showPitchPlayerTooltip(p.id, el, true);
-        }
+        e.stopPropagation();
+        const isMobile = window.innerWidth <= 768;
+        showPitchPlayerTooltip(p.id, el, isMobile);
       });
 
       benchContainer.appendChild(el);
@@ -2736,22 +2714,28 @@ function closePitchPopover() {
 }
 
 function positionPitchPopover(popover, triggerEl) {
+  const dialogEl = document.getElementById('pitch-dialog');
+  if (!dialogEl) return;
+  const dialogRect = dialogEl.getBoundingClientRect();
   const rect = triggerEl.getBoundingClientRect();
   const popoverWidth = 300;
-  const scrollX = window.scrollX || window.pageXOffset;
-  const scrollY = window.scrollY || window.pageYOffset;
 
-  let left = rect.left + scrollX - 110; // Center relative to player node (which is 75px wide)
-  let top = rect.bottom + scrollY + 8;
+  // Center popover relative to the player card (which is ~75px wide)
+  let left = rect.left - dialogRect.left - 110 + 37.5;
+  let top = rect.bottom - dialogRect.top + 8;
 
-  const popoverHeightEst = 240;
-  if (rect.bottom + popoverHeightEst > window.innerHeight && rect.top > popoverHeightEst) {
-    top = rect.top + scrollY - popoverHeightEst - 8;
+  const dialogWidth = dialogRect.width;
+  const dialogHeight = dialogRect.height;
+  const popoverHeightEst = 280;
+
+  // Position above player card if there is no space at the bottom of the dialog
+  if (rect.bottom - dialogRect.top + popoverHeightEst > dialogHeight && (rect.top - dialogRect.top) > popoverHeightEst) {
+    top = rect.top - dialogRect.top - popoverHeightEst - 8;
   }
 
   if (left < 10) left = 10;
-  if (left + popoverWidth > window.innerWidth - 10) {
-    left = window.innerWidth - popoverWidth - 10;
+  if (left + popoverWidth > dialogWidth - 10) {
+    left = dialogWidth - popoverWidth - 10;
   }
 
   popover.style.left = `${left}px`;
@@ -2760,7 +2744,7 @@ function positionPitchPopover(popover, triggerEl) {
 }
 
 function renderPitchPopoverLoading(popover, name, isMobile) {
-  const closeBtnHtml = isMobile ? `<button class="pitch-popover-close" onclick="closePitchPopover()">✕</button>` : '';
+  const closeBtnHtml = `<button class="pitch-popover-close" onclick="closePitchPopover()">✕</button>`;
   popover.innerHTML = `
     ${closeBtnHtml}
     <div style="font-size:0.75rem; font-weight:700; color:#fff; margin-bottom: 0.65rem;">
@@ -2781,7 +2765,7 @@ function renderPitchPopoverError(popover, errorMsg) {
 }
 
 function renderPitchPopoverData(popover, name, country, role, data, triggerEl, isMobile) {
-  const closeBtnHtml = isMobile ? `<button class="pitch-popover-close" onclick="closePitchPopover()">✕</button>` : '';
+  const closeBtnHtml = `<button class="pitch-popover-close" onclick="closePitchPopover()">✕</button>`;
 
   const strength = parseInt(data.matchStrength) || 50;
   let strengthColor = '#f43f5e';
@@ -2865,7 +2849,13 @@ async function showPitchPlayerTooltip(playerId, triggerEl, isMobile) {
   popover.className = `pitch-player-popover ${isMobile ? 'modal-view' : ''}`;
   popover.dataset.playerId = playerId;
   activePitchPopover = popover;
-  document.body.appendChild(popover);
+  
+  const dialogEl = document.getElementById('pitch-dialog');
+  if (dialogEl) {
+    dialogEl.appendChild(popover);
+  } else {
+    document.body.appendChild(popover);
+  }
 
   if (isMobile) {
     document.body.classList.add('ai-modal-open');

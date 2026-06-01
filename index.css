@@ -282,6 +282,11 @@ header {
   .dashboard-grid {
     grid-template-columns: 1fr;
   }
+  .dashboard-grid > * {
+    min-width: 0 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
   main.tab-container {
     order: 2;
   }
@@ -373,6 +378,25 @@ header {
 }
 
 @media (max-width: 768px) {
+  .panel {
+    padding: 1rem !important;
+  }
+  .player-table-container {
+    overflow-x: hidden !important; /* Contain layout */
+  }
+  .player-table tr {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .player-table td {
+    white-space: normal !important;
+    word-break: break-word !important;
+  }
+  .player-table td:nth-child(1) {
+    white-space: normal !important;
+    overflow: visible !important;
+    flex-wrap: wrap !important;
+  }
   .container {
     padding: 1rem 0.75rem;
   }

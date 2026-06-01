@@ -38,6 +38,12 @@ export default async function handler(req, res) {
 Fornisci un'analisi strategica dettagliata e accurata in lingua italiana per il calciatore: ${name} (Nazionale: ${country}, Ruolo: ${role}).
 Esegui una ricerca online in tempo reale tramite Google Search / Web Search per ottenere le informazioni calcistiche reali più recenti ed aggiornate ad oggi (squadra di club attuale, ultimo stato di forma, infortuni o convocazioni recenti, presenze e gol nella stagione 2025/2026).
 
+REGOLE DI ACCURATEZZA CRONOLOGICA E VERIFICA NEWS (MANDATORIE E CRUCIALI):
+- Il torneo di riferimento a cui partecipa il calciatore è il **Mondiale 2026 (World Cup 2026)**, che si gioca nel **2026**.
+- Devi effettuare ricerche mirate ed estremamente recenti (es. "${name} infortunio convocazione 2026" oppure "${name} convocazione belgio mondiale 2026") utilizzando SOLO fonti verificate e attendibili (Transfermarkt, Sky Sport, Gazzetta dello Sport, testate ufficiali della nazionale, ecc.).
+- È TASSATIVAMENTE VIETATO riportare notizie vecchie o di tornei passati spacciandole per attuali. In particolare, ignora totalmente le notizie risalenti all'Europeo 2024 (Euro 2024) o ad anni passati. Ad esempio, non confondere vecchie esclusioni (come quella di Thibaut Courtois dall'Europeo 2024) con lo stato attuale del Mondiale 2026. Courtois è pienamente convocato, disponibile e attivo per il Mondiale 2026!
+- Verifica con estrema attenzione le date degli articoli trovati e fai un controllo incrociato su più fonti per accertarti se il giocatore ha infortuni REALI ad oggi (giugno 2026), se è probabile titolare o se rischia di non giocare.
+
 REGOLE DI ESATTEZZA NUMERICA DELLE PRESENZE (CRUCIALE):
 ${appearancesInstruction}
 - È tassativamente vietato inventare, stimare o tirare a indovinare i numeri. Fai ricerche mirate (es. "${name} presenze gol 2025 2026 transfermarkt"). Se dopo molteplici tentativi non trovi dati certi, rispondi con "Dati non disponibili nella stagione 25/26", ma fai ogni sforzo per trovare l'esatta statistica reale ad oggi.

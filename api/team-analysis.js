@@ -32,6 +32,10 @@ IMPORTANTE: Questa analisi viene solitamente usata durante l'ASTA. L'obiettivo p
 
 Nazioni attualmente ELIMINATE o ASSENTI dal Mondiale ad oggi: ${ELIMINATED_COUNTRIES.join(', ')}
 
+REGOLE DI ACCURATEZZA CRONOLOGICA E VERIFICA NEWS (MANDATORIE E CRUCIALI):
+- Il torneo di riferimento è il Mondiale 2026 (World Cup 2026), che si gioca nel corrente anno 2026.
+- Qualsiasi notizia su infortuni, squalifiche, convocazioni e cammini nel tabellone deve fare riferimento all'anno 2026 e al Mondiale 2026. Ignora dati obsoleti legati ad altri tornei (come Euro 2024 o qualificazioni di anni passati). Usa fonti fresche e verificate, double-checking su più fonti.
+
 Input ricevuti:
 - Nome Squadra: ${teamName || 'Mia Squadra'}
 - Roster attuale (calciatori divisi per ruolo):
