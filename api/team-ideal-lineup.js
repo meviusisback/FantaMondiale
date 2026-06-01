@@ -23,14 +23,15 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Dati incompleti: la lista dei calciatori è obbligatoria ed è richiesto un array.' });
     }
 
-    const ELIMINATED_COUNTRIES = await getEliminatedCountries(apiKey, provider, openRouterModel);
-
-    // Format roster for the AI model
+    const ELIMINATED_COUNTRIES = await getEliminatedCountries(apiKey, provider, openRouterModel);    // Format roster with pre-calculated evaluations for the AI model
     const playersListText = players.map(p => 
-      `- ID: ${p.id} | Ruolo: ${p.role} | Nome: ${p.name} | Nazionale: ${p.country} | Costo d'acquisto: ${p.purchaseCost || 0} cr`
-    ).join('\n');    const prompt = `Sei un esperto analista calcistico e fantallenatore specializzato nel torneo "FantaMondiale" (il fantacalcio basato sulla fase finale dei Mondiali di calcio). Il tuo compito è analizzare la rosa completa dei calciatori a disposizione della squadra "${teamName || 'Mia Squadra'}" e schierare la FORMAZIONE IDEALE da bonus per massimizzare i punteggi.
+      `- ID: ${p.id} | Ruolo: ${p.role} | Nome: ${p.name} | Nazionale: ${p.country} | Costo d'acquisto: ${p.purchaseCost || 0} cr | Categoria IA: ${p.playerCategory || 'buono'} | Probabilità Titolare: ${p.starterProbability || '50%'} | Forza del Turno (1-100): ${p.matchStrength || 50} | Avversario prossimo: ${p.nextOpponent || 'Da verificare'} | Stato Forma/News: ${p.formState || 'Nessuna news'}`
+    ).join('\n');
 
-Ecco la rosa completa dei calciatori della squadra suddivisi per ruolo, ciascuno con il suo ID unico, ruolo, nome, nazione di appartenenza e costo d'acquisto:
+    const prompt = `Sei un esperto analista calcistico e fantallenatore specializzato nel torneo "FantaMondiale" (il fantacalcio basato sulla fase finale dei Mondiali di calcio). Il tuo compito è analizzare la rosa dei calciatori a disposizione della squadra "${teamName || 'Mia Squadra'}" e schierare la FORMAZIONE IDEALE da bonus per massimizzare i punteggi, sfruttando le valutazioni strategiche pre-calcolate per ciascuno di essi.
+Seleziona gli 11 titolari ed i panchinari basandoti rigorosamente sulle valutazioni fornite per massimizzare il punteggio del turno, schierando prioritariamente i giocatori con la forza del prossimo turno (matchStrength) più alta ed escludendo gli infortunati/eliminati!
+
+Ecco la rosa dei calciatori della squadra con le rispettive valutazioni IA fresche (inclusi infortuni, probabilità, forza e avversario prossimo):
 ${playersListText}
 
 REGOLE DI SELEZIONE E SCHIERAMENTO (MANDATORIE E RIGIDE):
@@ -43,24 +44,11 @@ REGOLE DI SELEZIONE E SCHIERAMENTO (MANDATORIE E RIGIDE):
    - "3-4-3": 1 POR, 3 DIF, 4 CEN, 3 ATT
    - "5-3-2": 1 POR, 5 DIF, 3 CEN, 2 ATT
 4. I giocatori titolari schierati e quelli in panchina devono corrispondere ESATTAMENTE ai calciatori presenti nella rosa fornita. Non inventare o aggiungere nuovi calciatori.
-5. **ACCURACY DELLE NOTIZIE, CONVOCAZIONI E INFORTUNI (MONDIALE 2026 - ANNO 2026):**
-   - Fai ricerche web in tempo reale per verificare convocazioni, infortuni, squalifiche e stato di forma per ciascun calciatore.
-   - **IMPORTANTE:** Le notizie e le convocazioni devono riferirsi TASSATIVAMENTE ed ESCLUSIVAMENTE alla fase finale del **Mondiale 2026 (World Cup 2026)** che si gioca nel corrente anno 2026.
-   - **IGNORA COMPLETAMENTE** notizie obsolete o esclusioni passate, come ad esempio l'assenza di Thibaut Courtois agli Europei 2024 (Euro 2024). Per il Mondiale 2026, Courtois è convocato e fa parte della rosa! Cerca solo notizie freschissime e aggiornate sul Mondiale 2026, verificando le date delle notizie. Usa solo fonti verificate e attendibili, effettuando controlli incrociati su più fonti.
-6. **Mandatorio per lo schieramento:** La formazione DEVE basarsi rigorosamente sullo stato di forma recente e la titolarità per il Mondiale 2026. Escludi dai titolari i giocatori infortunati, squalificati o non convocati reali per il Mondiale 2026. Preferisci giocatori attivi e con altissima probabilità di essere titolari e portare bonus.
-7. **VERIFICA CONVOCAZIONE ED ELIMINAZIONE MONDIALE (MANDATORIA E CRUCIALE):**
-   Nazioni attualmente eliminate o assenti dal Mondiale ad oggi: ${ELIMINATED_COUNTRIES.join(', ')}.
-   - **REGOLA DI PARTECIPAZIONE (IMPORTANTE):** Fai riferimento ESCLUSIVAMENTE all'elenco sopra per stabilire se una nazionale è eliminata o non partecipa. Se la nazione del calciatore NON è presente in quell'elenco (ad esempio Norvegia, Belgio, ecc.), devi considerarla a tutti gli effetti come ATTIVA e QUALIFICATA nel torneo dell'utente, ignorando qualsiasi dato reale di mancata qualificazione per garantire la coerenza con il database del FantaMondiale dell'utente (dove giocatori come Haaland sono attivi e giocano nel Mondiale 2026 dell'utente!).
-   - Se la nazionale di un calciatore è inclusa in tale elenco di nazionali eliminate o assenti dal Mondiale:
-     * È assolutamente vietato inserire il calciatore negli 11 titolari ('starters'), anche se si tratta di un top player assoluto.
-     * Devi inserirlo obbligatoriamente in fondo all'elenco dei panchinari ('bench').
-     * Nella chiave 'playersAnalysis' per quel calciatore, imposta 'starterProbability' tassativamente a '0%', 'playerCategory' tassativamente a 'scarso', e descrivi questo stato in 'formState' inserendo obbligatoriamente all'inizio: "ELIMINATO: [Spiegazione dettagliata dell'assenza o dell'eliminazione della nazionale dal Mondiale]". Non affidarti a conoscenze pregresse, esegui sempre ricerche web attive ad oggi per ogni singola nazionale rappresentata in rosa!
-8. **Valutazione Forza Prossimo Turno (matchStrength):** Calcola per ciascun calciatore un valore numerico da 1 a 100 che indichi la forza relativa specifica per il prossimo turno. Questo valore deve rispecchiare in modo rigoroso la difficoltà del prossimo avversario reale del Mondiale (ad esempio, se si scontra contro una nazionale favorita assoluta, il punteggio deve scendere drasticamente). Considera: valore del giocatore, suo stato di forma recente, probabilità di bonus (gol/assist/porta inviolata) nel turno, importanza della partita e situazione del team.
-9. **VALUTAZIONE GLOBALE BASATA SU VOTO E BONUS (MANDATORIA - CRUCIALE):**
-   - Devi calcolare e valutare singolarmente TUTTI i calciatori in rosa prima di decidere chi far partire titolare.
-   - La scelta di chi schierare titolare deve basarsi esclusivamente e rigorosamente sul **voto in pagella stimato e sulle probabilità di portare BONUS** (gol +3, assist +1, rigori, clean sheet per i portieri) o MALUS.
-   - **IGNORA COMPLETAMENTE** considerazioni tattiche o di posizionamento del calcio reale (es. non ha alcuna utilità escludere un centrocampista ultra-offensivo da bonus perché "è un'ala e non garantisce equilibrio difensivo" o perché "lascia scoperto il centrocampo"). Nel FantaMondiale contano esclusivamente il voto e i bonus/malus. I centrocampisti e gli attaccanti più offensivi e prolifici devono essere schierati prioritariamente rispetto a centrocampisti difensivi di contenimento, a prescindere dal modulo reale.
-10. **DIVIETO ASSOLUTO DI DUPLICAZIONE (MANDATORIO E STRICHE):** Ciascun calciatore della rosa fornita deve apparire UNA SOLA VOLTA nell'intero schieramento: o nei titolari ('starters') o nei panchinari ('bench'), mai in entrambi! È assolutamente vietato che un giocatore (es. Bernardo Silva o chiunque altro) compaia contemporaneamente sia tra i titolari che in panchina.
+5. **VALUTAZIONE GLOBALE BASATA SU VOTO E BONUS (MANDATORIA):**
+   - La scelta di chi schierare titolare deve basarsi rigorosamente sulla **Forza del Turno (matchStrength)** e sulla **Probabilità Titolare** che ti sono state fornite.
+   - Privilegia in assoluto i calciatori con i valori di "Forza del Turno" più elevati. È vietato schierare titolare un giocatore che ha una Forza del Turno molto bassa o pari a 0 (ad esempio perché infortunato o escluso/eliminato), se in rosa disponi di un'alternativa attiva e performante nello stesso ruolo.
+   - **IGNORA COMPLETAMENTE** considerazioni tattiche o di posizionamento del calcio reale (es. non ha alcuna utilità escludere un centrocampista ultra-offensivo da bonus perché "è un'ala e non garantisce equilibrio difensivo"). Nel FantaMondiale contano esclusivamente il voto e i bonus/malus.
+6. **DIVIETO ASSOLUTO DI DUPLICAZIONE (MANDATORIO E STRICHE):** Ciascun calciatore della rosa fornita deve apparire UNA SOLA VOLTA nell'intero schieramento: o nei titolari ('starters') o nei panchinari ('bench'), mai in entrambi! È assolutamente vietato che un giocatore compaia contemporaneamente sia tra i titolari che in panchina.
 
 REGOLE DI VALUTAZIONE E CATEGORIA:
 Assegna a ciascun calciatore della rosa una valutazione 'playerCategory' rigorosamente tra questi 5 valori in base alle sue ultime performance reali e prospettive nel Mondiale:

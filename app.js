@@ -3853,18 +3853,185 @@ async function recalculateIdealLineup(team) {
     <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 380px; background: rgba(0,0,0,0.5); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); padding: 2rem; text-align: center; box-sizing: border-box;">
       <div class="ai-skeleton-pulse" style="width: 50px; height: 50px; border-radius: 50%; background: var(--color-primary); margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; animation: pulse 1.5s infinite;">🔮</div>
       <h4 style="margin: 0 0 0.5rem 0; color: #fff; font-size: 0.9rem;">Elaborazione IA...</h4>
-      <p id="ai-recalc-status" style="margin: 0 0 1rem 0; font-size: 0.75rem; color: var(--color-text-muted); line-height: 1.4;">Fase 1: Calcolo schieramento ottimale e modulo tattico in corso...</p>
+      <p id="ai-recalc-status" style="margin: 0 0 1rem 0; font-size: 0.75rem; color: var(--color-text-muted); line-height: 1.4;">Fase 1: Raccolta news e statistiche calciatori in lotti...</p>
       <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; margin-bottom: 0.5rem;">
-        <div id="ai-recalc-progress" style="width: 15%; height: 100%; background: linear-gradient(90deg, #38bdf8 0%, #c084fc 100%); border-radius: 3px; transition: width 0.4s ease-out;"></div>
+        <div id="ai-recalc-progress" style="width: 10%; height: 100%; background: linear-gradient(90deg, #38bdf8 0%, #c084fc 100%); border-radius: 3px; transition: width 0.4s ease-out;"></div>
       </div>
     </div>
   `;
-  benchContainer.innerHTML = `<div style="text-align: center; color: var(--color-text-muted); font-size: 0.75rem; font-style: italic;">Ricarica in corso...</div>`;
+  benchContainer.innerHTML = `<div style="text-align: center; color: var(--color-text-muted); font-size: 0.75rem; font-style: italic;">Calcolo in corso...</div>`;
 
   try {
+    const statusTextEl = document.getElementById('ai-recalc-status');
+    const progressBarEl = document.getElementById('ai-recalc-progress');
+
     // ----------------------------------------------------
-    // STEP 1: Fetch optimized lineup (starters, bench, tactical justification)
+    // PHASE 1: Fetch evaluations for ALL players in small batches first
     // ----------------------------------------------------
+    const allPlayers = [...team.players];
+    const batchSize = 6;
+    const batches = [];
+    
+    for (let i = 0; i < allPlayers.length; i += batchSize) {
+      batches.push(allPlayers.slice(i, i + batchSize));
+    }
+
+    const totalBatches = batches.length;
+    
+    for (let batchIdx = 0; batchIdx < totalBatches; batchIdx++) {
+      const batchPlayers = batches[batchIdx];
+      
+      if (statusTextEl && progressBarEl) {
+        statusTextEl.innerText = `Fase 1: Recupero news e valutazioni... Lotto ${batchIdx + 1} di ${totalBatches} (${Math.round((batchIdx / totalBatches) * 100)}%)`;
+        progressBarEl.style.width = `${Math.round(((batchIdx + 1) / (totalBatches + 2)) * 100)}%`;
+      }
+
+      const batchResponse = await fetch('/api/player-batch-analysis', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          players: batchPlayers,
+          provider: state.settings.aiProvider || 'openrouter',
+          openRouterModel: state.settings.openRouterModel || 'openai/gpt-oss-120b:free'
+        })
+      });
+
+      if (!batchResponse.ok) {
+        console.warn(`Batch analysis failed for lot ${batchIdx + 1}`);
+        continue;
+      }
+
+      const batchResult = await batchResponse.json();
+      
+      if (batchResult.playersAnalysis) {
+        Object.keys(batchResult.playersAnalysis).forEach(playerId => {
+          const analysis = normalizePlayerAnalysis(batchResult.playersAnalysis[playerId]);
+          state.aiCache[playerId] = analysis;
+          sessionStorage.setItem(`fantamondiale_ai_${playerId}`, JSON.stringify(analysis));
+        });
+      }
+
+      // Re-render immediately so scores populate in real time!
+      renderPitch();
+      renderTeamDashboard();
+    }
+
+    // ----------------------------------------------------
+    // VERIFICATION: Check if we successfully received all player evaluations
+    // ----------------------------------------------------
+    let missingPlayers = team.players.filter(p => {
+      const analysis = state.aiCache[p.id];
+      if (!analysis) return true;
+      
+      const opp = analysis.matchAnalysis?.nextOpponent;
+      const isPlaceholderOpponent = !opp || 
+                                    opp === 'Da verificare' || 
+                                    opp === 'Da definire' || 
+                                    opp === 'Non disponibile' || 
+                                    opp === 'Da stabilire' ||
+                                    opp === 'N/D';
+      return isPlaceholderOpponent;
+    });
+
+    if (missingPlayers.length > 0) {
+      console.log(`Rilevati ${missingPlayers.length} calciatori senza valutazioni o con avversario da definire. Tentativo di ripristino mirato...`);
+      let retryAttempt = 0;
+      const maxRetryAttempts = 2;
+      
+      while (missingPlayers.length > 0 && retryAttempt < maxRetryAttempts) {
+        retryAttempt++;
+        if (statusTextEl) {
+          statusTextEl.innerText = `Fase 1 (Recupero): Calcolo mirato per ${missingPlayers.length} giocatori rimasti... (Tentativo ${retryAttempt}/${maxRetryAttempts})`;
+        }
+        
+        // Split the missing players into batches of 6
+        const retryBatches = [];
+        for (let i = 0; i < missingPlayers.length; i += 6) {
+          retryBatches.push(missingPlayers.slice(i, i + 6));
+        }
+        
+        for (let rIdx = 0; rIdx < retryBatches.length; rIdx++) {
+          const retryBatchPlayers = retryBatches[rIdx];
+          try {
+            const retryResponse = await fetch('/api/player-batch-analysis', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                players: retryBatchPlayers,
+                provider: state.settings.aiProvider || 'openrouter',
+                openRouterModel: state.settings.openRouterModel || 'openai/gpt-oss-120b:free'
+              })
+            });
+            
+            if (retryResponse.ok) {
+              const retryResult = await retryResponse.json();
+              if (retryResult.playersAnalysis) {
+                Object.keys(retryResult.playersAnalysis).forEach(playerId => {
+                  const analysis = normalizePlayerAnalysis(retryResult.playersAnalysis[playerId]);
+                  state.aiCache[playerId] = analysis;
+                  sessionStorage.setItem(`fantamondiale_ai_${playerId}`, JSON.stringify(analysis));
+                });
+              }
+            }
+          } catch (retryErr) {
+            console.warn(`Retry batch ${rIdx + 1} failed:`, retryErr);
+          }
+        }
+        
+        // Re-render immediately
+        renderPitch();
+        renderTeamDashboard();
+        
+        // Re-evaluate missing players
+        missingPlayers = team.players.filter(p => {
+          const analysis = state.aiCache[p.id];
+          if (!analysis) return true;
+          
+          const opp = analysis.matchAnalysis?.nextOpponent;
+          const isPlaceholderOpponent = !opp || 
+                                        opp === 'Da verificare' || 
+                                        opp === 'Da definire' || 
+                                        opp === 'Non disponibile' || 
+                                        opp === 'Da stabilire' ||
+                                        opp === 'N/D';
+          return isPlaceholderOpponent;
+        });
+      }
+    }
+
+    // STRICT RULE COMPLIANCE: If any players are still missing after retries, abort Phase 2 completely!
+    if (missingPlayers.length > 0) {
+      const missingNames = missingPlayers.map(p => p.name).join(', ');
+      throw new Error(`Impossibile scegliere la formazione ideale: non è stato possibile ricevere tutte le valutazioni dei giocatori (${missingNames}). Per favore riprova il ricalcolo.`);
+    }
+
+    // ----------------------------------------------------
+    // PHASE 2: Map pre-calculated evaluations and choose optimal lineup
+    // ----------------------------------------------------
+    if (statusTextEl && progressBarEl) {
+      statusTextEl.innerText = `Fase 2: Calcolo schieramento ottimale e modulo tattico da bonus...`;
+      progressBarEl.style.width = `${Math.round(((totalBatches + 1) / (totalBatches + 2)) * 100)}%`;
+    }
+
+    // Map roster players to include their newly calculated evaluations (scores, etc.)
+    const playersWithEvaluations = team.players.map(p => {
+      const analysis = state.aiCache[p.id] || {};
+      return {
+        id: p.id,
+        name: p.name,
+        role: p.role,
+        country: p.country,
+        purchaseCost: p.purchaseCost || 0,
+        playerCategory: analysis.playerCategory || "buono",
+        starterProbability: analysis.starterProbability || "50%",
+        matchStrength: analysis.matchStrength || 50,
+        nextOpponent: analysis.matchAnalysis?.nextOpponent || "Da verificare",
+        formState: analysis.formState || "In forma."
+      };
+    });
+
     const response = await fetch('/api/team-ideal-lineup', {
       method: 'POST',
       headers: {
@@ -3872,7 +4039,7 @@ async function recalculateIdealLineup(team) {
       },
       body: JSON.stringify({ 
         teamName: team.name,
-        players: team.players,
+        players: playersWithEvaluations,
         provider: state.settings.aiProvider || 'openrouter',
         openRouterModel: state.settings.openRouterModel || 'openai/gpt-oss-120b:free'
       })
@@ -3899,71 +4066,12 @@ async function recalculateIdealLineup(team) {
     team.module = result.recommendedModule || team.module || '4-3-3';
     dom.pitchModuleSelect.value = team.module;
 
-    // Render the initial pitch visualizer with recommended players (without scores yet)
-    renderPitch();
-
-    // ----------------------------------------------------
-    // STEP 2: Separate player roster into batches and query batch analysis
-    // ----------------------------------------------------
-    const statusTextEl = document.getElementById('ai-recalc-status');
-    const progressBarEl = document.getElementById('ai-recalc-progress');
-
-    const allPlayers = [...team.players];
-    const batchSize = 6;
-    const batches = [];
-    
-    for (let i = 0; i < allPlayers.length; i += batchSize) {
-      batches.push(allPlayers.slice(i, i + batchSize));
-    }
-
-    const totalBatches = batches.length;
-    
-    for (let batchIdx = 0; batchIdx < totalBatches; batchIdx++) {
-      const batchPlayers = batches[batchIdx];
-      
-      if (statusTextEl && progressBarEl) {
-        statusTextEl.innerText = `Fase 2: Analisi statistica e news... Lotto ${batchIdx + 1} di ${totalBatches} (${Math.round((batchIdx / totalBatches) * 100)}%)`;
-        progressBarEl.style.width = `${Math.round(((batchIdx + 1) / (totalBatches + 1)) * 100)}%`;
-      }
-
-      const batchResponse = await fetch('/api/player-batch-analysis', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          players: batchPlayers,
-          provider: state.settings.aiProvider || 'openrouter',
-          openRouterModel: state.settings.openRouterModel || 'openai/gpt-oss-120b:free'
-        })
-      });
-
-      if (!batchResponse.ok) {
-        console.warn(`Batch analysis failed for lot ${batchIdx + 1}`);
-        continue; // continue with next batches so we don't abort completely
-      }
-
-      const batchResult = await batchResponse.json();
-      
-      if (batchResult.playersAnalysis) {
-        Object.keys(batchResult.playersAnalysis).forEach(playerId => {
-          const analysis = normalizePlayerAnalysis(batchResult.playersAnalysis[playerId]);
-          state.aiCache[playerId] = analysis;
-          sessionStorage.setItem(`fantamondiale_ai_${playerId}`, JSON.stringify(analysis));
-        });
-      }
-
-      // Re-render immediately so scores populate in real time!
-      renderPitch();
-      renderTeamDashboard();
-    }
-
     // Set progress to 100%
     if (progressBarEl) {
       progressBarEl.style.width = '100%';
     }
 
-    showToast('Formazione ideale e statistiche ricalcolate in lotti con successo! 🔮📈', 'success');
+    showToast('Formazione ottimizzata e valutazioni IA ricalcolate con successo! 🔮📈', 'success');
     autoSave();
   } catch (err) {
     console.error(err);
