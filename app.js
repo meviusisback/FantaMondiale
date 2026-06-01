@@ -2807,9 +2807,12 @@ function renderPitchPopoverData(popover, name, country, role, data, triggerEl, i
   popover.innerHTML = `
     ${closeBtnHtml}
     
-    <div style="font-size: 0.8rem; font-weight: 800; color: #fff; margin-bottom: 0.5rem; display: flex; align-items: center; justify-content: space-between; padding-right: 1.5rem;">
-      <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 160px;">${name}</span>
-      <span style="font-size: 0.65rem; color: var(--color-text-muted); font-weight: 600; flex-shrink:0;">${role} | ${country}</span>
+    <div style="font-size: 0.8rem; font-weight: 800; color: #fff; margin-bottom: 0.5rem; display: flex; align-items: center; justify-content: space-between; padding-right: 1.5rem; flex-wrap: wrap; gap: 0.25rem;">
+      <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 130px;">${name}</span>
+      <div style="display: flex; align-items: center; gap: 0.35rem; flex-shrink: 0;">
+        <button onclick="refreshPitchPlayerTooltip('${triggerEl.getAttribute('data-player-id') || ''}')" style="background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.4); color: #c084fc; cursor: pointer; padding: 0.1rem 0.35rem; font-size: 0.58rem; font-weight: 800; border-radius: 4px; display: flex; align-items: center; gap: 0.15rem; transition: all 0.2s;" onmouseover="this.style.background='rgba(168, 85, 247, 0.25)'" onmouseout="this.style.background='rgba(168, 85, 247, 0.15)'" title="Forza ricalcolo dati freschi IA">🔄 Aggiorna</button>
+        <span style="font-size: 0.65rem; color: var(--color-text-muted); font-weight: 600;">${role} | ${country}</span>
+      </div>
     </div>
 
     <!-- Match details (Strength + Explanation) -->
@@ -2915,6 +2918,33 @@ async function showPitchPlayerTooltip(playerId, triggerEl, isMobile) {
     }
   }
 }
+
+async function refreshPitchPlayerTooltip(playerId) {
+  if (!playerId) return;
+  // Clear cached data
+  delete state.aiCache[playerId];
+  sessionStorage.removeItem(`fantamondiale_ai_${playerId}`);
+
+  // Find original trigger node in the DOM
+  let triggerEl = document.querySelector(`.pitch-player-node[data-player-id="${playerId}"]`) || 
+                  document.querySelector(`.bench-player-node[data-player-id="${playerId}"]`);
+
+  if (!triggerEl) {
+    triggerEl = document.body;
+  }
+
+  const isMobile = window.innerWidth <= 768;
+
+  // Remove and reset the current popover
+  if (activePitchPopover) {
+    activePitchPopover.remove();
+    activePitchPopover = null;
+  }
+
+  // Trigger loading and Vercel API fetch fresh
+  showPitchPlayerTooltip(playerId, triggerEl, isMobile);
+}
+window.refreshPitchPlayerTooltip = refreshPitchPlayerTooltip;
 
 // --- DYNAMIC AI SPEECH BUBBLE OVERLAY LOGIC ---
 let activeAIPopover = null;

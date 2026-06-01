@@ -82,12 +82,18 @@ Fornisci la risposta RIGOROSAMENTE in formato JSON con la seguente struttura esa
       "playerCategory": "stella",
       "starterProbability": "95%",
       "appearances": "32 presenze, 10 gol in campionato nella stagione 25/26",
-      "formState": "In forma strepitosa.",
+      "formState": "Descrizione reale e notizie freschissime su infortuni, convocazioni e forma di questa settimana (2 frasi max). ATTENZIONE: per i panchinari attivi NON scrivere 'ELIMINATO', ma scrivi semplicemente che non giocherà o partirà dalla panchina.",
       "matchStrength": 85,
       "matchAnalysis": {
         "nextOpponent": "Spagna",
-        "criteriaText": "Valutazione di 85/100 dovuta all'avversario abbordabile e all'elevata probabilità di porta inviolata, compensata da una forma fisica all'80%."
-      }
+        "criteriaText": "Spiegazione dettagliata ed esplicita (in 2-3 frasi chiare) di chi il giocatore affronterà, un giudizio su come sta giocando e perché ha quel punteggio da 1 a 100 per questa specifica partita."
+      },
+      "alternatives": [
+        {
+          "name": "Nome Competitore 1",
+          "playProbability": "35%"
+        }
+      ]
     }
   },
   "tacticalJustification": "Spiegazione dettagliata ed esplicita in lingua italiana incentrata ESCLUSIVAMENTE su strategie del FantaMondiale per massimizzare bonus (gol, assist, rigori, clean sheet per i portieri). NON parlare come un vero allenatore di calcio (niente commenti su equilibrio tattico reale della squadra o coperture difensive). Spiega in modo chiaro perché hai preferito gli 11 titolari rispetto a chi è rimasto in panchina (ad esempio chiarendo se chi è in panchina affronta partite più difficili nel prossimo turno del Mondiale, ha uno stato di forma peggiore, ha minori probabilità di portare bonus, o è meno performante). Fornisci anche in modo esplicito potenziali ballottaggi e/o alternative strategiche valide all'interno della rosa che il fantallenatore può adottare (es. ballottaggi tra titolari e panchina basati sul coefficiente di bonus o sulla difficoltà del match)."
