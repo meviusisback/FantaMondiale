@@ -68,7 +68,7 @@ Rispondi esclusivamente con un array JSON di stringhe in lingua italiana (es. ["
         text = data.choices?.[0]?.message?.content;
       }
     } else {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key=${apiKey}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

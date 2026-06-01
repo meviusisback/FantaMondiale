@@ -123,7 +123,7 @@ Rispondi esclusivamente con il codice JSON, senza alcun blocco di codice markdow
       const openRouterData = await openRouterResponse.json();
       text = openRouterData.choices?.[0]?.message?.content;
     } else {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key=${apiKey}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
       const response = await fetch(url, {
         method: 'POST',
