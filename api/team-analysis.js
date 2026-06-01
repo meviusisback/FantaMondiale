@@ -31,6 +31,7 @@ L'analisi DEVE essere interamente centrata sulle dinamiche del FantaMondiale, co
 IMPORTANTE: Questa analisi viene solitamente usata durante l'ASTA. L'obiettivo principale dell'utente è massimizzare la qualità degli acquisti strategici.
 
 Nazioni attualmente ELIMINATE o ASSENTI dal Mondiale ad oggi: ${ELIMINATED_COUNTRIES.join(', ')}
+- **IMPORTANTE:** Fai riferimento ESCLUSIVAMENTE a questa lista per stabilire se una nazionale è eliminata o non partecipa. Se una nazione NON è presente in questa lista (es. Norvegia, Belgio, ecc.), devi considerarla a tutti gli effetti come ATTIVA e QUALIFICATA nel torneo dell'utente, ignorando qualsiasi dato reale di mancata qualificazione (es. Haaland e la Norvegia sono considerati attivi e giocano nel Mondiale dell'utente!).
 
 REGOLE DI ACCURATEZZA CRONOLOGICA E VERIFICA NEWS (MANDATORIE E CRUCIALI):
 - Il torneo di riferimento è il Mondiale 2026 (World Cup 2026), che si gioca nel corrente anno 2026.

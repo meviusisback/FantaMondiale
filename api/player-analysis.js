@@ -57,26 +57,23 @@ Regole FantaMondiale per formulare la tua risposta:
    La descrizione deve essere fatta in relazione alle sue recenti performance storiche e alle aspettative/ruolo all'interno di questo specifico Mondiale, evidenziando se è il fulcro del gioco, un rigorista, o se rischia il posto in favore di altri titolari.
 4. **VERIFICA CONVOCAZIONE ED ELIMINAZIONE MONDIALE (MANDATORIA E CRUCIALE):**
    Nazioni attualmente eliminate o assenti dal Mondiale ad oggi: ${ELIMINATED_COUNTRIES.join(', ')}.
-   Verifica se la nazionale del calciatore (${country}) partecipa o è stata eliminata dal torneo. Se la sua nazionale è inclusa nell'elenco di quelle eliminate o non partecipa:
-   - Imposta la chiave 'starterProbability' tassativamente a '0%'.
-   - Imposta la chiave 'playerCategory' tassativamente a 'scarso'.
-   - Imposta la chiave 'valueForMoney' tassativamente a 'Sopravvalutato'.
-   - Modifica la chiave 'description' iniziando obbligatoriamente con la dicitura in maiuscolo: "ELIMINATO: [Spiegazione del fatto che la nazionale non partecipa o è stata eliminata]". Il resto della descrizione deve riflettere questa inutilizzabilità fantacalcistica.
+   - **REGOLA DI PARTECIPAZIONE (IMPORTANTE):** Fai riferimento ESCLUSIVAMENTE all'elenco 'ELIMINATED_COUNTRIES' fornito sopra per stabilire se una nazionale è eliminata o non partecipa. Se la nazione del calciatore (${country}) NON è presente in quell'elenco (ad esempio Norvegia, Belgio, ecc.), devi considerarla a tutti gli effetti come ATTIVA e QUALIFICATA nel torneo dell'utente, ignorando qualsiasi dato reale di mancata qualificazione per garantire la coerenza con il database del FantaMondiale dell'utente (dove giocatori come Haaland sono attivi e giocano nel Mondiale 2026 dell'utente!).
+   - **PANCHINARO VS ELIMINATO (CRUCIALE):** Non confondere assolutamente un giocatore panchinaro (che fa parte di una nazione attiva ma parte dalla panchina o ha bassa probabilità di giocare) con un giocatore ELIMINATO (la cui nazione è inclusa in 'ELIMINATED_COUNTRIES'). Per i panchinari attivi, **NON** scrivere assolutamente la parola 'ELIMINATO' nello stato di forma ('formState') o nella descrizione ('description'), ma indica semplicemente che partirà dalla panchina o che non giocherà dall'inizio in questo turno (es. 'non giocherà' o 'partirà dalla panchina').
+   - Se la sua nazionale è inclusa nell'elenco di quelle eliminate o non partecipa (incluso in 'ELIMINATED_COUNTRIES'):
+     * Imposta la chiave 'starterProbability' tassativamente a '0%'.
+     * Imposta la chiave 'playerCategory' tassativamente a 'scarso'.
+     * Imposta la chiave 'valueForMoney' tassativamente a 'Sopravvalutato'.
+     * Modifica la chiave 'description' iniziando obbligatoriamente con la dicitura in maiuscolo: "ELIMINATO: [Spiegazione del fatto che la nazionale non partecipa o è stata eliminata]". Il resto della descrizione deve riflettere questa inutilizzabilità fantacalcistica.
 
 Fornisci i dati strutturati RIGOROSAMENTE in formato JSON con le seguenti chiavi:
 - club: la squadra di club attuale in cui gioca (es. "Inter Miami", "Real Madrid")
 ${appearancesJsonDesc}
 - starterProbability: stima percentuale (es. "85%" o "30%") che giochi effettivamente come titolare durante questo Mondiale.
-- playerCategory: la classificazione del giocatore a livello FantaMondiale (scegli rigorosamente tra: "scarso", "accettabile", "buono", "ottimo", "stella"). Assegna il valore valutando attentamente i seguenti criteri:
-  - "scarso": gioca poco o niente, pochi bonus, squadra nazionale di appartenenza scarsa
-  - "accettabile": titolare in squadra scarsa, pochi bonus
-  - "buono": titolare in squadra forte, qualche bonus, pochi malus
-  - "ottimo": titolare e con buoni bonus e pochi malus
-  - "stella": uno dei migliori giocatori del ruolo, ottimi bonus, ottimo rendimento, gioca per squadre nazionali forti oppure è leader indiscusso di una squadra più debole e garantisce ottimi bonus
-- valueForMoney: valutazione sintetica del rapporto qualità/prezzo all'asta FantaMondiale (scegli rigorosamente tra: "Ottimo", "Buono", "Rischioso", "Sopravvalutato"). Ad esempio, un ottimo giocatore in una nazionale debole potrebbe essere "Sopravvalutato" o "Rischioso" perché uscirà presto.
-- formState: una breve descrizione testuale (1 riga o massimo 2 frasi) dello stato di forma e notizie reali del calciatore aggiornate a questa settimana (es. "In gran forma dopo il gol decisivo nel weekend", "In dubbio per affaticamento muscolare", "Reduce da ottime prestazioni").
+- playerCategory: la classificazione del giocatore a livello FantaMondiale (scegli rigorosamente tra: "scarso", "accettabile", "buono", "ottimo", "stella"). Assegna il valore valutando attentamente i criteri definiti sopra.
+- valueForMoney: valutazione sintetica del rapporto qualità/prezzo all'asta FantaMondiale (scegli rigorosamente tra: "Ottimo", "Buono", "Rischioso", "Sopravvalutato").
+- formState: una breve descrizione testuale (1 riga o massimo 2 frasi) dello stato di forma e notizie reali del calciatore aggiornate a questa settimana. ATTENZIONE: per i panchinari attivi non scrivere 'ELIMINATO', ma scrivi semplicemente che non giocherà o partirà dalla panchina.
 - description: descrizione del profilo del calciatore, valutando le performance recenti e le aspettative/performance al Mondiale in ottica FantaMondiale (2-3 frasi chiare).
-- alternatives: un array di massimo 2 oggetti reali rappresentanti i calciatori alternativi nello stesso ruolo che potrebbero insidiare la titolarità, con le chiavi: name (nome dell'alternativa) e playProbability (probabilità percentuale, es: "35%"). Se non ci sono insidie significative, restituisci un array vuoto [].
+- alternatives: un array di massimo 2 oggetti reali rappresentanti i calciatori alternativi nello stesso ruolo in quella specifica Nazionale che potrebbero insidiare la titolarità, con le chiavi: name (nome dell'alternativa) e playProbability (probabilità percentuale, es: "35%"). **MANDATORIO E STRICHE:** Questa lista deve **sempre** contenere esattamente 1 o 2 giocatori concorrenti reali dello stesso ruolo in quella Nazionale (ad esempio, per Lukaku indica Openda; per Haaland indica Strand Larsen o Sørloth; per Courtois indica Casteels e Sels, ecc.) con le loro probabilità reali o stimate di impiego. NON lasciare mai l'array vuoto per i giocatori attivi.
 - matchStrength: valore numerico (intero da 1 a 100) che indichi la forza relativa del calciatore in questo specifico prossimo turno in base a valore, forma recente, livello dell'avversario reale del prossimo turno, probabilità di bonus e importanza del match. NOTA: in caso di partita proibitiva o avversario durissimo, questo valore deve scendere drasticamente.
 - matchAnalysis: un oggetto strutturato con le seguenti chiavi:
   - nextOpponent: la nazionale avversaria reale del prossimo turno (es: "Francia", "Spagna").
