@@ -3044,6 +3044,7 @@ async function showPitchPlayerTooltip(playerId, triggerEl, isMobile) {
         renderPitch(); // Synchronize strength badge on the main pitch visualizer
       } else {
         renderPitchPopoverError(popover, result.error || 'Errore API');
+      }
     } catch (error) {
       if (activePitchPopover !== popover) return;
       renderPitchPopoverError(popover, error.message);
