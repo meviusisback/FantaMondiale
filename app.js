@@ -1171,6 +1171,121 @@ function hasRoleSlotAvailable(team, role) {
   return team.players.length < 35;
 }
 
+function normalizePlayerAnalysis(data) {
+  if (!data) {
+    return {
+      playerCategory: "buono",
+      valueForMoney: "Buono",
+      starterProbability: "50%",
+      appearances: "Dati non disponibili nella stagione 25/26",
+      formState: "Nessuna notizia recente.",
+      matchStrength: 50,
+      matchAnalysis: {
+        nextOpponent: "Da verificare",
+        criteriaText: "Analisi del turno in fase di elaborazione."
+      },
+      alternatives: []
+    };
+  }
+
+  const normalized = { ...data };
+
+  // 1. playerCategory
+  let cat = normalized.playerCategory || normalized.category || normalized.playerClass || "buono";
+  cat = typeof cat === 'string' ? cat.toLowerCase().trim() : 'buono';
+  if (cat.includes('stella') || cat.includes('star')) normalized.playerCategory = "stella";
+  else if (cat.includes('ottimo')) normalized.playerCategory = "ottimo";
+  else if (cat.includes('buono')) normalized.playerCategory = "buono";
+  else if (cat.includes('accettabile')) normalized.playerCategory = "accettabile";
+  else if (cat.includes('scarso')) normalized.playerCategory = "scarso";
+  else normalized.playerCategory = "buono";
+
+  // 2. valueForMoney
+  let val = normalized.valueForMoney || normalized.value || normalized.moneyValue || normalized.qValutazione || "Buono";
+  val = typeof val === 'string' ? val.trim() : 'Buono';
+  const valLower = val.toLowerCase();
+  if (valLower.includes('ottimo')) normalized.valueForMoney = "Ottimo";
+  else if (valLower.includes('buono')) normalized.valueForMoney = "Buono";
+  else if (valLower.includes('rischioso')) normalized.valueForMoney = "Rischioso";
+  else if (valLower.includes('sopravvalutato') || valLower.includes('scarso')) normalized.valueForMoney = "Sopravvalutato";
+  else normalized.valueForMoney = "Buono";
+
+  // 3. starterProbability
+  let prob = normalized.starterProbability || normalized.probability || normalized.playProbability || normalized.starterProb || "50%";
+  if (typeof prob === 'number') {
+    prob = `${prob}%`;
+  } else if (typeof prob === 'string') {
+    const num = parseInt(prob.replace(/[^0-9]/g, ''));
+    prob = !isNaN(num) ? `${num}%` : "50%";
+  } else {
+    prob = "50%";
+  }
+  normalized.starterProbability = prob;
+
+  // 4. appearances
+  normalized.appearances = normalized.appearances || "Dati non disponibili nella stagione 25/26";
+
+  // 5. formState
+  normalized.formState = normalized.formState || normalized.form || normalized.status || normalized.formDescription || normalized.description || "Nessuna notizia recente.";
+
+  // 6. matchStrength
+  let strength = normalized.matchStrength;
+  if (strength === undefined || strength === null) {
+    strength = normalized.strength || (normalized.matchAnalysis && (normalized.matchAnalysis.matchStrength || normalized.matchAnalysis.strength)) || 50;
+  }
+  if (typeof strength === 'string') {
+    strength = parseInt(strength.replace(/[^0-9]/g, ''));
+  }
+  normalized.matchStrength = !isNaN(parseInt(strength)) ? parseInt(strength) : 50;
+
+  // 7. matchAnalysis object
+  let rawMatch = normalized.matchAnalysis;
+  let opponent = 'Da verificare';
+  let criteria = 'Analisi del turno in fase di elaborazione.';
+
+  if (rawMatch && typeof rawMatch === 'object') {
+    opponent = rawMatch.nextOpponent || rawMatch.opponent || rawMatch.nextMatch || normalized.nextOpponent || normalized.opponent || normalized.vs || 'Da verificare';
+    criteria = rawMatch.criteriaText || rawMatch.description || rawMatch.text || rawMatch.criteria || normalized.criteriaText || normalized.criteria || 'Analisi del turno in fase di elaborazione.';
+  } else if (typeof rawMatch === 'string') {
+    criteria = rawMatch;
+    const match = rawMatch.match(/vs\s+([A-Za-zÀ-ÿ\s]+)/i);
+    opponent = match ? match[1].trim() : 'Da verificare';
+  } else {
+    opponent = normalized.nextOpponent || normalized.opponent || normalized.vs || 'Da verificare';
+    criteria = normalized.criteriaText || normalized.criteria || 'Analisi del turno in fase di elaborazione.';
+  }
+
+  normalized.matchAnalysis = {
+    nextOpponent: typeof opponent === 'string' ? opponent.trim() : 'Da verificare',
+    criteriaText: typeof criteria === 'string' ? criteria.trim() : 'Analisi del turno in fase di elaborazione.'
+  };
+
+  // 8. alternatives array
+  let alts = normalized.alternatives || normalized.alternativesList || normalized.concorrenti || [];
+  if (!Array.isArray(alts)) {
+    alts = [];
+  }
+  normalized.alternatives = alts.map(alt => {
+    if (typeof alt === 'string') {
+      return { name: alt, playProbability: "20%" };
+    }
+    if (alt && typeof alt === 'object') {
+      const name = alt.name || alt.playerName || alt.calciatore || 'Alternativa';
+      let altProb = alt.playProbability || alt.probability || alt.chance || '20%';
+      if (typeof altProb === 'number') {
+        altProb = `${altProb}%`;
+      } else if (typeof altProb === 'string') {
+        const num = parseInt(altProb.replace(/[^0-9]/g, ''));
+        altProb = !isNaN(num) ? `${num}%` : "20%";
+      }
+      return { name: typeof name === 'string' ? name.trim() : 'Alternativa', playProbability: altProb };
+    }
+    return null;
+  }).filter(Boolean);
+
+  return normalized;
+}
+
 // --- UI RENDERING WORKFLOW ---
 
 function renderAll() {
@@ -1785,7 +1900,9 @@ function renderPitch() {
     // If ideal lineup mode, sort by AI Form Score (fallback)
     if (state.pitchShowIdeal) {
       const getPlayerFormScore = (player) => {
-        const cached = state.aiCache[player.id] || JSON.parse(sessionStorage.getItem(`fantamondiale_ai_${player.id}`) || '{}');
+        const cachedRaw = state.aiCache[player.id] || JSON.parse(sessionStorage.getItem(`fantamondiale_ai_${player.id}`) || 'null');
+        if (!cachedRaw) return 50;
+        const cached = normalizePlayerAnalysis(cachedRaw);
         let score = 50;
         
         // Category score
@@ -1873,8 +1990,9 @@ function renderPitch() {
         node.setAttribute('draggable', 'true');
         node.setAttribute('data-player-id', player.id);
 
-        const cachedAnalysis = state.aiCache[player.id] || JSON.parse(sessionStorage.getItem(`fantamondiale_ai_${player.id}`) || '{}');
-        const strength = cachedAnalysis.matchStrength;
+        const cachedAnalysisRaw = state.aiCache[player.id] || JSON.parse(sessionStorage.getItem(`fantamondiale_ai_${player.id}`) || 'null');
+        const cachedAnalysis = cachedAnalysisRaw ? normalizePlayerAnalysis(cachedAnalysisRaw) : null;
+        const strength = cachedAnalysis ? cachedAnalysis.matchStrength : undefined;
         let strengthBadgeHtml = '';
         if (strength !== undefined && strength !== null) {
           const strVal = parseInt(strength);
@@ -1946,8 +2064,9 @@ function renderPitch() {
       el.setAttribute('draggable', 'true');
       el.setAttribute('data-player-id', p.id);
 
-      const cachedAnalysis = state.aiCache[p.id] || JSON.parse(sessionStorage.getItem(`fantamondiale_ai_${p.id}`) || '{}');
-      const strength = cachedAnalysis.matchStrength;
+      const cachedAnalysisRaw = state.aiCache[p.id] || JSON.parse(sessionStorage.getItem(`fantamondiale_ai_${p.id}`) || 'null');
+      const cachedAnalysis = cachedAnalysisRaw ? normalizePlayerAnalysis(cachedAnalysisRaw) : null;
+      const strength = cachedAnalysis ? cachedAnalysis.matchStrength : undefined;
       let strengthBadgeHtml = '';
       if (strength !== undefined && strength !== null) {
         const strVal = parseInt(strength);
@@ -2765,7 +2884,8 @@ function renderPitchPopoverError(popover, errorMsg) {
   `;
 }
 
-function renderPitchPopoverData(popover, name, country, role, data, triggerEl, isMobile) {
+function renderPitchPopoverData(popover, name, country, role, rawData, triggerEl, isMobile) {
+  const data = normalizePlayerAnalysis(rawData);
   const closeBtnHtml = `<button class="pitch-popover-close" onclick="closePitchPopover()">✕</button>`;
 
   const strength = parseInt(data.matchStrength) || 50;
@@ -2886,7 +3006,8 @@ async function showPitchPlayerTooltip(playerId, triggerEl, isMobile) {
     }, 10);
   }
 
-  let cachedData = state.aiCache[playerId] || JSON.parse(sessionStorage.getItem(`fantamondiale_ai_${playerId}`) || 'null');
+  const cachedDataRaw = state.aiCache[playerId] || JSON.parse(sessionStorage.getItem(`fantamondiale_ai_${playerId}`) || 'null');
+  const cachedData = cachedDataRaw ? normalizePlayerAnalysis(cachedDataRaw) : null;
 
   if (cachedData) {
     renderPitchPopoverData(popover, player.name, player.country, player.role, cachedData, triggerEl, isMobile);
@@ -2913,16 +3034,16 @@ async function showPitchPlayerTooltip(playerId, triggerEl, isMobile) {
       if (activePitchPopover !== popover) return;
 
       if (response.ok && !result.error) {
-        state.aiCache[playerId] = result;
-        sessionStorage.setItem(`fantamondiale_ai_${playerId}`, JSON.stringify(result));
-        renderPitchPopoverData(popover, player.name, player.country, player.role, result, triggerEl, isMobile);
+        const normalized = normalizePlayerAnalysis(result);
+        state.aiCache[playerId] = normalized;
+        sessionStorage.setItem(`fantamondiale_ai_${playerId}`, JSON.stringify(normalized));
+        renderPitchPopoverData(popover, player.name, player.country, player.role, normalized, triggerEl, isMobile);
         if (!isMobile) {
           positionPitchPopover(popover, triggerEl);
         }
         renderPitch(); // Synchronize strength badge on the main pitch visualizer
       } else {
         renderPitchPopoverError(popover, result.error || 'Errore API');
-      }
     } catch (error) {
       if (activePitchPopover !== popover) return;
       renderPitchPopoverError(popover, error.message);
@@ -2987,18 +3108,19 @@ async function showPlayerAIAnalysis(playerId, name, country, role, buttonEl, for
   renderPopoverLoading(popover, name);
 
   // 6. Check Cache (sessionStorage & in-memory)
-  let cachedData = state.aiCache[playerId];
-  if (!cachedData) {
+  let cachedDataRaw = state.aiCache[playerId];
+  if (!cachedDataRaw) {
     const sessionCached = sessionStorage.getItem(`fantamondiale_ai_${playerId}`);
     if (sessionCached) {
       try {
-        cachedData = JSON.parse(sessionCached);
-        state.aiCache[playerId] = cachedData;
+        cachedDataRaw = JSON.parse(sessionCached);
+        state.aiCache[playerId] = cachedDataRaw;
       } catch (e) {
-        cachedData = null;
+        cachedDataRaw = null;
       }
     }
   }
+  const cachedData = cachedDataRaw ? normalizePlayerAnalysis(cachedDataRaw) : null;
 
   // If in cache and not force refreshing, render data immediately
   if (cachedData && !forceRefresh) {
@@ -3033,12 +3155,13 @@ async function showPlayerAIAnalysis(playerId, name, country, role, buttonEl, for
       return;
     }
 
+    const normalized = normalizePlayerAnalysis(result);
     // Save to Cache
-    state.aiCache[playerId] = result;
-    sessionStorage.setItem(`fantamondiale_ai_${playerId}`, JSON.stringify(result));
+    state.aiCache[playerId] = normalized;
+    sessionStorage.setItem(`fantamondiale_ai_${playerId}`, JSON.stringify(normalized));
 
     // Render Data
-    renderPopoverData(popover, name, country, role, result, buttonEl);
+    renderPopoverData(popover, name, country, role, normalized, buttonEl);
     
     // Instantly update the main players table row with the calculated price range
     renderPlayerList();
@@ -3113,7 +3236,8 @@ function renderPopoverLoading(popover, name) {
   `;
 }
 
-function renderPopoverData(popover, name, country, role, data, buttonEl) {
+function renderPopoverData(popover, name, country, role, rawData, buttonEl) {
+  const data = normalizePlayerAnalysis(rawData);
   const qpClass = data.valueForMoney ? data.valueForMoney.toLowerCase().replace(/[^a-z]/g, '') : 'buono';
 
   const categoryValue = (data.playerCategory || '').toLowerCase().trim();
@@ -3560,8 +3684,10 @@ function copyLineupToClipboard(team, isIdeal) {
     let attPlayers = team.players.filter(p => p.role === 'ATT');
 
     if (isIdeal) {
-      const getPlayerFormScore = (player) => {
-        const cached = state.aiCache[player.id] || JSON.parse(sessionStorage.getItem(`fantamondiale_ai_${player.id}`) || '{}');
+       const getPlayerFormScore = (player) => {
+        const cachedRaw = state.aiCache[player.id] || JSON.parse(sessionStorage.getItem(`fantamondiale_ai_${player.id}`) || 'null');
+        if (!cachedRaw) return 50;
+        const cached = normalizePlayerAnalysis(cachedRaw);
         let score = 50;
         const cat = (cached.playerCategory || '').toLowerCase();
         if (cat.includes('stella')) score += 40;
@@ -3717,7 +3843,7 @@ async function recalculateIdealLineup(team) {
     // Map playersAnalysis results back to player-level caches so detail cards stay updated!
     if (result.playersAnalysis) {
       Object.keys(result.playersAnalysis).forEach(playerId => {
-        const analysis = result.playersAnalysis[playerId];
+        const analysis = normalizePlayerAnalysis(result.playersAnalysis[playerId]);
         state.aiCache[playerId] = analysis;
         sessionStorage.setItem(`fantamondiale_ai_${playerId}`, JSON.stringify(analysis));
       });
