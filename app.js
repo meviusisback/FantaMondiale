@@ -2720,6 +2720,10 @@ function logoutCloudSession() {
   renderAll();
   showToast('Sessione cloud disconnessa con successo! 🔓', 'success');
 
+  // Reopen startup choices dialog onboarding modal
+  openStartupDialog();
+}
+
 // --- RICH FORMATION PLAYER TOOLTIP / POPOVER LOGIC ---
 let activePitchPopover = null;
 
