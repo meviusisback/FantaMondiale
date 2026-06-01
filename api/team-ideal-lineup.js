@@ -62,7 +62,10 @@ Assegna a ciascun calciatore della rosa una valutazione 'playerCategory' rigoros
 - "stella": top player assoluto, leader indiscusso, rigori/piazzati, altissimo rendimento in nazionale forte o leader indiscusso.
 
 REGOLE DI ESATTEZZA NUMERICA DELLE PRESENZE:
-- Per la chiave 'appearances' di ogni calciatore nella chiave 'playersAnalysis', devi identificare il numero REALE ed ESATTO di presenze, gol e assist effettuati specificamente nella stagione calcistica più recente 2025/2026, contando ESCLUSIVAMENTE e SOLO le partite in CAMPIONATO (al fine di uniformare i dati, escludendo coppe nazionali o nazionali). Se dopo molteplici tentativi non trovi dati certi, scrivi "Dati non disponibili nella stagione 25/26", ma fai ogni sforzo per trovare l'esatta statistica reale ad oggi.
+- Per la chiave 'appearances' di ogni calciatore nella chiave 'playersAnalysis', devi identificare il numero REALE ed ESATTO di presenze registrate specificamente nella stagione calcistica più recente 2025/2026, contando ESCLUSIVAMENTE e SOLO le partite in CAMPIONATO (al fine di uniformare i dati, escludendo coppe nazionali o nazionali).
+  * Se il ruolo è 'POR' (Portiere), riporta presenze, clean sheet (partite senza subire gol) e gol subiti (es. "34 presenze, 12 clean sheet, 28 gol subiti nella stagione 25/26").
+  * Per tutti gli altri ruoli, riporta presenze, gol segnati e assist (es. "32 presenze, 10 gol, 4 assist in campionato nella stagione 25/26").
+- Se dopo molteplici tentativi non trovi dati certi, scrivi "Dati non disponibili nella stagione 25/26", ma fai ogni sforzo per trovare l'esatta statistica reale ad oggi.
 
 Fornisci la risposta RIGOROSAMENTE in formato JSON con la seguente struttura esatta (sostituendo le chiavi con i reali ID dei giocatori):
 {
@@ -82,7 +85,7 @@ Fornisci la risposta RIGOROSAMENTE in formato JSON con la seguente struttura esa
       }
     }
   },
-  "tacticalJustification": "Spiegazione dettagliata delle scelte fatte per la formazione..."
+  "tacticalJustification": "Spiegazione dettagliata ed esplicita in lingua italiana dei motivi tattici che ti hanno spinto a scegliere questi 11 titolari rispetto ai giocatori lasciati in panchina (ad esempio spiegando chiaramente se chi è in panchina affronta partite più difficili, ha uno stato di forma peggiore, è meno performante o rischia il posto). Fornisci anche in modo chiaro potenziali ballottaggi e/o alternative strategiche all'interno della rosa che il fantallenatore potrebbe prendere in considerazione."
 }
 
 Rispondi esclusivamente con il codice JSON, senza alcun blocco di codice markdown o testo introduttivo.`;

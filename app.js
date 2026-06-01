@@ -279,10 +279,10 @@ function initDOM() {
 
   // Fill config elements from state
   dom.configBudget.value = state.settings.budget;
-  dom.configSlotPOR.value = state.settings.slots.POR;
-  dom.configSlotDIF.value = state.settings.slots.DIF;
-  dom.configSlotCEN.value = state.settings.slots.CEN;
-  dom.configSlotATT.value = state.settings.slots.ATT;
+  if (dom.configSlotPOR) dom.configSlotPOR.value = state.settings.slots.POR;
+  if (dom.configSlotDIF) dom.configSlotDIF.value = state.settings.slots.DIF;
+  if (dom.configSlotCEN) dom.configSlotCEN.value = state.settings.slots.CEN;
+  if (dom.configSlotATT) dom.configSlotATT.value = state.settings.slots.ATT;
   dom.teamListInput.value = state.teams.map(t => t.name).join('\n');
 
   // Fill AI settings from state
@@ -522,10 +522,10 @@ function switchTab(tabId) {
 
 function saveConfig() {
   const newBudget = parseInt(dom.configBudget.value) || 500;
-  const newSlotPOR = parseInt(dom.configSlotPOR.value) || 3;
-  const newSlotDIF = parseInt(dom.configSlotDIF.value) || 8;
-  const newSlotCEN = parseInt(dom.configSlotCEN.value) || 8;
-  const newSlotATT = parseInt(dom.configSlotATT.value) || 6;
+  const newSlotPOR = dom.configSlotPOR ? (parseInt(dom.configSlotPOR.value) || 3) : 3;
+  const newSlotDIF = dom.configSlotDIF ? (parseInt(dom.configSlotDIF.value) || 8) : 8;
+  const newSlotCEN = dom.configSlotCEN ? (parseInt(dom.configSlotCEN.value) || 8) : 8;
+  const newSlotATT = dom.configSlotATT ? (parseInt(dom.configSlotATT.value) || 6) : 6;
   const newAIProvider = dom.configAIProvider ? dom.configAIProvider.value : 'openrouter';
   const newOpenRouterModel = dom.configOpenRouterModel ? dom.configOpenRouterModel.value.trim() : 'openai/gpt-oss-120b:free';
 
@@ -706,10 +706,10 @@ function handleSessionImport(e) {
       state.players = imported.players;
       
       dom.configBudget.value = state.settings.budget;
-      dom.configSlotPOR.value = state.settings.slots.POR;
-      dom.configSlotDIF.value = state.settings.slots.DIF;
-      dom.configSlotCEN.value = state.settings.slots.CEN;
-      dom.configSlotATT.value = state.settings.slots.ATT;
+      if (dom.configSlotPOR) dom.configSlotPOR.value = state.settings.slots.POR;
+      if (dom.configSlotDIF) dom.configSlotDIF.value = state.settings.slots.DIF;
+      if (dom.configSlotCEN) dom.configSlotCEN.value = state.settings.slots.CEN;
+      if (dom.configSlotATT) dom.configSlotATT.value = state.settings.slots.ATT;
       dom.teamListInput.value = state.teams.map(t => t.name).join('\n');
 
       // Restore AI settings
@@ -881,10 +881,10 @@ async function autoLoadCloudSession(id) {
 
     // Fill config inputs in settings tab
     dom.configBudget.value = state.settings.budget;
-    dom.configSlotPOR.value = state.settings.slots.POR;
-    dom.configSlotDIF.value = state.settings.slots.DIF;
-    dom.configSlotCEN.value = state.settings.slots.CEN;
-    dom.configSlotATT.value = state.settings.slots.ATT;
+    if (dom.configSlotPOR) dom.configSlotPOR.value = state.settings.slots.POR;
+    if (dom.configSlotDIF) dom.configSlotDIF.value = state.settings.slots.DIF;
+    if (dom.configSlotCEN) dom.configSlotCEN.value = state.settings.slots.CEN;
+    if (dom.configSlotATT) dom.configSlotATT.value = state.settings.slots.ATT;
     dom.teamListInput.value = state.teams.map(t => t.name).join('\n');
 
     // Restore AI settings
@@ -1318,7 +1318,10 @@ function renderActiveTeamConsole() {
           <div class="mini-player-name" style="font-size: 0.75rem; display: flex; align-items: center; gap: 0.35rem;">
             <span style="display:inline-block; width: 6px; height: 6px; border-radius:50%; background: var(--color-${p.role.toLowerCase()})"></span>
             <span style="color: #fff; font-weight: 500;">
-              ${p.name} <span style="color: var(--color-text-muted); font-size: 0.65rem;">(${p.country})</span>
+              ${state.eliminatedCountries.includes(p.country) 
+                ? `<span style="text-decoration: line-through; text-decoration-color: var(--color-danger); text-decoration-thickness: 2px; color: var(--color-danger); opacity: 0.85;">${p.name}</span>`
+                : p.name
+              } <span style="color: var(--color-text-muted); font-size: 0.65rem;">(${p.country})</span>
               ${state.eliminatedCountries.includes(p.country) ? ' <span style="font-size: 0.6rem; color: var(--color-danger); font-weight: 700;">[ELIMINATO]</span>' : ''}
             </span>
           </div>
@@ -1449,8 +1452,11 @@ function renderPlayerList() {
 
     tr.innerHTML = `
       <td style="font-weight: 700; white-space: nowrap;">
-        ${p.name}
-        ${state.eliminatedCountries.includes(p.country) ? ' <span class="badge badge-danger" style="font-size: 0.6rem; padding: 0.15rem 0.35rem; background: var(--color-danger); color: #fff;">❌ ELIMINATO</span>' : ''}
+        ${state.eliminatedCountries.includes(p.country) 
+          ? `<span class="eliminated-player-name" style="text-decoration: line-through; text-decoration-color: var(--color-danger); text-decoration-thickness: 2px; color: var(--color-danger); opacity: 0.85;">${p.name}</span>`
+          : `<span>${p.name}</span>`
+        }
+        ${state.eliminatedCountries.includes(p.country) ? ' <span class="badge badge-danger" style="font-size: 0.6rem; padding: 0.15rem 0.35rem; background: var(--color-danger); color: #fff; flex-shrink: 0;">❌ ELIMINATO</span>' : ''}
         <button class="btn-ai-sparkle" onclick="showPlayerAIAnalysis('${p.id}', '${escapedName}', '${escapedCountry}', '${p.role}', this); event.stopPropagation();" title="Analisi IA ✨">✨</button>
       </td>
       <td><span class="badge badge-${p.role.toLowerCase()}">${p.role}</span></td>
@@ -1866,7 +1872,6 @@ function renderPitch() {
         node.style.position = 'relative';
         node.setAttribute('draggable', 'true');
         node.setAttribute('data-player-id', player.id);
-        node.setAttribute('data-tooltip', `${player.name} (${player.purchaseCost} cr)`);
 
         const cachedAnalysis = state.aiCache[player.id] || JSON.parse(sessionStorage.getItem(`fantamondiale_ai_${player.id}`) || '{}');
         const strength = cachedAnalysis.matchStrength;
@@ -1888,7 +1893,7 @@ function renderPitch() {
           <div class="pitch-player-shirt" style="background: var(--color-${player.role.toLowerCase()}); ${state.eliminatedCountries.includes(player.country) ? 'opacity: 0.55; border: 2px dashed var(--color-danger);' : ''}">
             ${player.purchaseCost}
           </div>
-          <div class="pitch-player-name" style="${state.eliminatedCountries.includes(player.country) ? 'color: var(--color-danger); text-decoration: line-through;' : ''}">${player.name.split(' ').pop()}</div>
+          <div class="pitch-player-name" style="${state.eliminatedCountries.includes(player.country) ? 'color: var(--color-danger); text-decoration: line-through;' : ''}">${player.name} (${player.country})</div>
         `;
 
         // Wire drag and drop events
@@ -1897,6 +1902,24 @@ function renderPitch() {
         node.addEventListener('dragover', handleDragOver);
         node.addEventListener('dragleave', handleDragLeave);
         node.addEventListener('drop', handleDrop);
+
+        // Wire rich popover events
+        node.addEventListener('mouseenter', (e) => {
+          if (window.innerWidth > 768) {
+            showPitchPlayerTooltip(player.id, node, false);
+          }
+        });
+        node.addEventListener('mouseleave', (e) => {
+          if (window.innerWidth > 768) {
+            closePitchPopover();
+          }
+        });
+        node.addEventListener('click', (e) => {
+          if (window.innerWidth <= 768) {
+            e.stopPropagation();
+            showPitchPlayerTooltip(player.id, node, true);
+          }
+        });
 
         rowElement.appendChild(node);
       } else {
@@ -1952,7 +1975,7 @@ function renderPitch() {
 
       el.innerHTML = `
         <span class="dot" style="background: var(--color-${p.role.toLowerCase()})"></span>
-        <span style="${state.eliminatedCountries.includes(p.country) ? 'text-decoration: line-through; color: var(--color-text-muted);' : ''}">${p.name} (${p.role}) - <strong>${p.purchaseCost} cr</strong></span>
+        <span style="${state.eliminatedCountries.includes(p.country) ? 'text-decoration: line-through; color: var(--color-text-muted);' : ''}">${p.name} (${p.country})</span>
         ${strengthBadgeHtml}
         ${state.eliminatedCountries.includes(p.country) ? ' <span style="font-size: 0.55rem; color: var(--color-danger); font-weight: 700; border: 1px solid var(--color-danger); padding: 0.05rem 0.2rem; border-radius: 4px; line-height: 1;">ELIMINATO</span>' : ''}
       `;
@@ -1962,6 +1985,24 @@ function renderPitch() {
       el.addEventListener('dragover', handleDragOver);
       el.addEventListener('dragleave', handleDragLeave);
       el.addEventListener('drop', handleDrop);
+
+      // Wire rich popover events
+      el.addEventListener('mouseenter', (e) => {
+        if (window.innerWidth > 768) {
+          showPitchPlayerTooltip(p.id, el, false);
+        }
+      });
+      el.addEventListener('mouseleave', (e) => {
+        if (window.innerWidth > 768) {
+          closePitchPopover();
+        }
+      });
+      el.addEventListener('click', (e) => {
+        if (window.innerWidth <= 768) {
+          e.stopPropagation();
+          showPitchPlayerTooltip(p.id, el, true);
+        }
+      });
 
       benchContainer.appendChild(el);
     });
@@ -2495,10 +2536,10 @@ async function loadSpecificCloudSession(id, skipConfirm = false) {
 
     // Fill config inputs in settings tab
     dom.configBudget.value = state.settings.budget;
-    dom.configSlotPOR.value = state.settings.slots.POR;
-    dom.configSlotDIF.value = state.settings.slots.DIF;
-    dom.configSlotCEN.value = state.settings.slots.CEN;
-    dom.configSlotATT.value = state.settings.slots.ATT;
+    if (dom.configSlotPOR) dom.configSlotPOR.value = state.settings.slots.POR;
+    if (dom.configSlotDIF) dom.configSlotDIF.value = state.settings.slots.DIF;
+    if (dom.configSlotCEN) dom.configSlotCEN.value = state.settings.slots.CEN;
+    if (dom.configSlotATT) dom.configSlotATT.value = state.settings.slots.ATT;
     dom.teamListInput.value = state.teams.map(t => t.name).join('\n');
 
     // Restore AI settings
@@ -2679,8 +2720,206 @@ function logoutCloudSession() {
   renderAll();
   showToast('Sessione cloud disconnessa con successo! 🔓', 'success');
 
-  // Reopen startup choices dialog onboarding modal
-  openStartupDialog();
+// --- RICH FORMATION PLAYER TOOLTIP / POPOVER LOGIC ---
+let activePitchPopover = null;
+
+function closePitchPopover() {
+  if (activePitchPopover) {
+    activePitchPopover.remove();
+    activePitchPopover = null;
+    document.body.classList.remove('ai-modal-open');
+  }
+}
+
+function positionPitchPopover(popover, triggerEl) {
+  const rect = triggerEl.getBoundingClientRect();
+  const popoverWidth = 300;
+  const scrollX = window.scrollX || window.pageXOffset;
+  const scrollY = window.scrollY || window.pageYOffset;
+
+  let left = rect.left + scrollX - 110; // Center relative to player node (which is 75px wide)
+  let top = rect.bottom + scrollY + 8;
+
+  const popoverHeightEst = 240;
+  if (rect.bottom + popoverHeightEst > window.innerHeight && rect.top > popoverHeightEst) {
+    top = rect.top + scrollY - popoverHeightEst - 8;
+  }
+
+  if (left < 10) left = 10;
+  if (left + popoverWidth > window.innerWidth - 10) {
+    left = window.innerWidth - popoverWidth - 10;
+  }
+
+  popover.style.left = `${left}px`;
+  popover.style.top = `${top}px`;
+  popover.style.width = `${popoverWidth}px`;
+}
+
+function renderPitchPopoverLoading(popover, name, isMobile) {
+  const closeBtnHtml = isMobile ? `<button class="pitch-popover-close" onclick="closePitchPopover()">✕</button>` : '';
+  popover.innerHTML = `
+    ${closeBtnHtml}
+    <div style="font-size:0.75rem; font-weight:700; color:#fff; margin-bottom: 0.65rem;">
+      Caricamento dati IA per <span style="color:#c084fc;">${name}</span>...
+    </div>
+    <div class="ai-skeleton-pulse ai-skeleton-line" style="width: 100%; height: 35px; border-radius: 8px;"></div>
+    <div class="ai-skeleton-pulse ai-skeleton-line" style="width: 100%; height: 35px; border-radius: 8px; margin-top: 0.5rem;"></div>
+    <div class="ai-skeleton-pulse ai-skeleton-line" style="width: 100%; height: 50px; border-radius: 8px; margin-top: 0.5rem;"></div>
+  `;
+}
+
+function renderPitchPopoverError(popover, errorMsg) {
+  popover.innerHTML = `
+    <button class="pitch-popover-close" onclick="closePitchPopover()">✕</button>
+    <div style="font-size: 0.75rem; font-weight: 700; color: var(--color-danger); margin-bottom: 0.5rem;">Errore di Caricamento ❌</div>
+    <p style="font-size:0.65rem; color:#fff; margin:0; line-height:1.4;">${errorMsg}</p>
+  `;
+}
+
+function renderPitchPopoverData(popover, name, country, role, data, triggerEl, isMobile) {
+  const closeBtnHtml = isMobile ? `<button class="pitch-popover-close" onclick="closePitchPopover()">✕</button>` : '';
+
+  const strength = parseInt(data.matchStrength) || 50;
+  let strengthColor = '#f43f5e';
+  let strengthBg = 'rgba(244, 63, 94, 0.12)';
+  let strengthBorder = 'rgba(244, 63, 94, 0.3)';
+  if (strength >= 80) {
+    strengthColor = '#10b981';
+    strengthBg = 'rgba(16, 185, 129, 0.12)';
+    strengthBorder = 'rgba(16, 185, 129, 0.3)';
+  } else if (strength >= 50) {
+    strengthColor = '#f59e0b';
+    strengthBg = 'rgba(245, 158, 11, 0.12)';
+    strengthBorder = 'rgba(245, 158, 11, 0.3)';
+  }
+
+  let alternativesHtml = '';
+  if (data.alternatives && Array.isArray(data.alternatives) && data.alternatives.length > 0) {
+    const items = data.alternatives.map(alt => `
+      <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.68rem; margin-bottom: 0.2rem; background: rgba(255, 255, 255, 0.02); padding: 0.2rem 0.4rem; border-radius: 4px;">
+        <span style="color: #fff; font-weight: 500;">🔄 ${alt.name}</span>
+        <span style="color: #ef4444; font-weight: 700;">Impiego: ${alt.playProbability}</span>
+      </div>
+    `).join('');
+    alternativesHtml = `
+      <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.04); border-radius: 8px; padding: 0.4rem 0.5rem; margin-bottom: 0.5rem;">
+        <span style="display: block; font-size: 0.6rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em; margin-bottom: 0.25rem;">Alternative in Nazionale 🔄</span>
+        ${items}
+      </div>
+    `;
+  } else {
+    alternativesHtml = `
+      <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.04); border-radius: 8px; padding: 0.4rem 0.5rem; margin-bottom: 0.5rem;">
+        <span style="display: block; font-size: 0.6rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em; margin-bottom: 0.1rem;">Alternative in Nazionale 🔄</span>
+        <span style="font-size: 0.65rem; color: var(--color-text-muted); font-style: italic;">Nessuna insidia rilevata</span>
+      </div>
+    `;
+  }
+
+  popover.innerHTML = `
+    ${closeBtnHtml}
+    
+    <div style="font-size: 0.8rem; font-weight: 800; color: #fff; margin-bottom: 0.5rem; display: flex; align-items: center; justify-content: space-between; padding-right: 1.5rem;">
+      <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 160px;">${name}</span>
+      <span style="font-size: 0.65rem; color: var(--color-text-muted); font-weight: 600; flex-shrink:0;">${role} | ${country}</span>
+    </div>
+
+    <!-- Match details (Strength + Explanation) -->
+    <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.04); border-radius: 8px; padding: 0.4rem 0.5rem; margin-bottom: 0.5rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+        <span style="font-size: 0.6rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em;">Prossimo Turno: vs ${data.matchAnalysis?.nextOpponent || 'N/D'}</span>
+        <div style="width: 22px; height: 22px; border-radius: 50%; background: ${strengthBg}; border: 1px solid ${strengthBorder}; color: ${strengthColor}; display: flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: 800;" title="Forza del turno: ${strength}/100">
+          ${strength}
+        </div>
+      </div>
+      <div style="background: rgba(0, 0, 0, 0.15); border-left: 2px solid ${strengthColor}; padding: 0.35rem 0.45rem; border-radius: 4px; font-size: 0.65rem; color: var(--color-text-muted); line-height: 1.35; font-style: italic;">
+        ${data.matchAnalysis?.criteriaText || 'Parametri di forza non calcolati.'}
+      </div>
+    </div>
+
+    <!-- Form State -->
+    <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.04); border-radius: 8px; padding: 0.4rem 0.5rem; margin-bottom: 0.5rem;">
+      <span style="display:block; margin-bottom:0.15rem; font-size: 0.6rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em;">Stato di Forma (Settimana) 📈</span>
+      <p style="margin: 0; font-size: 0.65rem; line-height: 1.35; color: #fff; font-weight: 500;">
+        ${data.formState || 'Nessuna notizia recente.'}
+      </p>
+    </div>
+
+    <!-- Alternatives -->
+    ${alternativesHtml}
+  `;
+}
+
+async function showPitchPlayerTooltip(playerId, triggerEl, isMobile) {
+  if (activePitchPopover && activePitchPopover.dataset.playerId === playerId) {
+    return;
+  }
+  
+  closePitchPopover();
+
+  const popover = document.createElement('div');
+  popover.className = `pitch-player-popover ${isMobile ? 'modal-view' : ''}`;
+  popover.dataset.playerId = playerId;
+  activePitchPopover = popover;
+  document.body.appendChild(popover);
+
+  if (isMobile) {
+    document.body.classList.add('ai-modal-open');
+  }
+
+  const player = state.players.find(p => p.id === playerId) ||
+                 (state.teams.find(t => t.id === state.activePitchTeamId)?.players.find(p => p.id === playerId));
+
+  if (!player) return;
+
+  if (!isMobile) {
+    positionPitchPopover(popover, triggerEl);
+    setTimeout(() => {
+      if (activePitchPopover === popover) popover.classList.add('show');
+    }, 10);
+  }
+
+  let cachedData = state.aiCache[playerId] || JSON.parse(sessionStorage.getItem(`fantamondiale_ai_${playerId}`) || 'null');
+
+  if (cachedData) {
+    renderPitchPopoverData(popover, player.name, player.country, player.role, cachedData, triggerEl, isMobile);
+    if (!isMobile) {
+      positionPitchPopover(popover, triggerEl);
+    }
+  } else {
+    renderPitchPopoverLoading(popover, player.name, isMobile);
+    
+    try {
+      const response = await fetch('/api/player-analysis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: player.name,
+          country: player.country,
+          role: player.role,
+          provider: state.settings.aiProvider || 'openrouter',
+          openRouterModel: state.settings.openRouterModel || 'openai/gpt-oss-120b:free'
+        })
+      });
+      const result = await response.json();
+      
+      if (activePitchPopover !== popover) return;
+
+      if (response.ok && !result.error) {
+        state.aiCache[playerId] = result;
+        sessionStorage.setItem(`fantamondiale_ai_${playerId}`, JSON.stringify(result));
+        renderPitchPopoverData(popover, player.name, player.country, player.role, result, triggerEl, isMobile);
+        if (!isMobile) {
+          positionPitchPopover(popover, triggerEl);
+        }
+      } else {
+        renderPitchPopoverError(popover, result.error || 'Errore API');
+      }
+    } catch (error) {
+      if (activePitchPopover !== popover) return;
+      renderPitchPopoverError(popover, error.message);
+    }
+  }
 }
 
 // --- DYNAMIC AI SPEECH BUBBLE OVERLAY LOGIC ---
@@ -2956,7 +3195,7 @@ function renderPopoverData(popover, name, country, role, data, buttonEl) {
         <span class="ai-stat-value" title="${data.club || 'N/D'}">${data.club || 'N/D'}</span>
       </div>
       <div class="ai-stat-card">
-        <span class="ai-stat-label">Presenze</span>
+        <span class="ai-stat-label">${role === 'POR' ? 'Presenze & Clean Sheets' : 'Presenze'}</span>
         <span class="ai-stat-value" title="${data.appearances || 'N/D'}">${data.appearances || 'N/D'}</span>
       </div>
     </div>
@@ -3050,6 +3289,13 @@ document.addEventListener('click', function(e) {
       e.target.id !== 'btn-team-ai-analysis' &&
       !e.target.closest('#btn-team-ai-analysis')) {
     closeAIPopover();
+  }
+
+  if (activePitchPopover && 
+      !activePitchPopover.contains(e.target) && 
+      !e.target.closest('.pitch-player-node') && 
+      !e.target.closest('.bench-player-node')) {
+    closePitchPopover();
   }
 });
 

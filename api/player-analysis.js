@@ -25,12 +25,21 @@ export default async function handler(req, res) {
 
     const ELIMINATED_COUNTRIES = await getEliminatedCountries(apiKey, provider, openRouterModel);
 
+    const isGK = role === 'POR';
+    const appearancesInstruction = isGK
+      ? `- Per la chiave 'appearances' del JSON, trattandosi di un Portiere (POR), devi identificare tramite ricerca web statistica (ad esempio Transfermarkt, Soccerway o FBref) il numero REALE ed ESATTO di presenze, clean sheet (partite chiuse senza subire gol) e gol subiti registrati dal calciatore ${name} specificamente nella stagione calcistica 2025/2026, contando ESCLUSIVAMENTE e SOLO le partite in CAMPIONATO (al fine di uniformare e rendere omogenei i dati tra tutti i giocatori, escludendo coppe nazionali, coppe continentali o partite della Nazionale).`
+      : `- Per la chiave 'appearances' del JSON, devi identificare tramite ricerca web statistica (ad esempio Transfermarkt, Soccerway o FBref) il numero REALE ed ESATTO di presenze, gol e assist effettuati dal calciatore ${name} specificamente nella stagione calcistica 2025/2026, contando ESCLUSIVAMENTE e SOLO le partite in CAMPIONATO (al fine di uniformare e rendere omogenei i dati tra tutti i giocatori, escludendo quindi coppe nazionali, coppe continentali e partite della Nazionale).`;
+
+    const appearancesJsonDesc = isGK
+      ? `- appearances: le presenze, clean sheet (partite senza subire gol) e gol subiti registrati nella stagione calcistica più recente 2025/2026 in CAMPIONATO (es. "34 presenze, 12 clean sheet, 28 gol subiti nella stagione 25/26")`
+      : `- appearances: le presenze e gol/assist registrati nella stagione calcistica più recente 2025/2026 in CAMPIONATO (es. "34 presenze, 12 gol nella stagione 25/26")`;
+
     const prompt = `Sei un esperto analista calcistico e fantallenatore specializzato nel torneo "FantaMondiale" (il fantacalcio basato sulla fase finale dei Mondiali di calcio).
 Fornisci un'analisi strategica dettagliata e accurata in lingua italiana per il calciatore: ${name} (Nazionale: ${country}, Ruolo: ${role}).
 Esegui una ricerca online in tempo reale tramite Google Search / Web Search per ottenere le informazioni calcistiche reali più recenti ed aggiornate ad oggi (squadra di club attuale, ultimo stato di forma, infortuni o convocazioni recenti, presenze e gol nella stagione 2025/2026).
 
 REGOLE DI ESATTEZZA NUMERICA DELLE PRESENZE (CRUCIALE):
-- Per la chiave 'appearances' del JSON, devi identificare tramite ricerca web statistica (ad esempio interrogando Transfermarkt, Soccerway o FBref) il numero REALE ed ESATTO di presenze, gol e assist effettuati dal calciatore ${name} specificamente nella stagione calcistica 2025/2026, contando ESCLUSIVAMENTE e SOLO le partite in CAMPIONATO (al fine di uniformare e rendere omogenei i dati tra tutti i giocatori, escludendo quindi coppe nazionali, coppe continentali e partite della Nazionale).
+${appearancesInstruction}
 - È tassativamente vietato inventare, stimare o tirare a indovinare i numeri. Fai ricerche mirate (es. "${name} presenze gol 2025 2026 transfermarkt"). Se dopo molteplici tentativi non trovi dati certi, rispondi con "Dati non disponibili nella stagione 25/26", ma fai ogni sforzo per trovare l'esatta statistica reale ad oggi.
 
 Regole FantaMondiale per formulare la tua risposta:
@@ -50,7 +59,7 @@ Regole FantaMondiale per formulare la tua risposta:
 
 Fornisci i dati strutturati RIGOROSAMENTE in formato JSON con le seguenti chiavi:
 - club: la squadra di club attuale in cui gioca (es. "Inter Miami", "Real Madrid")
-- appearances: le presenze e gol/assist registrati nella stagione calcistica più recente 2025/2026 in CAMPIONATO (es. "34 presenze, 12 gol nella stagione 25/26")
+${appearancesJsonDesc}
 - starterProbability: stima percentuale (es. "85%" o "30%") che giochi effettivamente come titolare durante questo Mondiale.
 - playerCategory: la classificazione del giocatore a livello FantaMondiale (scegli rigorosamente tra: "scarso", "accettabile", "buono", "ottimo", "stella"). Assegna il valore valutando attentamente i seguenti criteri:
   - "scarso": gioca poco o niente, pochi bonus, squadra nazionale di appartenenza scarsa
