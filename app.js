@@ -3852,16 +3852,19 @@ async function recalculateIdealLineup(team) {
   pitchContainer.innerHTML = `
     <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 380px; background: rgba(0,0,0,0.5); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); padding: 2rem; text-align: center; box-sizing: border-box;">
       <div class="ai-skeleton-pulse" style="width: 50px; height: 50px; border-radius: 50%; background: var(--color-primary); margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; animation: pulse 1.5s infinite;">🔮</div>
-      <h4 style="margin: 0 0 0.5rem 0; color: #fff; font-size: 0.9rem;">Ricalcolo Formazione IA...</h4>
-      <p id="ai-recalc-status" style="margin: 0 0 1rem 0; font-size: 0.75rem; color: var(--color-text-muted); line-height: 1.4;">Analisi in corso della rosa completa e delle ultime news calcistiche in tempo reale...</p>
+      <h4 style="margin: 0 0 0.5rem 0; color: #fff; font-size: 0.9rem;">Elaborazione IA...</h4>
+      <p id="ai-recalc-status" style="margin: 0 0 1rem 0; font-size: 0.75rem; color: var(--color-text-muted); line-height: 1.4;">Fase 1: Calcolo schieramento ottimale e modulo tattico in corso...</p>
       <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; margin-bottom: 0.5rem;">
-        <div id="ai-recalc-progress" style="width: 100%; height: 100%; background: linear-gradient(90deg, #38bdf8 0%, #c084fc 100%); border-radius: 3px; animation: aiPulse 1.5s ease infinite;"></div>
+        <div id="ai-recalc-progress" style="width: 15%; height: 100%; background: linear-gradient(90deg, #38bdf8 0%, #c084fc 100%); border-radius: 3px; transition: width 0.4s ease-out;"></div>
       </div>
     </div>
   `;
   benchContainer.innerHTML = `<div style="text-align: center; color: var(--color-text-muted); font-size: 0.75rem; font-style: italic;">Ricarica in corso...</div>`;
 
   try {
+    // ----------------------------------------------------
+    // STEP 1: Fetch optimized lineup (starters, bench, tactical justification)
+    // ----------------------------------------------------
     const response = await fetch('/api/team-ideal-lineup', {
       method: 'POST',
       headers: {
@@ -3876,7 +3879,7 @@ async function recalculateIdealLineup(team) {
     });
 
     if (!response.ok) {
-      throw new Error(`API returned status ${response.status}`);
+      throw new Error(`Lineup API returned status ${response.status}`);
     }
 
     const result = await response.json();
@@ -3896,16 +3899,71 @@ async function recalculateIdealLineup(team) {
     team.module = result.recommendedModule || team.module || '4-3-3';
     dom.pitchModuleSelect.value = team.module;
 
-    // Map playersAnalysis results back to player-level caches so detail cards stay updated!
-    if (result.playersAnalysis) {
-      Object.keys(result.playersAnalysis).forEach(playerId => {
-        const analysis = normalizePlayerAnalysis(result.playersAnalysis[playerId]);
-        state.aiCache[playerId] = analysis;
-        sessionStorage.setItem(`fantamondiale_ai_${playerId}`, JSON.stringify(analysis));
-      });
+    // Render the initial pitch visualizer with recommended players (without scores yet)
+    renderPitch();
+
+    // ----------------------------------------------------
+    // STEP 2: Separate player roster into batches and query batch analysis
+    // ----------------------------------------------------
+    const statusTextEl = document.getElementById('ai-recalc-status');
+    const progressBarEl = document.getElementById('ai-recalc-progress');
+
+    const allPlayers = [...team.players];
+    const batchSize = 6;
+    const batches = [];
+    
+    for (let i = 0; i < allPlayers.length; i += batchSize) {
+      batches.push(allPlayers.slice(i, i + batchSize));
     }
 
-    showToast('Formazione ideale ricalcolata con successo in base alle ultime news! 🔮📈', 'success');
+    const totalBatches = batches.length;
+    
+    for (let batchIdx = 0; batchIdx < totalBatches; batchIdx++) {
+      const batchPlayers = batches[batchIdx];
+      
+      if (statusTextEl && progressBarEl) {
+        statusTextEl.innerText = `Fase 2: Analisi statistica e news... Lotto ${batchIdx + 1} di ${totalBatches} (${Math.round((batchIdx / totalBatches) * 100)}%)`;
+        progressBarEl.style.width = `${Math.round(((batchIdx + 1) / (totalBatches + 1)) * 100)}%`;
+      }
+
+      const batchResponse = await fetch('/api/player-batch-analysis', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          players: batchPlayers,
+          provider: state.settings.aiProvider || 'openrouter',
+          openRouterModel: state.settings.openRouterModel || 'openai/gpt-oss-120b:free'
+        })
+      });
+
+      if (!batchResponse.ok) {
+        console.warn(`Batch analysis failed for lot ${batchIdx + 1}`);
+        continue; // continue with next batches so we don't abort completely
+      }
+
+      const batchResult = await batchResponse.json();
+      
+      if (batchResult.playersAnalysis) {
+        Object.keys(batchResult.playersAnalysis).forEach(playerId => {
+          const analysis = normalizePlayerAnalysis(batchResult.playersAnalysis[playerId]);
+          state.aiCache[playerId] = analysis;
+          sessionStorage.setItem(`fantamondiale_ai_${playerId}`, JSON.stringify(analysis));
+        });
+      }
+
+      // Re-render immediately so scores populate in real time!
+      renderPitch();
+      renderTeamDashboard();
+    }
+
+    // Set progress to 100%
+    if (progressBarEl) {
+      progressBarEl.style.width = '100%';
+    }
+
+    showToast('Formazione ideale e statistiche ricalcolate in lotti con successo! 🔮📈', 'success');
     autoSave();
   } catch (err) {
     console.error(err);
@@ -3915,7 +3973,7 @@ async function recalculateIdealLineup(team) {
   // Restore buttons state
   buttons.forEach(btn => btn.disabled = false);
 
-  // Render fresh updated pitch
+  // Render final updated visualizer and tables
   renderPitch();
   renderTeamDashboard();
 }

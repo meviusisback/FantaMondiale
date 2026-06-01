@@ -82,25 +82,6 @@ Fornisci la risposta RIGOROSAMENTE in formato JSON con la seguente struttura esa
   "recommendedModule": "4-3-3",
   "starters": ["id_del_giocatore_1", "id_del_giocatore_2"],
   "bench": ["id_del_giocatore_3"],
-  "playersAnalysis": {
-    "id_del_giocatore_1": {
-      "playerCategory": "stella",
-      "starterProbability": "95%",
-      "appearances": "32 presenze, 10 gol in campionato nella stagione 25/26",
-      "formState": "Descrizione reale e notizie freschissime su infortuni, convocazioni e forma di questa settimana (2 frasi max). **DIVIETO ASSOLUTO:** Non descrivere le caratteristiche generiche del giocatore o che tipo di giocatore è (es. NON scrivere 'è un attaccante tecnico', 'un terzino veloce', o simili). Devi indicare **esclusivamente e tassativamente** lo stato di forma fisica attuale, notizie reali su infortuni, convocazioni, allenamento, ultime prestazioni sul campo e se partirà titolare o meno (es. 'Fisicamente al top dopo l'ultimo gol in campionato', 'Recuperato dal risentimento muscolare, si allena regolarmente', 'In ottima forma ma partirà dalla panchina in questo turno'). ATTENZIONE: per i panchinari attivi NON scrivere 'ELIMINATO', ma scrivi semplicemente che non giocherà o partirà dalla panchina.",
-      "matchStrength": 85,
-      "matchAnalysis": {
-        "nextOpponent": "Spagna (REGOLA CRUCIALE: Deve trattarsi tassativamente del nome proprio di una reale nazionale di calcio, ad es. 'Francia' o 'Spagna'. È totalmente ed assolutamente vietato usare diciture generiche o di gironi come 'Avversario Girone', 'Fase a gironi', 'Girone E', 'Avversario del girone' o 'TBD'. Se non trovi la partita esatta da ricerca web, indica come avversario uno degli altri 3 paesi reali presenti nello stesso girone mondiale di tale nazione nel Mondiale 2026).",
-        "criteriaText": "Spiegazione dettagliata ed esplicita (in 2-3 frasi chiare) di chi il giocatore affronterà, un giudizio su come sta giocando e perché ha quel punteggio da 1 a 100 per questa specifica partita."
-      },
-      "alternatives": [
-        {
-          "name": "Nome del concorrente reale nello stesso ruolo in Nazionale (es. Openda per Lukaku; Casteels per Courtois; Strand Larsen per Haaland) che andrà in panchina se gioca il titolare analizzato. Tassativamente 1 o 2 concorrenti reali.",
-          "playProbability": "Percentuale reale o stimata di impiego. REQUISITO MATEMATICO DEL 100% (CRUCIALE): La somma tra starterProbability del titolare analizzato (es. 85%) e le playProbability di queste alternative concorrenti (es. 15%) deve essere tassativamente pari al 100% in totale."
-        }
-      ]
-    }
-  },
   "tacticalJustification": "Spiegazione dettagliata ed esplicita in lingua italiana incentrata ESCLUSIVAMENTE su strategie del FantaMondiale per massimizzare bonus (gol, assist, rigori, clean sheet per i portieri). NON parlare come un vero allenatore di calcio (niente commenti su equilibrio tattico reale della squadra o coperture difensive). Spiega in modo chiaro perché hai preferito gli 11 titolari rispetto a chi è rimasto in panchina (ad esempio chiarendo se chi è in panchina affronta partite più difficili nel prossimo turno del Mondiale, ha uno stato di forma peggiore, ha minori probabilità di portare bonus, o è meno performante). Fornisci anche in modo esplicito potenziali ballottaggi e/o alternative strategiche valide all'interno della rosa che il fantallenatore può adottare (es. ballottaggi tra titolari e panchina basati sul coefficiente di bonus o sulla difficoltà del match)."
 }
 
