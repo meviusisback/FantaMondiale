@@ -87,7 +87,7 @@ Fornisci la risposta RIGOROSAMENTE in formato JSON con la seguente struttura esa
       "playerCategory": "stella",
       "starterProbability": "95%",
       "appearances": "32 presenze, 10 gol in campionato nella stagione 25/26",
-      "formState": "Descrizione reale e notizie freschissime su infortuni, convocazioni e forma di questa settimana (2 frasi max). ATTENZIONE: per i panchinari attivi NON scrivere 'ELIMINATO', ma scrivi semplicemente che non giocherà o partirà dalla panchina.",
+      "formState": "Descrizione reale e notizie freschissime su infortuni, convocazioni e forma di questa settimana (2 frasi max). **DIVIETO ASSOLUTO:** Non descrivere le caratteristiche generiche del giocatore o che tipo di giocatore è (es. NON scrivere 'è un attaccante tecnico', 'un terzino veloce', o simili). Devi indicare **esclusivamente e tassativamente** lo stato di forma fisica attuale, notizie reali su infortuni, convocazioni, allenamento, ultime prestazioni sul campo e se partirà titolare o meno (es. 'Fisicamente al top dopo l'ultimo gol in campionato', 'Recuperato dal risentimento muscolare, si allena regolarmente', 'In ottima forma ma partirà dalla panchina in questo turno'). ATTENZIONE: per i panchinari attivi NON scrivere 'ELIMINATO', ma scrivi semplicemente che non giocherà o partirà dalla panchina.",
       "matchStrength": 85,
       "matchAnalysis": {
         "nextOpponent": "Spagna",
