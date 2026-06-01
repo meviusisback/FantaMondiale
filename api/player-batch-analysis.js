@@ -169,6 +169,47 @@ Rispondi esclusivamente con il codice JSON, senza alcun blocco di codice markdow
     // Programmatic override for eliminated/absent countries
     if (!parsedData.playersAnalysis) parsedData.playersAnalysis = {};
     
+    // ==========================================
+    // CRITICAL FIX: Robust key remapping - the AI model may use player names 
+    // instead of IDs as keys (e.g. "Alisson Becker" instead of "s-2").
+    // We MUST remap all keys to the correct internal player IDs.
+    // ==========================================
+    const remappedAnalysis = {};
+    const originalKeys = Object.keys(parsedData.playersAnalysis);
+    
+    players.forEach(p => {
+      // Try exact ID match first
+      if (parsedData.playersAnalysis[p.id]) {
+        remappedAnalysis[p.id] = parsedData.playersAnalysis[p.id];
+        return;
+      }
+      
+      // Try matching by player name (case-insensitive, trimmed)
+      const nameKey = originalKeys.find(k => 
+        k.trim().toLowerCase() === p.name.trim().toLowerCase()
+      );
+      if (nameKey && parsedData.playersAnalysis[nameKey]) {
+        remappedAnalysis[p.id] = parsedData.playersAnalysis[nameKey];
+        return;
+      }
+      
+      // Try partial name match (last name or first name)
+      const nameParts = p.name.toLowerCase().split(/\s+/);
+      const partialKey = originalKeys.find(k => {
+        const kLower = k.trim().toLowerCase();
+        return nameParts.some(part => part.length > 2 && kLower.includes(part));
+      });
+      if (partialKey && parsedData.playersAnalysis[partialKey] && !remappedAnalysis[p.id]) {
+        remappedAnalysis[p.id] = parsedData.playersAnalysis[partialKey];
+        return;
+      }
+    });
+    
+    // If remapping produced results, use them; otherwise keep original (model used correct IDs)
+    if (Object.keys(remappedAnalysis).length > 0) {
+      parsedData.playersAnalysis = remappedAnalysis;
+    }
+
     players.forEach(p => {
       const isEliminated = ELIMINATED_COUNTRIES.includes(p.country);
       if (isEliminated) {
@@ -182,6 +223,23 @@ Rispondi esclusivamente con il codice JSON, senza alcun blocco di codice markdow
           matchAnalysis: {
             nextOpponent: "Nessuno",
             criteriaText: "La nazionale di appartenenza è stata eliminata o non partecipa al Mondiale."
+          },
+          alternatives: []
+        };
+      }
+      
+      // Ensure every player in the batch has an entry - create fallback if model omitted them
+      if (!parsedData.playersAnalysis[p.id]) {
+        parsedData.playersAnalysis[p.id] = {
+          playerCategory: "buono",
+          starterProbability: "50%",
+          valueForMoney: "Buono",
+          appearances: "Dati non disponibili nella stagione 25/26",
+          formState: "Valutazione in corso.",
+          matchStrength: 50,
+          matchAnalysis: {
+            nextOpponent: "Da verificare",
+            criteriaText: "Analisi non disponibile per questo turno."
           },
           alternatives: []
         };

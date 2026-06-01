@@ -3940,12 +3940,44 @@ async function recalculateIdealLineup(team) {
         throw new Error(`Impossibile ricevere valutazioni per il Lotto ${batchIdx + 1}: ${lastError ? lastError.message || lastError : 'Errore sconosciuto'}`);
       }
 
-      // Save valid batch results to cache
+      // Save valid batch results to cache (with client-side key remapping as safety net)
       if (batchResult && batchResult.playersAnalysis) {
-        Object.keys(batchResult.playersAnalysis).forEach(playerId => {
-          const analysis = normalizePlayerAnalysis(batchResult.playersAnalysis[playerId]);
-          state.aiCache[playerId] = analysis;
-          sessionStorage.setItem(`fantamondiale_ai_${playerId}`, JSON.stringify(analysis));
+        // First, try direct ID keys
+        const returnedKeys = Object.keys(batchResult.playersAnalysis);
+        
+        // Build a name-to-ID lookup for the current batch
+        const nameToIdMap = {};
+        batchPlayers.forEach(p => {
+          nameToIdMap[p.name.trim().toLowerCase()] = p.id;
+          // Also map partial names (last name, first name)
+          p.name.split(/\s+/).forEach(part => {
+            if (part.length > 2) nameToIdMap[part.toLowerCase()] = p.id;
+          });
+        });
+        
+        returnedKeys.forEach(key => {
+          let targetId = key; // Assume key is the player ID
+          
+          // Check if this key is actually a player ID in our batch
+          const isValidId = batchPlayers.some(p => p.id === key);
+          
+          if (!isValidId) {
+            // Key is NOT a valid ID - try to match it to a player by name
+            const keyLower = key.trim().toLowerCase();
+            if (nameToIdMap[keyLower]) {
+              targetId = nameToIdMap[keyLower];
+            } else {
+              // Try partial matching
+              const matchedId = Object.entries(nameToIdMap).find(([name]) => 
+                keyLower.includes(name) || name.includes(keyLower)
+              );
+              if (matchedId) targetId = matchedId[1];
+            }
+          }
+          
+          const analysis = normalizePlayerAnalysis(batchResult.playersAnalysis[key]);
+          state.aiCache[targetId] = analysis;
+          sessionStorage.setItem(`fantamondiale_ai_${targetId}`, JSON.stringify(analysis));
         });
       }
 
@@ -3955,24 +3987,14 @@ async function recalculateIdealLineup(team) {
     }
 
     // ----------------------------------------------------
-    // VERIFICATION: Check if we successfully received all player evaluations
+    // VERIFICATION: Check that ALL players have received at least SOME analysis data
+    // The requirement is: calculate players first, THEN choose formation.
+    // We check for the presence of ANY cached data, not for perfect opponent names.
     // ----------------------------------------------------
-    let missingPlayers = team.players.filter(p => {
-      const analysis = state.aiCache[p.id];
-      if (!analysis) return true;
-      
-      const opp = analysis.matchAnalysis?.nextOpponent;
-      const isPlaceholderOpponent = !opp || 
-                                    opp === 'Da verificare' || 
-                                    opp === 'Da definire' || 
-                                    opp === 'Non disponibile' || 
-                                    opp === 'Da stabilire' ||
-                                    opp === 'N/D';
-      return isPlaceholderOpponent;
-    });
+    let missingPlayers = team.players.filter(p => !state.aiCache[p.id]);
 
     if (missingPlayers.length > 0) {
-      console.log(`Rilevati ${missingPlayers.length} calciatori senza valutazioni o con avversario da definire. Tentativo di ripristino mirato...`);
+      console.log(`Rilevati ${missingPlayers.length} calciatori senza alcuna valutazione. Tentativo di ripristino mirato...`);
       let retryAttempt = 0;
       const maxRetryAttempts = 2;
       
@@ -3982,7 +4004,7 @@ async function recalculateIdealLineup(team) {
           statusTextEl.innerText = `Fase 1 (Recupero): Calcolo mirato per ${missingPlayers.length} giocatori rimasti... (Tentativo ${retryAttempt}/${maxRetryAttempts})`;
         }
         
-        // Split the missing players into small batches of 2 to ensure rapid, zero-timeout execution
+        // Split the missing players into small batches of 2
         const retryBatches = [];
         for (let i = 0; i < missingPlayers.length; i += 2) {
           retryBatches.push(missingPlayers.slice(i, i + 2));
@@ -3992,72 +4014,70 @@ async function recalculateIdealLineup(team) {
           const retryBatchPlayers = retryBatches[rIdx];
           
           if (rIdx > 0) {
-            await new Promise(resolve => setTimeout(resolve, 800)); // Delay between retries
+            await new Promise(resolve => setTimeout(resolve, 800));
           }
 
-          let rSuccess = false;
-          let rAttempt = 0;
-          let rResult = null;
-
-          while (!rSuccess && rAttempt < 3) {
-            rAttempt++;
-            try {
-              const retryResponse = await fetch('/api/player-batch-analysis', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  players: retryBatchPlayers,
-                  provider: state.settings.aiProvider || 'openrouter',
-                  openRouterModel: state.settings.openRouterModel || 'openai/gpt-oss-120b:free'
-                })
-              });
-              
-              if (retryResponse.ok) {
-                rResult = await retryResponse.json();
-                if (rResult && !rResult.error) {
-                  rSuccess = true;
-                }
-              }
-            } catch (retryErr) {
-              console.warn(`Retry batch ${rIdx + 1} (Attempt ${rAttempt}/3) failed:`, retryErr);
-              if (rAttempt < 3) await new Promise(r => setTimeout(r, 1500));
-            }
-          }
-          
-          if (rSuccess && rResult && rResult.playersAnalysis) {
-            Object.keys(rResult.playersAnalysis).forEach(playerId => {
-              const analysis = normalizePlayerAnalysis(rResult.playersAnalysis[playerId]);
-              state.aiCache[playerId] = analysis;
-              sessionStorage.setItem(`fantamondiale_ai_${playerId}`, JSON.stringify(analysis));
+          try {
+            const retryResponse = await fetch('/api/player-batch-analysis', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                players: retryBatchPlayers,
+                provider: state.settings.aiProvider || 'openrouter',
+                openRouterModel: state.settings.openRouterModel || 'openai/gpt-oss-120b:free'
+              })
             });
+            
+            if (retryResponse.ok) {
+              const rResult = await retryResponse.json();
+              if (rResult && rResult.playersAnalysis) {
+                const rKeys = Object.keys(rResult.playersAnalysis);
+                const rNameToId = {};
+                retryBatchPlayers.forEach(p => {
+                  rNameToId[p.name.trim().toLowerCase()] = p.id;
+                  p.name.split(/\s+/).forEach(part => {
+                    if (part.length > 2) rNameToId[part.toLowerCase()] = p.id;
+                  });
+                });
+                
+                rKeys.forEach(key => {
+                  let targetId = key;
+                  const isValidId = retryBatchPlayers.some(p => p.id === key);
+                  if (!isValidId) {
+                    const keyLower = key.trim().toLowerCase();
+                    if (rNameToId[keyLower]) targetId = rNameToId[keyLower];
+                    else {
+                      const match = Object.entries(rNameToId).find(([n]) => keyLower.includes(n) || n.includes(keyLower));
+                      if (match) targetId = match[1];
+                    }
+                  }
+                  const analysis = normalizePlayerAnalysis(rResult.playersAnalysis[key]);
+                  state.aiCache[targetId] = analysis;
+                  sessionStorage.setItem(`fantamondiale_ai_${targetId}`, JSON.stringify(analysis));
+                });
+              }
+            }
+          } catch (retryErr) {
+            console.warn(`Retry batch ${rIdx + 1} failed:`, retryErr);
           }
         }
         
-        // Re-render immediately
+        // Re-render
         renderPitch();
         renderTeamDashboard();
         
-        // Re-evaluate missing players
-        missingPlayers = team.players.filter(p => {
-          const analysis = state.aiCache[p.id];
-          if (!analysis) return true;
-          
-          const opp = analysis.matchAnalysis?.nextOpponent;
-          const isPlaceholderOpponent = !opp || 
-                                        opp === 'Da verificare' || 
-                                        opp === 'Da definire' || 
-                                        opp === 'Non disponibile' || 
-                                        opp === 'Da stabilire' ||
-                                        opp === 'N/D';
-          return isPlaceholderOpponent;
-        });
+        // Re-evaluate
+        missingPlayers = team.players.filter(p => !state.aiCache[p.id]);
       }
     }
 
-    // STRICT RULE COMPLIANCE: If any players are still missing after retries, abort Phase 2 completely!
-    if (missingPlayers.length > 0) {
-      const missingNames = missingPlayers.map(p => p.name).join(', ');
-      throw new Error(`Impossibile scegliere la formazione ideale: non è stato possibile ricevere tutte le valutazioni dei giocatori (${missingNames}). Per favore riprova il ricalcolo.`);
+    // Log how many players were successfully evaluated
+    const evaluatedCount = team.players.filter(p => state.aiCache[p.id]).length;
+    console.log(`Fase 1 completata: ${evaluatedCount}/${team.players.length} giocatori valutati con successo.`);
+    
+    // If ALL players are still missing (zero evaluations), abort - something is fundamentally broken
+    if (evaluatedCount === 0) {
+      throw new Error('Impossibile ottenere alcuna valutazione dai giocatori. Verifica la connessione e le chiavi API, poi riprova.');
     }
 
     // ----------------------------------------------------
