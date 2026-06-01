@@ -3869,7 +3869,7 @@ async function recalculateIdealLineup(team) {
     // PHASE 1: Fetch evaluations for ALL players in small batches first
     // ----------------------------------------------------
     const allPlayers = [...team.players];
-    const batchSize = 6;
+    const batchSize = 3; // Reduced batch size to 3 to completely eliminate 10s Vercel serverless timeouts!
     const batches = [];
     
     for (let i = 0; i < allPlayers.length; i += batchSize) {
@@ -3881,31 +3881,67 @@ async function recalculateIdealLineup(team) {
     for (let batchIdx = 0; batchIdx < totalBatches; batchIdx++) {
       const batchPlayers = batches[batchIdx];
       
+      // Delay slightly between batches to protect from model rate limits (800ms)
+      if (batchIdx > 0) {
+        await new Promise(resolve => setTimeout(resolve, 800));
+      }
+      
       if (statusTextEl && progressBarEl) {
         statusTextEl.innerText = `Fase 1: Recupero news e valutazioni... Lotto ${batchIdx + 1} di ${totalBatches} (${Math.round((batchIdx / totalBatches) * 100)}%)`;
         progressBarEl.style.width = `${Math.round(((batchIdx + 1) / (totalBatches + 2)) * 100)}%`;
       }
 
-      const batchResponse = await fetch('/api/player-batch-analysis', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          players: batchPlayers,
-          provider: state.settings.aiProvider || 'openrouter',
-          openRouterModel: state.settings.openRouterModel || 'openai/gpt-oss-120b:free'
-        })
-      });
+      // Retry mechanism: up to 3 attempts with 2 seconds wait in case of network/timeout errors
+      let success = false;
+      let attempt = 0;
+      let batchResult = null;
+      let lastError = null;
 
-      if (!batchResponse.ok) {
-        console.warn(`Batch analysis failed for lot ${batchIdx + 1}`);
-        continue;
+      while (!success && attempt < 3) {
+        attempt++;
+        if (attempt > 1 && statusTextEl) {
+          statusTextEl.innerText = `Fase 1: Lotto ${batchIdx + 1} di ${totalBatches}... Riprovo (Tentativo ${attempt}/3)`;
+        }
+
+        try {
+          const batchResponse = await fetch('/api/player-batch-analysis', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              players: batchPlayers,
+              provider: state.settings.aiProvider || 'openrouter',
+              openRouterModel: state.settings.openRouterModel || 'openai/gpt-oss-120b:free'
+            })
+          });
+
+          if (!batchResponse.ok) {
+            throw new Error(`Errore HTTP ${batchResponse.status} ${batchResponse.statusText}`);
+          }
+
+          batchResult = await batchResponse.json();
+          if (batchResult.error) {
+            throw new Error(batchResult.error);
+          }
+
+          success = true;
+        } catch (err) {
+          lastError = err;
+          console.warn(`Lotto ${batchIdx + 1} fallito (Tentativo ${attempt}/3):`, err);
+          if (attempt < 3) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          }
+        }
       }
 
-      const batchResult = await batchResponse.json();
-      
-      if (batchResult.playersAnalysis) {
+      // If we failed after 3 attempts, throw the actual error immediately so the user knows exactly why!
+      if (!success) {
+        throw new Error(`Impossibile ricevere valutazioni per il Lotto ${batchIdx + 1}: ${lastError ? lastError.message || lastError : 'Errore sconosciuto'}`);
+      }
+
+      // Save valid batch results to cache
+      if (batchResult && batchResult.playersAnalysis) {
         Object.keys(batchResult.playersAnalysis).forEach(playerId => {
           const analysis = normalizePlayerAnalysis(batchResult.playersAnalysis[playerId]);
           state.aiCache[playerId] = analysis;
@@ -3946,37 +3982,54 @@ async function recalculateIdealLineup(team) {
           statusTextEl.innerText = `Fase 1 (Recupero): Calcolo mirato per ${missingPlayers.length} giocatori rimasti... (Tentativo ${retryAttempt}/${maxRetryAttempts})`;
         }
         
-        // Split the missing players into batches of 6
+        // Split the missing players into small batches of 2 to ensure rapid, zero-timeout execution
         const retryBatches = [];
-        for (let i = 0; i < missingPlayers.length; i += 6) {
-          retryBatches.push(missingPlayers.slice(i, i + 6));
+        for (let i = 0; i < missingPlayers.length; i += 2) {
+          retryBatches.push(missingPlayers.slice(i, i + 2));
         }
         
         for (let rIdx = 0; rIdx < retryBatches.length; rIdx++) {
           const retryBatchPlayers = retryBatches[rIdx];
-          try {
-            const retryResponse = await fetch('/api/player-batch-analysis', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                players: retryBatchPlayers,
-                provider: state.settings.aiProvider || 'openrouter',
-                openRouterModel: state.settings.openRouterModel || 'openai/gpt-oss-120b:free'
-              })
-            });
-            
-            if (retryResponse.ok) {
-              const retryResult = await retryResponse.json();
-              if (retryResult.playersAnalysis) {
-                Object.keys(retryResult.playersAnalysis).forEach(playerId => {
-                  const analysis = normalizePlayerAnalysis(retryResult.playersAnalysis[playerId]);
-                  state.aiCache[playerId] = analysis;
-                  sessionStorage.setItem(`fantamondiale_ai_${playerId}`, JSON.stringify(analysis));
-                });
+          
+          if (rIdx > 0) {
+            await new Promise(resolve => setTimeout(resolve, 800)); // Delay between retries
+          }
+
+          let rSuccess = false;
+          let rAttempt = 0;
+          let rResult = null;
+
+          while (!rSuccess && rAttempt < 3) {
+            rAttempt++;
+            try {
+              const retryResponse = await fetch('/api/player-batch-analysis', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  players: retryBatchPlayers,
+                  provider: state.settings.aiProvider || 'openrouter',
+                  openRouterModel: state.settings.openRouterModel || 'openai/gpt-oss-120b:free'
+                })
+              });
+              
+              if (retryResponse.ok) {
+                rResult = await retryResponse.json();
+                if (rResult && !rResult.error) {
+                  rSuccess = true;
+                }
               }
+            } catch (retryErr) {
+              console.warn(`Retry batch ${rIdx + 1} (Attempt ${rAttempt}/3) failed:`, retryErr);
+              if (rAttempt < 3) await new Promise(r => setTimeout(r, 1500));
             }
-          } catch (retryErr) {
-            console.warn(`Retry batch ${rIdx + 1} failed:`, retryErr);
+          }
+          
+          if (rSuccess && rResult && rResult.playersAnalysis) {
+            Object.keys(rResult.playersAnalysis).forEach(playerId => {
+              const analysis = normalizePlayerAnalysis(rResult.playersAnalysis[playerId]);
+              state.aiCache[playerId] = analysis;
+              sessionStorage.setItem(`fantamondiale_ai_${playerId}`, JSON.stringify(analysis));
+            });
           }
         }
         
