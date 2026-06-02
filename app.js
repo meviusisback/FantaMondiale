@@ -520,6 +520,7 @@ function setupEventListeners() {
         if (isDialogContent) return;
         dialog.close();
       });
+    }
   });
 
   // Tournament simulator event listeners
