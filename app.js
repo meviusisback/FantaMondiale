@@ -1151,13 +1151,27 @@ function calculateIdealBidRange(player, targetTeam = null) {
   if (team) {
     const remainingCredits = team.budget;
     const playersCount = team.players.length;
-    const playersNeeded = Math.max(1, 35 - playersCount);
+    
+    // Core target size is 25 players (standard rotation size); once reached, we budget up to the max of 35.
+    const targetRosterSize = playersCount < 25 ? 25 : 35;
+    const playersNeeded = Math.max(1, targetRosterSize - playersCount);
     const avgCreditsPerPlayer = remainingCredits / playersNeeded;
     
     // Standard average credits per player is ~15 cr
     const budgetRatio = avgCreditsPerPlayer / 15;
-    // Allow scaling up to 10.0 to spend all remaining credits for competitive squads!
-    const teamFactor = Math.min(10.0, Math.max(0.2, budgetRatio));
+    
+    // Non-linear scaling:
+    // If budgetRatio is > 1.0, scale up linearily to spend the surplus.
+    // If budgetRatio is <= 1.0, scale down gently (using a baseline of 0.5) so top players aren't undervalued.
+    let teamFactor = 1.0;
+    if (budgetRatio > 1.0) {
+      teamFactor = budgetRatio;
+    } else {
+      teamFactor = 0.5 + 0.5 * budgetRatio;
+    }
+    
+    // Limit factor to prevent astronomical multipliers if playersNeeded is 1
+    teamFactor = Math.min(6.0, teamFactor);
     
     // Also check role saturation
     const roleCount = team.players.filter(p => p.role === player.role).length;
@@ -1170,7 +1184,7 @@ function calculateIdealBidRange(player, targetTeam = null) {
       roleSaturationFactor = 0.8;
       roleExplanation = "ruolo ben coperto";
     } else if (roleCount === 0) {
-      roleSaturationFactor = 1.2; // desperately need at least one, bid more!
+      roleSaturationFactor = 1.25; // desperately need at least one, bid more!
       roleExplanation = "nessun giocatore comprato in questo ruolo (urgente)";
     } else {
       roleExplanation = `hai già ${roleCount} giocatori in questo ruolo`;
@@ -1179,7 +1193,13 @@ function calculateIdealBidRange(player, targetTeam = null) {
     minPrice = Math.round(minPrice * teamFactor * roleSaturationFactor);
     maxPrice = Math.round(maxPrice * teamFactor * roleSaturationFactor);
     
-    justificationParts.push(`budget residuo di ${remainingCredits} cr (${Math.round(avgCreditsPerPlayer)} cr/slot rimasti)`);
+    // Absolute budget bounds:
+    // Can never recommend a bid higher than the maximum affordable bid.
+    const maxAffordable = Math.max(1, remainingCredits - playersNeeded + 1);
+    minPrice = Math.min(minPrice, maxAffordable);
+    maxPrice = Math.min(maxPrice, maxAffordable);
+    
+    justificationParts.push(`budget residuo di ${remainingCredits} cr (${Math.round(avgCreditsPerPlayer)} cr/slot stimati)`);
     justificationParts.push(roleExplanation);
   }
   
