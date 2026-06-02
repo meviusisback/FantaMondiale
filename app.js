@@ -542,6 +542,13 @@ function setupEventListeners() {
       renderTournament();
     });
   }
+
+  // Global click listener to close split button menus when clicking outside
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.split-btn-dropdown.open').forEach(el => {
+      el.classList.remove('open');
+    });
+  });
 }
 
 // --- STATE ACTIONS ---
@@ -1087,6 +1094,23 @@ function loadStartupCloudSession(id) {
 
 // --- DIRECT INLINE ASSIGNMENT ENGINE ---
 
+function toggleSplitDropdown(event, playerId) {
+  event.stopPropagation();
+  const arrow = document.getElementById(`arrow-${playerId}`);
+  const dropdown = arrow ? arrow.closest('.split-btn-dropdown') : null;
+  
+  // Close all other open dropdowns first
+  document.querySelectorAll('.split-btn-dropdown.open').forEach(el => {
+    if (el !== dropdown) {
+      el.classList.remove('open');
+    }
+  });
+
+  if (dropdown) {
+    dropdown.classList.toggle('open');
+  }
+}
+
 function setPlayerRowTargetTeam(playerId, teamId, teamName, isEligible) {
   const btn = document.getElementById(`assign-btn-${playerId}`);
   if (!btn) return;
@@ -1095,16 +1119,12 @@ function setPlayerRowTargetTeam(playerId, teamId, teamName, isEligible) {
   btn.textContent = `Acquista per ${teamName}`;
   btn.disabled = !isEligible;
 
-  // Temporarily force hide the dropdown menu so it closes immediately on click
+  // Close the dropdown menu by removing the open class
   const container = btn.closest('.split-button-container');
   if (container) {
-    const menu = container.querySelector('.split-btn-menu');
-    if (menu) {
-      menu.style.display = 'none';
-      // Reset the inline style on mouseleave so hover opens it next time
-      container.addEventListener('mouseleave', () => {
-        menu.style.removeProperty('display');
-      }, { once: true });
+    const dropdown = container.querySelector('.split-btn-dropdown');
+    if (dropdown) {
+      dropdown.classList.remove('open');
     }
   }
 }
@@ -1773,7 +1793,7 @@ function renderPlayerList() {
             ${buttonLabel}
           </button>
           <div class="split-btn-dropdown">
-            <button class="split-btn-arrow">▾</button>
+            <button id="arrow-${p.id}" class="split-btn-arrow" onclick="toggleSplitDropdown(event, '${p.id}')">▾</button>
             <div class="split-btn-menu">
               <div class="dropdown-menu-header">Seleziona Squadra:</div>
               ${menuItemsHtml}
@@ -4560,6 +4580,7 @@ async function recalculateIdealLineup(team) {
 // Window globals to wire up inline HTML onclick actions
 window.assignPlayerDirect = assignPlayerDirect;
 window.setPlayerRowTargetTeam = setPlayerRowTargetTeam;
+window.toggleSplitDropdown = toggleSplitDropdown;
 window.releasePlayer = releasePlayer;
 window.showTeamPitch = showTeamPitch;
 window.loadSpecificCloudSession = loadSpecificCloudSession;

@@ -352,9 +352,7 @@ header {
 
   /* --- Collapsible Content Wrapper --- */
   .mobile-collapsible {
-    display: grid;
-    grid-template-rows: 0fr;
-    transition: grid-template-rows 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    display: none;
     overflow: hidden;
   }
 
@@ -364,7 +362,7 @@ header {
   }
 
   .mobile-collapsible.open {
-    grid-template-rows: 1fr;
+    display: block;
   }
 
   .mobile-collapsible.open > * {
@@ -536,7 +534,7 @@ header {
     padding: 0.5rem;
     font-size: 0.8rem;
   }
-  .player-table td:nth-child(6) > div {
+  .player-table td:nth-child(6) > div:not(.split-button-container) {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
@@ -2702,7 +2700,7 @@ body.ai-modal-open::before {
   overflow: hidden;
 }
 
-.split-btn-dropdown:hover .split-btn-menu {
+.split-btn-dropdown.open .split-btn-menu {
   display: block;
 }
 
