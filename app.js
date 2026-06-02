@@ -554,6 +554,12 @@ function switchTab(tabId) {
   dom.tabContents.forEach(content => {
     content.classList.toggle('active', content.id === `tab-${tabId}`);
   });
+
+  const gridContainer = document.querySelector('.dashboard-grid');
+  if (gridContainer) {
+    gridContainer.classList.toggle('hide-sidebar', tabId === 'tabellone');
+  }
+
   if (tabId === 'tabellone') {
     renderTournament();
   }
@@ -4516,9 +4522,6 @@ function initializeTournament(force = false) {
     return;
   }
 
-  // Get unique countries in the players database (only those with players)
-  const dbCountries = [...new Set(state.players.map(p => p.country).filter(Boolean))];
-
   // Base tournament teams list (Group A to L, 4 per group) - Official 2026 FIFA World Cup Groups
   const defaultGroups = {
     A: ['Messico', 'Sudafrica', 'Corea del Sud', 'Rep. Ceca'],
@@ -4535,46 +4538,8 @@ function initializeTournament(force = false) {
     L: ['Inghilterra', 'Croazia', 'Ghana', 'Panama']
   };
 
-  // Convert defaultGroups to a flat list of teams for easier replacement
-  let currentTeams = [];
-  for (const groupKey in defaultGroups) {
-    defaultGroups[groupKey].forEach(teamName => {
-      currentTeams.push({ name: teamName, group: groupKey });
-    });
-  }
-
-  // Find which of dbCountries are NOT in currentTeams
-  const missingCountries = dbCountries.filter(c => !currentTeams.some(t => t.name === c));
-
-  if (missingCountries.length > 0) {
-    // Count players for each current team
-    const teamPlayerCounts = currentTeams.map(t => {
-      const count = state.players.filter(p => p.country === t.name).length;
-      return { team: t, count: count };
-    });
-
-    // Sort by count ascending, so we replace teams with 0 players first
-    teamPlayerCounts.sort((a, b) => a.count - b.count);
-
-    // Replace the teams with the lowest count
-    missingCountries.forEach((c, idx) => {
-      if (idx < teamPlayerCounts.length) {
-        const teamToReplace = teamPlayerCounts[idx].team;
-        teamToReplace.name = c;
-      }
-    });
-  }
-
-  // Re-group currentTeams into A-L
-  const finalGroups = {
-    A: [], B: [], C: [], D: [], E: [], F: [],
-    G: [], H: [], I: [], J: [], K: [], L: []
-  };
-  currentTeams.forEach(t => {
-    if (finalGroups[t.group]) {
-      finalGroups[t.group].push(t.name);
-    }
-  });
+  // Deep clone defaultGroups to state.tournament.groups
+  const finalGroups = JSON.parse(JSON.stringify(defaultGroups));
 
   state.tournament = {
     groups: finalGroups,
