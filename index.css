@@ -2584,3 +2584,24 @@ body.ai-modal-open::before {
   color: #34d399;
 }
 
+/* Drag and Drop styles for Group Stage Reordering */
+.group-team-row {
+  cursor: grab;
+  user-select: none;
+  transition: transform var(--transition-fast), background var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.group-team-row.dragging {
+  opacity: 0.4;
+  border: 1px dashed var(--color-accent);
+  background: rgba(168, 85, 247, 0.05);
+}
+
+.group-team-row.drag-over {
+  border: 1px solid var(--color-accent) !important;
+  background: rgba(168, 85, 247, 0.15) !important;
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(168, 85, 247, 0.2);
+}
+
+

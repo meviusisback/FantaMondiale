@@ -1454,6 +1454,9 @@ function renderAll() {
   renderPlayerList();
   renderTeamDashboard();
   updateAISettingsEditability();
+  if (state.activeTab === 'tabellone') {
+    renderTournament();
+  }
 }
 
 function updateAISettingsEditability() {
@@ -4509,7 +4512,7 @@ window.logoutCloudSession = logoutCloudSession;
 // --- TOURNAMENT SIMULATOR AND BRACKET FUNCTIONS ---
 
 function initializeTournament(force = false) {
-  if (state.tournament && state.tournament.groups && state.tournament.knockout && !force) {
+  if (state.tournament && state.tournament.groups && state.tournament.groups.A && state.tournament.knockout && !force) {
     return;
   }
 
@@ -4647,7 +4650,7 @@ function getTournamentTree() {
 }
 
 function validateKnockoutWinners() {
-  if (!state.tournament) return false;
+  if (!state.tournament || !state.tournament.groups || !state.tournament.groups.A || !state.tournament.knockout) return false;
 
   let changed = false;
   for (let step = 0; step < 4; step++) {
@@ -4758,7 +4761,7 @@ function simulateGroups() {
 }
 
 function simulateEntireTournament() {
-  if (!state.tournament || !state.tournament.groups || !state.tournament.knockout) {
+  if (!state.tournament || !state.tournament.groups || !state.tournament.groups.A || !state.tournament.knockout) {
     initializeTournament();
   }
 
@@ -4813,7 +4816,7 @@ function simulateEntireTournament() {
 }
 
 function simulateAiPrediction() {
-  if (!state.tournament || !state.tournament.groups || !state.tournament.knockout) {
+  if (!state.tournament || !state.tournament.groups || !state.tournament.groups.A || !state.tournament.knockout) {
     initializeTournament();
   }
 
@@ -4885,7 +4888,7 @@ function renderTournament() {
   const container = document.getElementById('tournament-views-container');
   if (!container) return;
 
-  if (!state.tournament || !state.tournament.groups || !state.tournament.knockout) {
+  if (!state.tournament || !state.tournament.groups || !state.tournament.groups.A || !state.tournament.knockout) {
     initializeTournament();
   }
 
@@ -4903,6 +4906,107 @@ function renderTournament() {
   }
 }
 
+// --- GROUP STAGE IA CALCULATIONS & DRAG-AND-DROP ---
+
+function getGroupQualificationProbabilities(groupTeams) {
+  if (!groupTeams || groupTeams.length < 4) return [50, 50, 50, 50];
+  const ratings = groupTeams.map(t => getTeamRating(t));
+  const simCount = 500;
+  const qualCounts = [0, 0, 0, 0];
+
+  for (let s = 0; s < simCount; s++) {
+    const points = [0, 0, 0, 0];
+    const goalsDiff = [0, 0, 0, 0];
+    
+    const simulateMatch = (idxA, idxB) => {
+      const rA = ratings[idxA];
+      const rB = ratings[idxB];
+      const probA = 1 / (1 + Math.pow(10, (rB - rA) / 20));
+      const rand = Math.random();
+      // Win A: 70% of probA, Win B: 70% of (1 - probA), Draw: 30%
+      const winAProb = probA * 0.7;
+      const winBProb = (1 - probA) * 0.7;
+      if (rand < winAProb) {
+        points[idxA] += 3;
+        goalsDiff[idxA] += 1;
+        goalsDiff[idxB] -= 1;
+      } else if (rand < winAProb + winBProb) {
+        points[idxB] += 3;
+        goalsDiff[idxB] += 1;
+        goalsDiff[idxA] -= 1;
+      } else {
+        points[idxA] += 1;
+        points[idxB] += 1;
+      }
+    };
+
+    simulateMatch(0, 1);
+    simulateMatch(0, 2);
+    simulateMatch(0, 3);
+    simulateMatch(1, 2);
+    simulateMatch(1, 3);
+    simulateMatch(2, 3);
+
+    const indices = [0, 1, 2, 3];
+    indices.sort((a, b) => {
+      if (points[b] !== points[a]) return points[b] - points[a];
+      if (goalsDiff[b] !== goalsDiff[a]) return goalsDiff[b] - goalsDiff[a];
+      return ratings[b] - ratings[a];
+    });
+
+    qualCounts[indices[0]]++;
+    qualCounts[indices[1]]++;
+  }
+
+  return groupTeams.map((t, idx) => Math.round((qualCounts[idx] / simCount) * 100));
+}
+
+function handleGroupDragStart(event, groupKey, index) {
+  event.dataTransfer.setData('text/plain', JSON.stringify({ groupKey, index }));
+  event.dataTransfer.effectAllowed = 'move';
+  event.currentTarget.classList.add('dragging');
+}
+
+function handleGroupDragOver(event) {
+  event.preventDefault();
+  event.dataTransfer.dropEffect = 'move';
+}
+
+function handleGroupDragEnter(event) {
+  event.preventDefault();
+  const row = event.currentTarget.closest('.group-team-row');
+  if (row) row.classList.add('drag-over');
+}
+
+function handleGroupDragLeave(event) {
+  const row = event.currentTarget.closest('.group-team-row');
+  if (row) row.classList.remove('drag-over');
+}
+
+function handleGroupDrop(event, targetGroupKey, targetIndex) {
+  event.preventDefault();
+  const row = event.currentTarget.closest('.group-team-row');
+  if (row) row.classList.remove('drag-over');
+  
+  try {
+    const data = JSON.parse(event.dataTransfer.getData('text/plain'));
+    const { groupKey, index } = data;
+    
+    if (groupKey === targetGroupKey && index !== targetIndex) {
+      swapGroupTeams(groupKey, index, targetIndex);
+    }
+  } catch (err) {
+    console.error('Drag and drop error:', err);
+  }
+}
+
+// Bind to window for global access in inline event attributes
+window.handleGroupDragStart = handleGroupDragStart;
+window.handleGroupDragOver = handleGroupDragOver;
+window.handleGroupDragEnter = handleGroupDragEnter;
+window.handleGroupDragLeave = handleGroupDragLeave;
+window.handleGroupDrop = handleGroupDrop;
+
 function renderGroupStage(container) {
   const groups = state.tournament.groups;
   const userTeam = state.teams.find(t => t.isUserTeam);
@@ -4911,6 +5015,8 @@ function renderGroupStage(container) {
 
   for (const groupKey in groups) {
     const teams = groups[groupKey];
+    const qualProbs = state.tournament.showAiProbabilities ? getGroupQualificationProbabilities(teams) : null;
+
     html += `
       <div class="group-card">
         <h3 class="group-card-title">Gruppo ${groupKey}</h3>
@@ -4918,15 +5024,24 @@ function renderGroupStage(container) {
     `;
 
     teams.forEach((teamName, idx) => {
-      const pCount = userTeam ? state.players.filter(p => p.ownerId === userTeam.id && p.country === teamName).length : 0;
-      const userPlayers = userTeam ? state.players.filter(p => p.ownerId === userTeam.id && p.country === teamName) : [];
+      const pCount = userTeam ? (state.players || []).filter(p => p.ownerId === userTeam.id && p.country === teamName).length : 0;
+      const userPlayers = userTeam ? (state.players || []).filter(p => p.ownerId === userTeam.id && p.country === teamName) : [];
 
       let badgeHtml = '';
       if (pCount > 0) {
         const tooltipText = `Calciatori in rosa: ${userPlayers.map(p => `${p.name} (${p.role})`).join(', ')}`;
         badgeHtml = `
-          <span class="team-user-badge" data-tooltip="${tooltipText}">
+          <span class="team-user-badge" data-tooltip="${tooltipText}" title="${tooltipText}">
             ${pCount} 🏅
+          </span>
+        `;
+      }
+
+      let probHtml = '';
+      if (qualProbs) {
+        probHtml = `
+          <span class="group-prob-badge" style="margin-left: auto; font-size: 0.65rem; font-weight: 700; color: #a855f7; background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.25); padding: 0.1rem 0.35rem; border-radius: 4px; display: inline-flex; align-items: center; gap: 0.15rem;" title="Probabilità di passaggio del turno (IA)">
+            IA: ${qualProbs[idx]}%
           </span>
         `;
       }
@@ -4935,11 +5050,17 @@ function renderGroupStage(container) {
       const downDisabled = idx === 3 ? 'disabled' : '';
 
       html += `
-        <div class="group-team-row">
-          <div class="team-info-left">
+        <div class="group-team-row" draggable="true" 
+             ondragstart="handleGroupDragStart(event, '${groupKey}', ${idx})" 
+             ondragover="handleGroupDragOver(event)" 
+             ondragenter="handleGroupDragEnter(event)"
+             ondragleave="handleGroupDragLeave(event)"
+             ondrop="handleGroupDrop(event, '${groupKey}', ${idx})">
+          <div class="team-info-left" style="flex: 1;">
             <span class="team-pos">${idx + 1}</span>
             <span class="team-name" title="${teamName}">${teamName}</span>
             ${badgeHtml}
+            ${probHtml}
           </div>
           <div class="reorder-controls">
             <button class="btn-reorder" ${upDisabled} onclick="swapGroupTeams('${groupKey}', ${idx}, ${idx - 1})">▲</button>
@@ -5011,7 +5132,7 @@ function renderKnockoutBracket(container) {
       <div class="champion-container">
   `;
   if (ko.final) {
-    const champPlayers = userTeam ? state.players.filter(p => p.ownerId === userTeam.id && p.country === ko.final) : [];
+    const champPlayers = userTeam ? (state.players || []).filter(p => p.ownerId === userTeam.id && p.country === ko.final) : [];
     let champPlayersHtml = '';
     if (champPlayers.length > 0) {
       champPlayersHtml = `
@@ -5068,14 +5189,14 @@ function renderBracketMatchCard(roundKey, matchIndex, teamA, teamB, winner, titl
 
     const isWinner = winner === teamName;
     const isEliminated = winner && winner !== teamName;
-    const pCount = userTeam ? state.players.filter(p => p.ownerId === userTeam.id && p.country === teamName).length : 0;
-    const userPlayers = userTeam ? state.players.filter(p => p.ownerId === userTeam.id && p.country === teamName) : [];
+    const pCount = userTeam ? (state.players || []).filter(p => p.ownerId === userTeam.id && p.country === teamName).length : 0;
+    const userPlayers = userTeam ? (state.players || []).filter(p => p.ownerId === userTeam.id && p.country === teamName) : [];
 
     let badgeHtml = '';
     if (pCount > 0) {
       const tooltipText = `Calciatori in rosa: ${userPlayers.map(p => `${p.name} (${p.role})`).join(', ')}`;
       badgeHtml = `
-        <span class="team-user-badge" data-tooltip="${tooltipText}" style="margin-left: 0.35rem; padding: 0.05rem 0.25rem; font-size: 0.6rem;">
+        <span class="team-user-badge" data-tooltip="${tooltipText}" title="${tooltipText}" style="margin-left: 0.35rem; padding: 0.05rem 0.25rem; font-size: 0.6rem;">
           ${pCount} 🏅
         </span>
       `;
