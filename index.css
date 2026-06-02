@@ -2621,4 +2621,122 @@ body.ai-modal-open::before {
   box-shadow: 0 4px 12px rgba(168, 85, 247, 0.2);
 }
 
+/* Split Button and Dropdown Menu */
+.split-button-container {
+  display: inline-flex;
+  align-items: stretch;
+  position: relative;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.split-btn-main {
+  background: linear-gradient(135deg, var(--color-primary) 0%, #4f46e5 100%);
+  color: #fff;
+  border: 1px solid rgba(99, 102, 241, 0.4);
+  border-right: none;
+  border-top-left-radius: var(--radius-sm);
+  border-bottom-left-radius: var(--radius-sm);
+  padding: 0.35rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.split-btn-main:hover:not(:disabled) {
+  background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+  border-color: rgba(99, 102, 241, 0.6);
+}
+
+.split-btn-main:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: var(--bg-card);
+  border-color: var(--border-light);
+  color: var(--color-text-muted);
+}
+
+.split-btn-dropdown {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+}
+
+.split-btn-arrow {
+  background: linear-gradient(135deg, var(--color-primary) 0%, #4f46e5 100%);
+  color: #fff;
+  border: 1px solid rgba(99, 102, 241, 0.4);
+  border-left: 1px solid rgba(255, 255, 255, 0.15);
+  border-top-right-radius: var(--radius-sm);
+  border-bottom-right-radius: var(--radius-sm);
+  padding: 0.35rem 0.5rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.split-btn-arrow:hover {
+  background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+}
+
+.split-btn-menu {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: 4px;
+  z-index: 1000;
+  background: #1e1b4b;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  min-width: 175px;
+  padding: 0.35rem 0;
+  overflow: hidden;
+}
+
+.split-btn-dropdown:hover .split-btn-menu {
+  display: block;
+}
+
+.dropdown-menu-header {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  padding: 0.35rem 0.75rem;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  margin-bottom: 0.25rem;
+}
+
+.dropdown-menu-item {
+  display: block;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  transition: all var(--transition-fast);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.dropdown-menu-item:hover:not(.disabled) {
+  background: rgba(99, 102, 241, 0.15);
+  color: #fff;
+}
+
+.dropdown-menu-item.disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 

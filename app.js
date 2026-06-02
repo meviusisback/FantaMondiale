@@ -1713,31 +1713,45 @@ function renderPlayerList() {
       }
 
       const otherTeams = state.teams.filter(t => t.id !== state.activeTeamId);
-      let selectOptions = '';
+      let menuItemsHtml = '';
       otherTeams.forEach(t => {
         const maxBid = calculateMaxBid(t);
         const hasSlots = countEmptySlots(t) > 0;
         const hasRoleOpen = hasRoleSlotAvailable(t, p.role);
         const isEligible = hasSlots && hasRoleOpen && maxBid >= 1;
         
-        const disableOptionAttr = !isEligible ? 'disabled' : '';
-        let optionSuffix = '';
-        if (!hasSlots) optionSuffix = ' (Rosa Compl.)';
-        else if (!hasRoleOpen) optionSuffix = ` (No slot ${p.role})`;
-        else if (maxBid < 1) optionSuffix = ' (Cred. Insuff.)';
-        
-        selectOptions += `<option value="${t.id}" ${disableOptionAttr}>${t.name}${optionSuffix}</option>`;
+        if (isEligible) {
+          menuItemsHtml += `
+            <a href="#" class="dropdown-menu-item" onclick="assignPlayerDirect('${p.id}', '${t.id}'); return false;">
+              ${t.name}
+            </a>
+          `;
+        } else {
+          let reason = '';
+          if (!hasSlots) reason = 'Rosa compl.';
+          else if (!hasRoleOpen) reason = `No slot ${p.role}`;
+          else if (maxBid < 1) reason = 'Cred. insuff.';
+          
+          menuItemsHtml += `
+            <span class="dropdown-menu-item disabled" title="${reason}">
+              ${t.name} <small style="font-size:0.6rem; color:var(--color-danger)">(${reason})</small>
+            </span>
+          `;
+        }
       });
 
       actionCellHtml = `
-        <div style="display: flex; gap: 0.35rem; align-items: center; justify-content: flex-end;">
-          <button class="btn btn-primary" style="padding: 0.35rem 0.6rem; font-size: 0.75rem; background: var(--color-success); white-space: nowrap;" ${disableAttr} onclick="assignPlayerDirect('${p.id}')">
+        <div class="split-button-container">
+          <button class="split-btn-main" ${disableAttr} onclick="assignPlayerDirect('${p.id}')">
             ${buttonLabel}
           </button>
-          <select class="input-control" style="padding: 0.25rem 0.4rem; font-size: 0.72rem; width: 110px; margin: 0; background: var(--bg-card); border-color: rgba(255,255,255,0.15);" onchange="if(this.value) { assignPlayerDirect('${p.id}', this.value); this.value=''; }">
-            <option value="">Altre sq. ▾</option>
-            ${selectOptions}
-          </select>
+          <div class="split-btn-dropdown">
+            <button class="split-btn-arrow">▾</button>
+            <div class="split-btn-menu">
+              <div class="dropdown-menu-header">Assegna a:</div>
+              ${menuItemsHtml}
+            </div>
+          </div>
         </div>
       `;
     }
