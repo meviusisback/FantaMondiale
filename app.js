@@ -1114,7 +1114,7 @@ function getPlayerPerformanceRating(player) {
   return 6.0 + (Math.abs(hash) % 29) / 10; // 6.0 to 8.8
 }
 
-function calculateIdealBidRange(player) {
+function calculateIdealBidRange(player, targetTeam = null) {
   const performance = getPlayerPerformanceRating(player);
   const base = player.initialValue;
   
@@ -1146,20 +1146,21 @@ function calculateIdealBidRange(player) {
     justificationParts.push(`titolare stimato al ${starterProb}`);
   }
   
-  // Now adjust based on the "mia squadra" (user's team) situation!
-  const userTeam = state.teams.find(t => t.isUserTeam);
-  if (userTeam) {
-    const remainingCredits = userTeam.budget;
-    const playersCount = userTeam.players.length;
+  // Now adjust based on the target team (or user's team if none provided) situation!
+  const team = targetTeam || state.teams.find(t => t.isUserTeam);
+  if (team) {
+    const remainingCredits = team.budget;
+    const playersCount = team.players.length;
     const playersNeeded = Math.max(1, 35 - playersCount);
     const avgCreditsPerPlayer = remainingCredits / playersNeeded;
     
     // Standard average credits per player is ~15 cr
     const budgetRatio = avgCreditsPerPlayer / 15;
-    const teamFactor = Math.min(2.0, Math.max(0.5, budgetRatio));
+    // Allow scaling up to 10.0 to spend all remaining credits for competitive squads!
+    const teamFactor = Math.min(10.0, Math.max(0.2, budgetRatio));
     
     // Also check role saturation
-    const roleCount = userTeam.players.filter(p => p.role === player.role).length;
+    const roleCount = team.players.filter(p => p.role === player.role).length;
     let roleSaturationFactor = 1.0;
     let roleExplanation = "";
     if (roleCount >= 8) {
@@ -3747,7 +3748,7 @@ function renderTeamAnalysisPopoverData(popover, team, analysisText, recommendedP
     recommendedPlayerIds.forEach(id => {
       const p = state.players.find(x => x.id === id);
       if (p) {
-        const range = calculateIdealBidRange(p);
+        const range = calculateIdealBidRange(p, team);
         const escapedName = p.name.replace(/'/g, "\\'");
         const escapedCountry = p.country.replace(/'/g, "\\'");
         

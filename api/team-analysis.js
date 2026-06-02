@@ -51,13 +51,13 @@ ${freePlayers?.map(p => `  * ID: ${p.id} | Ruolo: ${p.role} | Nome: ${p.name} | 
 
 Regole cruciali per massimizzare il punteggio all'asta:
 1. **Analisi del Tabellone e degli Accoppiamenti:** Esegui una ricerca web sul tabellone/bracket reale dei Mondiali ad oggi. Valuta con chi finiranno a giocare le nazionali dei vari giocatori nei primi turni e nella fase a eliminazione diretta. Segnala se ci sono accoppiamenti proibitivi in arrivo che potrebbero causare eliminazioni premature di pedine chiave, o se ci sono cammini favorevoli nel tabellone da sfruttare!
-2. **Profondità e Copertura della Rosa:** Valuta se la rosa è "corta" in alcuni reparti (es. troppi pochi giocatori attivi in difesa o attacco) o ha lacune e dove intervenire con i crediti rimasti per colmare le lacune.
-3. **Scelta dei migliori prospetti (CRUCIALE):** Seleziona esattamente da 3 a 5 calciatori tra quelli forniti nella lista dei prospetti rimasti liberi che meglio rispondono alle lacune evidenziate e ai crediti rimasti. Nella scelta, valuta con attenzione sia la reale **probabilità di giocare titolare** del calciatore che le **probabilità di avanzamento della sua Nazionale** nel torneo (più avanzano, più partite giocheranno, portando potenzialmente più punteggi/bonus).
+2. **Profondità, Rotazioni e Copertura della Rosa:** Valuta se la rosa è "corta" per garantire buone rotazioni e avere sempre titolari attivi disponibili (es. per coprire squalifiche o turn-over). Indica quanti giocatori acquistare per ruolo per assicurare questa copertura ottimale della rosa.
+3. **Uso Completo dei Crediti e Scelta dei Migliori Prospetti (CRUCIALE):** Seleziona esattamente da 3 a 5 calciatori tra quelli forniti nella lista dei prospetti liberi. Mostra come impiegare **tutti i crediti rimanenti** per l'acquisto di questi giocatori, suggerendo di incrementare i range di offerta (biddare in modo molto aggressivo) per assicurarsi i profili migliori e più competitivi per massimizzare i punti, anziché lasciare budget inutilizzato. Nella scelta, valuta con attenzione la probabilità di titolarità e le chance di avanzamento della loro Nazionale.
 
 Rispondi RIGOROSAMENTE con un oggetto JSON con le seguenti chiavi:
 - analysisText: stringa contenente l'analisi strutturata in 2 punti elenco (usa il grassetto per le parole chiave, massimo 150-180 parole totali):
   1. **Voto, Profondità & Tabellone**: giudizio complessivo del roster attuale.
-  2. **Strategia Asta & Lacune da Colmare**: indicazioni su quali ruoli/nazionali acquistare per colmare le lacune.
+  2. **Strategia Asta & Lacune da Colmare**: indicazioni su quali ruoli/nazionali acquistare per colmare le lacune, quanti giocatori prendere per garantire buone rotazioni e come spendere tutto il budget residuo incrementando i range d'offerta per profili chiave.
 - recommendedPlayerIds: un array di stringhe contenente gli ID (es: ["s-12", "s-15"]) dei 3-5 calciatori consigliati presi esclusivamente dalla lista dei prospetti fornita sopra.
 
 Rispondi esclusivamente con il codice JSON, senza alcun blocco di codice markdown o testo introduttivo.`;
