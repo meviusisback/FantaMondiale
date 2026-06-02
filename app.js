@@ -142,6 +142,8 @@ const dom = {
   cloudLoadListContainer: null,
   btnTeamAIAnalysis: null,
   btnTeamIdealPitch: null,
+  btnRecalculatePlayersHeader: null,
+  btnAiLineupHeader: null,
 
   // Tabs buttons and contents
   tabButtons: [],
@@ -248,6 +250,8 @@ function initDOM() {
   dom.cloudLoadListContainer = document.getElementById('cloud-load-list-container');
   dom.btnTeamAIAnalysis = document.getElementById('btn-team-ai-analysis');
   dom.btnTeamIdealPitch = document.getElementById('btn-team-ideal-pitch');
+  dom.btnRecalculatePlayersHeader = document.getElementById('btn-recalculate-players-header');
+  dom.btnAiLineupHeader = document.getElementById('btn-ai-lineup-header');
 
   dom.tabButtons = Array.from(document.querySelectorAll('.tab-btn'));
   dom.tabContents = Array.from(document.querySelectorAll('.tab-content'));
@@ -438,6 +442,33 @@ function setupEventListeners() {
         return;
       }
       showTeamPitch(team.id, true);
+    });
+  }
+
+  if (dom.btnRecalculatePlayersHeader) {
+    dom.btnRecalculatePlayersHeader.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const team = state.teams.find(t => t.id === state.activeTeamId);
+      if (!team) {
+        showToast('Seleziona una squadra attiva nel pannello laterale per poter ricalcolare i giocatori!', 'warning');
+        return;
+      }
+      recalculatePlayerEvaluations(team);
+    });
+  }
+
+  if (dom.btnAiLineupHeader) {
+    dom.btnAiLineupHeader.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const team = state.teams.find(t => t.id === state.activeTeamId);
+      if (!team) {
+        showToast('Seleziona una squadra attiva nel pannello laterale per calcolare la formazione AI!', 'warning');
+        return;
+      }
+      showTeamPitch(team.id, true);
+      generateIdealLineup(team);
     });
   }
 
@@ -1863,259 +1894,269 @@ function renderPitch() {
   
   if (!team || !pitchContainer || !benchContainer) return;
 
-  const module = team.module || '4-3-3';
-  const parts = module.split('-').map(x => parseInt(x));
-  
-  const defNeeded = parts[0] || 4;
-  const cenNeeded = parts[1] || 3;
-  const attNeeded = parts[2] || 3;
-  const porNeeded = 1;
+  const updateDOM = () => {
+    const module = team.module || '4-3-3';
+    const parts = module.split('-').map(x => parseInt(x));
+    
+    const defNeeded = parts[0] || 4;
+    const cenNeeded = parts[1] || 3;
+    const attNeeded = parts[2] || 3;
+    const porNeeded = 1;
 
-  const idealLineup = state.teamIdealLineups?.[team.id];
-  let porStarters, porBench, difStarters, difBench, cenStarters, cenBench, attStarters, attBench;
+    const idealLineup = state.teamIdealLineups?.[team.id];
+    let porStarters, porBench, difStarters, difBench, cenStarters, cenBench, attStarters, attBench;
 
-  if (state.pitchShowIdeal && idealLineup) {
-    // If we have an AI-recommended ideal lineup, use the exact players recommended by the AI!
-    const startersList = team.players.filter(p => idealLineup.starters.includes(p.id));
-    const benchList = team.players.filter(p => idealLineup.bench.includes(p.id));
+    if (state.pitchShowIdeal && idealLineup) {
+      // If we have an AI-recommended ideal lineup, use the exact players recommended by the AI!
+      const startersList = team.players.filter(p => idealLineup.starters.includes(p.id));
+      const benchList = team.players.filter(p => idealLineup.bench.includes(p.id));
 
-    porStarters = startersList.filter(p => p.role === 'POR');
-    porBench = benchList.filter(p => p.role === 'POR');
+      porStarters = startersList.filter(p => p.role === 'POR');
+      porBench = benchList.filter(p => p.role === 'POR');
 
-    difStarters = startersList.filter(p => p.role === 'DIF');
-    difBench = benchList.filter(p => p.role === 'DIF');
+      difStarters = startersList.filter(p => p.role === 'DIF');
+      difBench = benchList.filter(p => p.role === 'DIF');
 
-    cenStarters = startersList.filter(p => p.role === 'CEN');
-    cenBench = benchList.filter(p => p.role === 'CEN');
+      cenStarters = startersList.filter(p => p.role === 'CEN');
+      cenBench = benchList.filter(p => p.role === 'CEN');
 
-    attStarters = startersList.filter(p => p.role === 'ATT');
-    attBench = benchList.filter(p => p.role === 'ATT');
-  } else {
-    // Separate all team players by role
-    let porPlayers = team.players.filter(p => p.role === 'POR');
-    let difPlayers = team.players.filter(p => p.role === 'DIF');
-    let cenPlayers = team.players.filter(p => p.role === 'CEN');
-    let attPlayers = team.players.filter(p => p.role === 'ATT');
+      attStarters = startersList.filter(p => p.role === 'ATT');
+      attBench = benchList.filter(p => p.role === 'ATT');
+    } else {
+      // Separate all team players by role
+      let porPlayers = team.players.filter(p => p.role === 'POR');
+      let difPlayers = team.players.filter(p => p.role === 'DIF');
+      let cenPlayers = team.players.filter(p => p.role === 'CEN');
+      let attPlayers = team.players.filter(p => p.role === 'ATT');
 
-    // If ideal lineup mode, sort by AI Form Score (fallback)
-    if (state.pitchShowIdeal) {
-      const getPlayerFormScore = (player) => {
-        const cachedRaw = state.aiCache[player.id] || JSON.parse(sessionStorage.getItem(`fantamondiale_ai_${player.id}`) || 'null');
-        if (!cachedRaw) return 50;
-        const cached = normalizePlayerAnalysis(cachedRaw);
-        let score = 50;
-        
-        // Category score
-        const cat = (cached.playerCategory || '').toLowerCase();
-        if (cat.includes('stella')) score += 40;
-        else if (cat.includes('ottimo')) score += 30;
-        else if (cat.includes('buono')) score += 20;
-        else if (cat.includes('accettabile')) score += 10;
-        else if (cat.includes('scarso')) score -= 20;
+      // If ideal lineup mode, sort by AI Form Score (fallback)
+      if (state.pitchShowIdeal) {
+        const getPlayerFormScore = (player) => {
+          const cachedRaw = state.aiCache[player.id] || JSON.parse(sessionStorage.getItem(`fantamondiale_ai_${player.id}`) || 'null');
+          if (!cachedRaw) return 50;
+          const cached = normalizePlayerAnalysis(cachedRaw);
+          let score = 50;
+          
+          // Category score
+          const cat = (cached.playerCategory || '').toLowerCase();
+          if (cat.includes('stella')) score += 40;
+          else if (cat.includes('ottimo')) score += 30;
+          else if (cat.includes('buono')) score += 20;
+          else if (cat.includes('accettabile')) score += 10;
+          else if (cat.includes('scarso')) score -= 20;
 
-        // Starter probability score
-        if (cached.starterProbability) {
-          const prob = parseInt(cached.starterProbability.replace(/[^0-9]/g, '')) || 50;
-          score += prob * 0.2;
-        }
-        
-        // Cost score
-        score += (player.purchaseCost || 0) * 0.1;
-        return score;
-      };
+          // Starter probability score
+          if (cached.starterProbability) {
+            const prob = parseInt(cached.starterProbability.replace(/[^0-9]/g, '')) || 50;
+            score += prob * 0.2;
+          }
+          
+          // Cost score
+          score += (player.purchaseCost || 0) * 0.1;
+          return score;
+        };
 
-      porPlayers = [...porPlayers].sort((a, b) => getPlayerFormScore(b) - getPlayerFormScore(a));
-      difPlayers = [...difPlayers].sort((a, b) => getPlayerFormScore(b) - getPlayerFormScore(a));
-      cenPlayers = [...cenPlayers].sort((a, b) => getPlayerFormScore(b) - getPlayerFormScore(a));
-      attPlayers = [...attPlayers].sort((a, b) => getPlayerFormScore(b) - getPlayerFormScore(a));
+        porPlayers = [...porPlayers].sort((a, b) => getPlayerFormScore(b) - getPlayerFormScore(a));
+        difPlayers = [...difPlayers].sort((a, b) => getPlayerFormScore(b) - getPlayerFormScore(a));
+        cenPlayers = [...cenPlayers].sort((a, b) => getPlayerFormScore(b) - getPlayerFormScore(a));
+        attPlayers = [...attPlayers].sort((a, b) => getPlayerFormScore(b) - getPlayerFormScore(a));
+      }
+
+      // Slices: Starters (Titolari) and Bench (Panchina)
+      porStarters = porPlayers.slice(0, porNeeded);
+      porBench = porPlayers.slice(porNeeded);
+
+      difStarters = difPlayers.slice(0, defNeeded);
+      difBench = difPlayers.slice(defNeeded);
+
+      cenStarters = cenPlayers.slice(0, cenNeeded);
+      cenBench = cenPlayers.slice(cenNeeded);
+
+      attStarters = attPlayers.slice(0, attNeeded);
+      attBench = attPlayers.slice(attNeeded);
     }
 
-    // Slices: Starters (Titolari) and Bench (Panchina)
-    porStarters = porPlayers.slice(0, porNeeded);
-    porBench = porPlayers.slice(porNeeded);
+    let benchList;
+    if (state.pitchShowIdeal && idealLineup) {
+      benchList = idealLineup.bench.map(id => team.players.find(p => p.id === id)).filter(Boolean);
+    } else {
+      benchList = [...porBench, ...difBench, ...cenBench, ...attBench];
+    }
 
-    difStarters = difPlayers.slice(0, defNeeded);
-    difBench = difPlayers.slice(defNeeded);
-
-    cenStarters = cenPlayers.slice(0, cenNeeded);
-    cenBench = cenPlayers.slice(cenNeeded);
-
-    attStarters = attPlayers.slice(0, attNeeded);
-    attBench = attPlayers.slice(attNeeded);
-  }
-
-  let benchList;
-  if (state.pitchShowIdeal && idealLineup) {
-    benchList = idealLineup.bench.map(id => team.players.find(p => p.id === id)).filter(Boolean);
-  } else {
-    benchList = [...porBench, ...difBench, ...cenBench, ...attBench];
-  }
-
-  // Draw Football field lines vertically
-  pitchContainer.innerHTML = `
-    <div class="pitch-container" style="position: relative; width: 100%; height: 380px;">
-      <div class="pitch-line pitch-midline"></div>
-      <div class="pitch-line pitch-penalty-bottom"></div>
-      <div class="pitch-line pitch-penalty-top"></div>
-      <div class="pitch-line pitch-goal-bottom"></div>
-      <div class="pitch-line pitch-goal-top"></div>
-      <div class="pitch-center-circle"></div>
-      
-      <!-- Flex layout grid overlay to dynamic rows sizing -->
-      <div class="pitch-grid-overlay">
-        <!-- Row 4: Attackers -->
-        <div id="row-att" class="pitch-grid-row"></div>
-        <!-- Row 3: Midfielders -->
-        <div id="row-cen" class="pitch-grid-row"></div>
-        <!-- Row 2: Defenders -->
-        <div id="row-dif" class="pitch-grid-row"></div>
-        <!-- Row 1: Goalkeeper -->
-        <div id="row-por" class="pitch-grid-row"></div>
+    // Draw Football field lines vertically
+    pitchContainer.innerHTML = `
+      <div class="pitch-container" style="position: relative; width: 100%; height: 380px;">
+        <div class="pitch-line pitch-midline"></div>
+        <div class="pitch-line pitch-penalty-bottom"></div>
+        <div class="pitch-line pitch-penalty-top"></div>
+        <div class="pitch-line pitch-goal-bottom"></div>
+        <div class="pitch-line pitch-goal-top"></div>
+        <div class="pitch-center-circle"></div>
+        
+        <!-- Flex layout grid overlay to dynamic rows sizing -->
+        <div class="pitch-grid-overlay">
+          <!-- Row 4: Attackers -->
+          <div id="row-att" class="pitch-grid-row"></div>
+          <!-- Row 3: Midfielders -->
+          <div id="row-cen" class="pitch-grid-row"></div>
+          <!-- Row 2: Defenders -->
+          <div id="row-dif" class="pitch-grid-row"></div>
+          <!-- Row 1: Goalkeeper -->
+          <div id="row-por" class="pitch-grid-row"></div>
+        </div>
       </div>
-    </div>
-  `;
+    `;
 
-  // Draw starting row elements programmatically
-  const populateRow = (starters, neededCount, roleName, rowId) => {
-    const rowElement = document.getElementById(rowId);
-    if (!rowElement) return;
+    // Draw starting row elements programmatically
+    const populateRow = (starters, neededCount, roleName, rowId) => {
+      const rowElement = document.getElementById(rowId);
+      if (!rowElement) return;
 
-    for (let i = 0; i < neededCount; i++) {
-      if (i < starters.length) {
-        // Render Active Draggable Player card
-        const player = starters[i];
-        const node = document.createElement('div');
-        node.className = 'pitch-player-node';
-        node.style.position = 'relative';
-        node.setAttribute('draggable', 'true');
-        node.setAttribute('data-player-id', player.id);
+      for (let i = 0; i < neededCount; i++) {
+        if (i < starters.length) {
+          // Render Active Draggable Player card
+          const player = starters[i];
+          const node = document.createElement('div');
+          node.className = 'pitch-player-node';
+          node.style.position = 'relative';
+          node.setAttribute('draggable', 'true');
+          node.setAttribute('data-player-id', player.id);
+          node.style.viewTransitionName = `player-${player.id}`;
 
-        const cachedAnalysisRaw = state.aiCache[player.id] || JSON.parse(sessionStorage.getItem(`fantamondiale_ai_${player.id}`) || 'null');
+          const cachedAnalysisRaw = state.aiCache[player.id] || JSON.parse(sessionStorage.getItem(`fantamondiale_ai_${player.id}`) || 'null');
+          const cachedAnalysis = cachedAnalysisRaw ? normalizePlayerAnalysis(cachedAnalysisRaw) : null;
+          const strength = cachedAnalysis ? cachedAnalysis.matchStrength : undefined;
+          let strengthBadgeHtml = '';
+          if (strength !== undefined && strength !== null) {
+            const strVal = parseInt(strength);
+            let strColor = '#fff';
+            let strBg = '#ef4444'; // Red
+            if (strVal >= 80) {
+              strBg = '#10b981'; // Emerald
+            } else if (strVal >= 50) {
+              strBg = '#f59e0b'; // Amber
+            }
+            strengthBadgeHtml = `<div class="pitch-player-strength-badge" title="Forza del turno: ${strVal}/100" style="position: absolute; top: -4px; right: -4px; width: 17px; height: 17px; border-radius: 50%; background: ${strBg}; color: ${strColor}; font-size: 0.58rem; font-weight: 800; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.25); box-shadow: 0 1px 3px rgba(0,0,0,0.4); z-index: 5;">${strVal}</div>`;
+          }
+
+          const roleLetter = { POR: 'P', DIF: 'D', CEN: 'C', ATT: 'A' }[player.role] || player.role[0];
+          node.innerHTML = `
+            ${strengthBadgeHtml}
+            <div class="pitch-player-shirt" style="background: var(--color-${player.role.toLowerCase()}); ${state.eliminatedCountries.includes(player.country) ? 'opacity: 0.55; border: 2px dashed var(--color-danger);' : ''}">
+              ${roleLetter}
+            </div>
+            <div class="pitch-player-name" style="${state.eliminatedCountries.includes(player.country) ? 'color: var(--color-danger); text-decoration: line-through;' : ''}">${player.name} (${player.country})</div>
+          `;
+
+          // Wire drag and drop events
+          node.addEventListener('dragstart', handleDragStart);
+          node.addEventListener('dragend', handleDragEnd);
+          node.addEventListener('dragover', handleDragOver);
+          node.addEventListener('dragleave', handleDragLeave);
+          node.addEventListener('drop', handleDrop);
+
+          // Wire rich popover events
+          node.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isMobile = window.innerWidth <= 768;
+            showPitchPlayerTooltip(player.id, node, isMobile);
+          });
+
+          rowElement.appendChild(node);
+        } else {
+          // Render dotted placeholder drop target slot
+          const node = document.createElement('div');
+          node.className = 'pitch-placeholder-node';
+          node.setAttribute('data-role', roleName);
+          node.innerHTML = `+ ${roleName}`;
+
+          // Wire drop target drag events
+          node.addEventListener('dragover', handleDragOver);
+          node.addEventListener('dragleave', handleDragLeave);
+          node.addEventListener('drop', handlePlaceholderDrop);
+
+          rowElement.appendChild(node);
+        }
+      }
+    };
+
+    // Populate Flex Rows
+    populateRow(porStarters, porNeeded, 'POR', 'row-por');
+    populateRow(difStarters, defNeeded, 'DIF', 'row-dif');
+    populateRow(cenStarters, cenNeeded, 'CEN', 'row-cen');
+    populateRow(attStarters, attNeeded, 'ATT', 'row-att');
+
+    // 3. Render Bench listing programmatically with Drag events
+    benchContainer.innerHTML = '';
+    if (benchList.length === 0) {
+      benchContainer.innerHTML = `<span style="color: var(--color-text-muted); font-size: 0.75rem; font-style: italic;">Panchina vuota... Tutti i giocatori rientrano nei titolari.</span>`;
+    } else {
+      benchList.forEach(p => {
+        const el = document.createElement('div');
+        el.className = 'bench-player-node';
+        el.setAttribute('draggable', 'true');
+        el.setAttribute('data-player-id', p.id);
+        el.style.viewTransitionName = `player-${p.id}`;
+
+        const cachedAnalysisRaw = state.aiCache[p.id] || JSON.parse(sessionStorage.getItem(`fantamondiale_ai_${p.id}`) || 'null');
         const cachedAnalysis = cachedAnalysisRaw ? normalizePlayerAnalysis(cachedAnalysisRaw) : null;
         const strength = cachedAnalysis ? cachedAnalysis.matchStrength : undefined;
         let strengthBadgeHtml = '';
         if (strength !== undefined && strength !== null) {
           const strVal = parseInt(strength);
-          let strColor = '#fff';
-          let strBg = '#ef4444'; // Red
+          let strColor = '#ef4444'; // Red
+          let strBg = 'rgba(239, 68, 68, 0.12)';
           if (strVal >= 80) {
-            strBg = '#10b981'; // Emerald
+            strColor = '#10b981'; // Green
+            strBg = 'rgba(16, 185, 129, 0.12)';
           } else if (strVal >= 50) {
-            strBg = '#f59e0b'; // Amber
+            strColor = '#f59e0b'; // Amber
+            strBg = 'rgba(245, 158, 11, 0.12)';
           }
-          strengthBadgeHtml = `<div class="pitch-player-strength-badge" title="Forza del turno: ${strVal}/100" style="position: absolute; top: -4px; right: -4px; width: 17px; height: 17px; border-radius: 50%; background: ${strBg}; color: ${strColor}; font-size: 0.58rem; font-weight: 800; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.25); box-shadow: 0 1px 3px rgba(0,0,0,0.4); z-index: 5;">${strVal}</div>`;
+          strengthBadgeHtml = `<span style="display: inline-flex; align-items: center; justify-content: center; width: 17px; height: 17px; border-radius: 50%; background: ${strBg}; border: 1px solid rgba(255,255,255,0.05); color: ${strColor}; font-size: 0.6rem; font-weight: 800; margin-left: 0.35rem;" title="Forza del turno: ${strVal}/100">${strVal}</span>`;
         }
 
-        const roleLetter = { POR: 'P', DIF: 'D', CEN: 'C', ATT: 'A' }[player.role] || player.role[0];
-        node.innerHTML = `
+        el.innerHTML = `
+          <span class="dot" style="background: var(--color-${p.role.toLowerCase()})"></span>
+          <span style="${state.eliminatedCountries.includes(p.country) ? 'text-decoration: line-through; color: var(--color-text-muted);' : ''}">${p.name} (${p.country})</span>
           ${strengthBadgeHtml}
-          <div class="pitch-player-shirt" style="background: var(--color-${player.role.toLowerCase()}); ${state.eliminatedCountries.includes(player.country) ? 'opacity: 0.55; border: 2px dashed var(--color-danger);' : ''}">
-            ${roleLetter}
-          </div>
-          <div class="pitch-player-name" style="${state.eliminatedCountries.includes(player.country) ? 'color: var(--color-danger); text-decoration: line-through;' : ''}">${player.name} (${player.country})</div>
+          ${state.eliminatedCountries.includes(p.country) ? ' <span style="font-size: 0.55rem; color: var(--color-danger); font-weight: 700; border: 1px solid var(--color-danger); padding: 0.05rem 0.2rem; border-radius: 4px; line-height: 1;">ELIMINATO</span>' : ''}
         `;
 
-        // Wire drag and drop events
-        node.addEventListener('dragstart', handleDragStart);
-        node.addEventListener('dragend', handleDragEnd);
-        node.addEventListener('dragover', handleDragOver);
-        node.addEventListener('dragleave', handleDragLeave);
-        node.addEventListener('drop', handleDrop);
+        el.addEventListener('dragstart', handleDragStart);
+        el.addEventListener('dragend', handleDragEnd);
+        el.addEventListener('dragover', handleDragOver);
+        el.addEventListener('dragleave', handleDragLeave);
+        el.addEventListener('drop', handleDrop);
 
         // Wire rich popover events
-        node.addEventListener('click', (e) => {
+        el.addEventListener('click', (e) => {
           e.stopPropagation();
           const isMobile = window.innerWidth <= 768;
-          showPitchPlayerTooltip(player.id, node, isMobile);
+          showPitchPlayerTooltip(p.id, el, isMobile);
         });
 
-        rowElement.appendChild(node);
+        benchContainer.appendChild(el);
+      });
+    }
+
+    // Show or hide the AI tactical card
+    const tacticalCard = document.getElementById('pitch-ai-tactical-card');
+    const tacticalText = document.getElementById('pitch-ai-tactical-text');
+    if (tacticalCard && tacticalText) {
+      if (state.pitchShowIdeal && idealLineup && idealLineup.tacticalJustification) {
+        tacticalText.textContent = idealLineup.tacticalJustification;
+        tacticalCard.style.display = 'block';
       } else {
-        // Render dotted placeholder drop target slot
-        const node = document.createElement('div');
-        node.className = 'pitch-placeholder-node';
-        node.setAttribute('data-role', roleName);
-        node.innerHTML = `+ ${roleName}`;
-
-        // Wire drop target drag events
-        node.addEventListener('dragover', handleDragOver);
-        node.addEventListener('dragleave', handleDragLeave);
-        node.addEventListener('drop', handlePlaceholderDrop);
-
-        rowElement.appendChild(node);
+        tacticalCard.style.display = 'none';
       }
     }
   };
 
-  // Populate Flex Rows
-  populateRow(porStarters, porNeeded, 'POR', 'row-por');
-  populateRow(difStarters, defNeeded, 'DIF', 'row-dif');
-  populateRow(cenStarters, cenNeeded, 'CEN', 'row-cen');
-  populateRow(attStarters, attNeeded, 'ATT', 'row-att');
-
-  // 3. Render Bench listing programmatically with Drag events
-  benchContainer.innerHTML = '';
-  if (benchList.length === 0) {
-    benchContainer.innerHTML = `<span style="color: var(--color-text-muted); font-size: 0.75rem; font-style: italic;">Panchina vuota... Tutti i giocatori rientrano nei titolari.</span>`;
+  if (!document.startViewTransition) {
+    updateDOM();
   } else {
-    benchList.forEach(p => {
-      const el = document.createElement('div');
-      el.className = 'bench-player-node';
-      el.setAttribute('draggable', 'true');
-      el.setAttribute('data-player-id', p.id);
-
-      const cachedAnalysisRaw = state.aiCache[p.id] || JSON.parse(sessionStorage.getItem(`fantamondiale_ai_${p.id}`) || 'null');
-      const cachedAnalysis = cachedAnalysisRaw ? normalizePlayerAnalysis(cachedAnalysisRaw) : null;
-      const strength = cachedAnalysis ? cachedAnalysis.matchStrength : undefined;
-      let strengthBadgeHtml = '';
-      if (strength !== undefined && strength !== null) {
-        const strVal = parseInt(strength);
-        let strColor = '#ef4444'; // Red
-        let strBg = 'rgba(239, 68, 68, 0.12)';
-        if (strVal >= 80) {
-          strColor = '#10b981'; // Green
-          strBg = 'rgba(16, 185, 129, 0.12)';
-        } else if (strVal >= 50) {
-          strColor = '#f59e0b'; // Amber
-          strBg = 'rgba(245, 158, 11, 0.12)';
-        }
-        strengthBadgeHtml = `<span style="display: inline-flex; align-items: center; justify-content: center; width: 17px; height: 17px; border-radius: 50%; background: ${strBg}; border: 1px solid rgba(255,255,255,0.05); color: ${strColor}; font-size: 0.6rem; font-weight: 800; margin-left: 0.35rem;" title="Forza del turno: ${strVal}/100">${strVal}</span>`;
-      }
-
-      el.innerHTML = `
-        <span class="dot" style="background: var(--color-${p.role.toLowerCase()})"></span>
-        <span style="${state.eliminatedCountries.includes(p.country) ? 'text-decoration: line-through; color: var(--color-text-muted);' : ''}">${p.name} (${p.country})</span>
-        ${strengthBadgeHtml}
-        ${state.eliminatedCountries.includes(p.country) ? ' <span style="font-size: 0.55rem; color: var(--color-danger); font-weight: 700; border: 1px solid var(--color-danger); padding: 0.05rem 0.2rem; border-radius: 4px; line-height: 1;">ELIMINATO</span>' : ''}
-      `;
-
-      el.addEventListener('dragstart', handleDragStart);
-      el.addEventListener('dragend', handleDragEnd);
-      el.addEventListener('dragover', handleDragOver);
-      el.addEventListener('dragleave', handleDragLeave);
-      el.addEventListener('drop', handleDrop);
-
-      // Wire rich popover events
-      el.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const isMobile = window.innerWidth <= 768;
-        showPitchPlayerTooltip(p.id, el, isMobile);
-      });
-
-      benchContainer.appendChild(el);
-    });
-  }
-
-  // Show or hide the AI tactical card
-  const tacticalCard = document.getElementById('pitch-ai-tactical-card');
-  const tacticalText = document.getElementById('pitch-ai-tactical-text');
-  if (tacticalCard && tacticalText) {
-    if (state.pitchShowIdeal && idealLineup && idealLineup.tacticalJustification) {
-      tacticalText.textContent = idealLineup.tacticalJustification;
-      tacticalCard.style.display = 'block';
-    } else {
-      tacticalCard.style.display = 'none';
-    }
+    document.startViewTransition(() => updateDOM());
   }
 }
 
@@ -2161,8 +2202,8 @@ function showTeamPitch(teamId, showIdeal = false) {
       refreshAIBtn.style.gap = '0.35rem';
       refreshAIBtn.style.background = 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)';
       refreshAIBtn.style.borderColor = 'rgba(168, 85, 247, 0.4)';
-      refreshAIBtn.innerHTML = '🔄 Ricalcola Formazione IA';
-      refreshAIBtn.onclick = () => recalculateIdealLineup(team);
+      refreshAIBtn.innerHTML = '⚽ Calcola Formazione AI';
+      refreshAIBtn.onclick = () => generateIdealLineup(team);
       buttonsWrapper.appendChild(refreshAIBtn);
     }
   }
@@ -2172,7 +2213,7 @@ function showTeamPitch(teamId, showIdeal = false) {
 
   // If showing Ideal for the first time and we have players, automatically trigger recalculate
   if (showIdeal && (!state.teamIdealLineups || !state.teamIdealLineups[team.id]) && team.players.length > 0) {
-    recalculateIdealLineup(team);
+    generateIdealLineup(team);
   }
 }
 
@@ -3825,7 +3866,7 @@ function copyLineupToClipboard(team, isIdeal) {
     });
 }
 
-async function recalculateIdealLineup(team) {
+async function recalculatePlayerEvaluations(team) {
   if (!team || team.players.length === 0) {
     showToast('Nessun giocatore in rosa da aggiornare!', 'warning');
     return;
@@ -3837,39 +3878,31 @@ async function recalculateIdealLineup(team) {
     sessionStorage.removeItem(`fantamondiale_ai_${p.id}`);
   });
 
-  const pitchContainer = dom.pitchVisualizerContainer;
-  const benchContainer = dom.pitchBenchContainer;
-  if (!pitchContainer || !benchContainer) return;
+  const dialog = document.getElementById('ai-recalc-dialog');
+  const dialogContent = document.getElementById('ai-recalc-dialog-content');
+  if (!dialog || !dialogContent) return;
 
-  const originalPitchHtml = pitchContainer.innerHTML;
-  const originalBenchHtml = benchContainer.innerHTML;
+  // Open dialog
+  dialog.showModal();
 
-  // Disable buttons during load
-  const buttons = document.querySelectorAll('#pitch-action-buttons-wrapper button');
-  buttons.forEach(btn => btn.disabled = true);
-
-  // Render a beautiful, premium glassmorphic loader inside the field container
-  pitchContainer.innerHTML = `
-    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 380px; background: rgba(0,0,0,0.5); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); padding: 2rem; text-align: center; box-sizing: border-box;">
-      <div class="ai-skeleton-pulse" style="width: 50px; height: 50px; border-radius: 50%; background: var(--color-primary); margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; animation: pulse 1.5s infinite;">🔮</div>
-      <h4 style="margin: 0 0 0.5rem 0; color: #fff; font-size: 0.9rem;">Elaborazione IA...</h4>
-      <p id="ai-recalc-status" style="margin: 0 0 1rem 0; font-size: 0.75rem; color: var(--color-text-muted); line-height: 1.4;">Fase 1: Raccolta news e statistiche calciatori in lotti...</p>
-      <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; margin-bottom: 0.5rem;">
-        <div id="ai-recalc-progress" style="width: 10%; height: 100%; background: linear-gradient(90deg, #38bdf8 0%, #c084fc 100%); border-radius: 3px; transition: width 0.4s ease-out;"></div>
+  // Render loader progress
+  dialogContent.innerHTML = `
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1.5rem; text-align: center;">
+      <div class="ai-skeleton-pulse" style="width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #a855f7 0%, #7e22ce 100%); margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: center; font-size: 1.75rem; animation: pulse 1.5s infinite; box-shadow: 0 0 15px rgba(168, 85, 247, 0.45);">🔮</div>
+      <h3 style="margin: 0 0 0.5rem 0; color: #fff; font-size: 1.15rem; font-weight: 700;">Ricalcolo Valutazioni Giocatori 🔄</h3>
+      <p id="ai-recalc-dialog-status" style="margin: 0 0 1.25rem 0; font-size: 0.8rem; color: var(--color-text-muted); line-height: 1.4;">Fase 1: Raccolta news e statistiche calciatori in lotti...</p>
+      <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; margin-bottom: 0.5rem;">
+        <div id="ai-recalc-dialog-progress" style="width: 5%; height: 100%; background: linear-gradient(90deg, #38bdf8 0%, #c084fc 100%); border-radius: 4px; transition: width 0.4s ease-out;"></div>
       </div>
     </div>
   `;
-  benchContainer.innerHTML = `<div style="text-align: center; color: var(--color-text-muted); font-size: 0.75rem; font-style: italic;">Calcolo in corso...</div>`;
+
+  const statusTextEl = document.getElementById('ai-recalc-dialog-status');
+  const progressBarEl = document.getElementById('ai-recalc-dialog-progress');
 
   try {
-    const statusTextEl = document.getElementById('ai-recalc-status');
-    const progressBarEl = document.getElementById('ai-recalc-progress');
-
-    // ----------------------------------------------------
-    // PHASE 1: Fetch evaluations for ALL players in small batches first
-    // ----------------------------------------------------
     const allPlayers = [...team.players];
-    const batchSize = 3; // Reduced batch size to 3 to completely eliminate 10s Vercel serverless timeouts!
+    const batchSize = 3;
     const batches = [];
     
     for (let i = 0; i < allPlayers.length; i += batchSize) {
@@ -3881,7 +3914,6 @@ async function recalculateIdealLineup(team) {
     for (let batchIdx = 0; batchIdx < totalBatches; batchIdx++) {
       const batchPlayers = batches[batchIdx];
       
-      // Delay slightly between batches to protect from model rate limits (800ms)
       if (batchIdx > 0) {
         await new Promise(resolve => setTimeout(resolve, 800));
       }
@@ -3891,7 +3923,6 @@ async function recalculateIdealLineup(team) {
         progressBarEl.style.width = `${Math.round(((batchIdx + 1) / (totalBatches + 2)) * 100)}%`;
       }
 
-      // Retry mechanism: up to 3 attempts with 2 seconds wait in case of network/timeout errors
       let success = false;
       let attempt = 0;
       let batchResult = null;
@@ -3935,39 +3966,29 @@ async function recalculateIdealLineup(team) {
         }
       }
 
-      // If we failed after 3 attempts, throw the actual error immediately so the user knows exactly why!
       if (!success) {
         throw new Error(`Impossibile ricevere valutazioni per il Lotto ${batchIdx + 1}: ${lastError ? lastError.message || lastError : 'Errore sconosciuto'}`);
       }
 
-      // Save valid batch results to cache (with client-side key remapping as safety net)
       if (batchResult && batchResult.playersAnalysis) {
-        // First, try direct ID keys
         const returnedKeys = Object.keys(batchResult.playersAnalysis);
-        
-        // Build a name-to-ID lookup for the current batch
         const nameToIdMap = {};
         batchPlayers.forEach(p => {
           nameToIdMap[p.name.trim().toLowerCase()] = p.id;
-          // Also map partial names (last name, first name)
           p.name.split(/\s+/).forEach(part => {
             if (part.length > 2) nameToIdMap[part.toLowerCase()] = p.id;
           });
         });
         
         returnedKeys.forEach(key => {
-          let targetId = key; // Assume key is the player ID
-          
-          // Check if this key is actually a player ID in our batch
+          let targetId = key;
           const isValidId = batchPlayers.some(p => p.id === key);
           
           if (!isValidId) {
-            // Key is NOT a valid ID - try to match it to a player by name
             const keyLower = key.trim().toLowerCase();
             if (nameToIdMap[keyLower]) {
               targetId = nameToIdMap[keyLower];
             } else {
-              // Try partial matching
               const matchedId = Object.entries(nameToIdMap).find(([name]) => 
                 keyLower.includes(name) || name.includes(keyLower)
               );
@@ -3981,16 +4002,12 @@ async function recalculateIdealLineup(team) {
         });
       }
 
-      // Re-render immediately so scores populate in real time!
+      // Re-render in real time!
       renderPitch();
       renderTeamDashboard();
     }
 
-    // ----------------------------------------------------
-    // VERIFICATION: Check that ALL players have received at least SOME analysis data
-    // The requirement is: calculate players first, THEN choose formation.
-    // We check for the presence of ANY cached data, not for perfect opponent names.
-    // ----------------------------------------------------
+    // Verification
     let missingPlayers = team.players.filter(p => !state.aiCache[p.id]);
 
     if (missingPlayers.length > 0) {
@@ -4004,7 +4021,6 @@ async function recalculateIdealLineup(team) {
           statusTextEl.innerText = `Fase 1 (Recupero): Calcolo mirato per ${missingPlayers.length} giocatori rimasti... (Tentativo ${retryAttempt}/${maxRetryAttempts})`;
         }
         
-        // Split the missing players into small batches of 2
         const retryBatches = [];
         for (let i = 0; i < missingPlayers.length; i += 2) {
           retryBatches.push(missingPlayers.slice(i, i + 2));
@@ -4062,33 +4078,102 @@ async function recalculateIdealLineup(team) {
           }
         }
         
-        // Re-render
         renderPitch();
         renderTeamDashboard();
-        
-        // Re-evaluate
         missingPlayers = team.players.filter(p => !state.aiCache[p.id]);
       }
     }
 
-    // Log how many players were successfully evaluated
     const evaluatedCount = team.players.filter(p => state.aiCache[p.id]).length;
-    console.log(`Fase 1 completata: ${evaluatedCount}/${team.players.length} giocatori valutati con successo.`);
-    
-    // If ALL players are still missing (zero evaluations), abort - something is fundamentally broken
     if (evaluatedCount === 0) {
       throw new Error('Impossibile ottenere alcuna valutazione dai giocatori. Verifica la connessione e le chiavi API, poi riprova.');
     }
 
-    // ----------------------------------------------------
-    // PHASE 2: Map pre-calculated evaluations and choose optimal lineup
-    // ----------------------------------------------------
-    if (statusTextEl && progressBarEl) {
-      statusTextEl.innerText = `Fase 2: Calcolo schieramento ottimale e modulo tattico da bonus...`;
-      progressBarEl.style.width = `${Math.round(((totalBatches + 1) / (totalBatches + 2)) * 100)}%`;
+    // Success Screen
+    if (progressBarEl) progressBarEl.style.width = '100%';
+    
+    dialogContent.innerHTML = `
+      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1.5rem; text-align: center;">
+        <div style="width: 60px; height: 60px; border-radius: 50%; background: rgba(16, 185, 129, 0.15); border: 2px solid #10b981; margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: center; font-size: 2rem; color: #10b981; box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);">✓</div>
+        <h3 style="margin: 0 0 0.5rem 0; color: #fff; font-size: 1.15rem; font-weight: 700;">Ricalcolo Completato! 🎉</h3>
+        <p style="margin: 0 0 1.5rem 0; font-size: 0.85rem; color: var(--color-text-muted); line-height: 1.45;">
+          Tutte le valutazioni e le statistiche dei giocatori per la squadra <strong>${team.name}</strong> sono state aggiornate correttamente con l'AI. (Totale: ${evaluatedCount}/${team.players.length} giocatori).
+        </p>
+        <button class="btn btn-primary" style="background: linear-gradient(135deg, var(--color-primary) 0%, #4f46e5 100%); border-color: rgba(99, 102, 241, 0.4); padding: 0.55rem 1.5rem; font-size: 0.85rem;" onclick="document.getElementById('ai-recalc-dialog').close()">
+          Chiudi
+        </button>
+      </div>
+    `;
+
+    autoSave();
+  } catch (err) {
+    console.error(err);
+    // Error Screen
+    dialogContent.innerHTML = `
+      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1.5rem; text-align: center;">
+        <div style="width: 60px; height: 60px; border-radius: 50%; background: rgba(239, 68, 68, 0.15); border: 2px solid #ef4444; margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: center; font-size: 2rem; color: #ef4444; box-shadow: 0 0 15px rgba(239, 68, 68, 0.2);">✗</div>
+        <h3 style="margin: 0 0 0.5rem 0; color: #fff; font-size: 1.15rem; font-weight: 700;">Errore Ricalcolo ⚠️</h3>
+        <p style="margin: 0 0 1.5rem 0; font-size: 0.85rem; color: var(--color-danger); line-height: 1.45;">
+          ${err.message || err}
+        </p>
+        <div style="display: flex; gap: 0.5rem;">
+          <button class="btn btn-secondary" style="padding: 0.55rem 1.2rem; font-size: 0.85rem;" onclick="document.getElementById('ai-recalc-dialog').close()">
+            Annulla
+          </button>
+          <button class="btn btn-primary" style="background: linear-gradient(135deg, #a855f7 0%, #7e22ce 100%); border-color: rgba(168, 85, 247, 0.4); padding: 0.55rem 1.2rem; font-size: 0.85rem;" id="btn-recalc-retry-modal">
+            Riprova 🔄
+          </button>
+        </div>
+      </div>
+    `;
+    const modalRetryBtn = document.getElementById('btn-recalc-retry-modal');
+    if (modalRetryBtn) {
+      modalRetryBtn.onclick = () => recalculatePlayerEvaluations(team);
+    }
+  }
+}
+
+async function generateIdealLineup(team) {
+  if (!team || team.players.length === 0) {
+    showToast('Nessun giocatore in rosa da schierare!', 'warning');
+    return;
+  }
+
+  const pitchContainer = dom.pitchVisualizerContainer;
+  const benchContainer = dom.pitchBenchContainer;
+  if (!pitchContainer || !benchContainer) return;
+
+  const originalPitchHtml = pitchContainer.innerHTML;
+  const originalBenchHtml = benchContainer.innerHTML;
+
+  // Disable buttons during load
+  const buttons = document.querySelectorAll('#pitch-action-buttons-wrapper button');
+  buttons.forEach(btn => btn.disabled = true);
+
+  // Render a beautiful, premium glassmorphic loader inside the field container
+  pitchContainer.innerHTML = `
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 380px; background: rgba(0,0,0,0.5); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); padding: 2rem; text-align: center; box-sizing: border-box;">
+      <div class="ai-skeleton-pulse" style="width: 50px; height: 50px; border-radius: 50%; background: var(--color-primary); margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; animation: pulse 1.5s infinite;">⚽</div>
+      <h4 style="margin: 0 0 0.5rem 0; color: #fff; font-size: 0.9rem;">Formazione AI in corso...</h4>
+      <p id="ai-recalc-status" style="margin: 0 0 1rem 0; font-size: 0.75rem; color: var(--color-text-muted); line-height: 1.4;">Calcolo schieramento ottimale e modulo tattico da bonus...</p>
+      <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; margin-bottom: 0.5rem;">
+        <div id="ai-recalc-progress" style="width: 50%; height: 100%; background: linear-gradient(90deg, #38bdf8 0%, #c084fc 100%); border-radius: 3px; transition: width 0.4s ease-out;"></div>
+      </div>
+    </div>
+  `;
+  benchContainer.innerHTML = `<div style="text-align: center; color: var(--color-text-muted); font-size: 0.75rem; font-style: italic;">Calcolo in corso...</div>`;
+
+  try {
+    const statusTextEl = document.getElementById('ai-recalc-status');
+    const progressBarEl = document.getElementById('ai-recalc-progress');
+
+    // Check if any players have evaluations. If completely empty, warn the user.
+    const evaluatedPlayers = team.players.filter(p => state.aiCache[p.id]);
+    if (evaluatedPlayers.length === 0) {
+      showToast('Attenzione: Nessuna valutazione aggiornata in memoria per questa squadra. Esegui prima il "Ricalcolo giocatori" per risultati ideali!', 'warning');
     }
 
-    // Map roster players to include their newly calculated evaluations (scores, etc.)
+    // Map roster players to include their calculated evaluations (scores, etc.)
     const playersWithEvaluations = team.players.map(p => {
       const analysis = state.aiCache[p.id] || {};
       return {
@@ -4144,11 +4229,11 @@ async function recalculateIdealLineup(team) {
       progressBarEl.style.width = '100%';
     }
 
-    showToast('Formazione ottimizzata e valutazioni IA ricalcolate con successo! 🔮📈', 'success');
+    showToast('Formazione ottimizzata calcolata con successo! 🔮⚽', 'success');
     autoSave();
   } catch (err) {
     console.error(err);
-    showToast(`Errore durante il ricalcolo: ${err.message || err}`, 'danger');
+    showToast(`Errore durante il calcolo della formazione: ${err.message || err}`, 'danger');
   }
 
   // Restore buttons state
@@ -4157,6 +4242,11 @@ async function recalculateIdealLineup(team) {
   // Render final updated visualizer and tables
   renderPitch();
   renderTeamDashboard();
+}
+
+async function recalculateIdealLineup(team) {
+  await recalculatePlayerEvaluations(team);
+  await generateIdealLineup(team);
 }
 
 // Window globals to wire up inline HTML onclick actions
@@ -4170,6 +4260,8 @@ window.showTeamAIAnalysis = showTeamAIAnalysis;
 window.closeAIPopover = closeAIPopover;
 window.copyLineupToClipboard = copyLineupToClipboard;
 window.recalculateIdealLineup = recalculateIdealLineup;
+window.recalculatePlayerEvaluations = recalculatePlayerEvaluations;
+window.generateIdealLineup = generateIdealLineup;
 window.autoLoadCloudSession = autoLoadCloudSession;
 window.openStartupDialog = openStartupDialog;
 window.openNewSessionFromStartup = openNewSessionFromStartup;
