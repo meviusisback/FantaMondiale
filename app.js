@@ -4548,7 +4548,8 @@ function initializeTournament(force = false) {
       r16: Array(8).fill(null),
       qf: Array(4).fill(null),
       sf: Array(2).fill(null),
-      final: null
+      final: null,
+      thirdPlaceWinner: null
     },
     showAiProbabilities: false
   };
@@ -4597,50 +4598,117 @@ function getTournamentTree() {
     return (groups[groupKey] && groups[groupKey][index]) ? groups[groupKey][index] : 'In attesa...';
   };
 
-  // Calculate best 3rd placed teams across all 12 groups A to L
+  // 1. Calculate best 3rd placed teams across all 12 groups A to L
   const allThirds = [];
   const groupKeys = ['A','B','C','D','E','F','G','H','I','J','K','L'];
   groupKeys.forEach(k => {
     if (groups[k] && groups[k][2]) {
-      allThirds.push(groups[k][2]);
+      allThirds.push({ teamName: groups[k][2], groupKey: k });
     }
   });
-  // Sort by Elo rating descending
-  allThirds.sort((a, b) => getTeamRating(b) - getTeamRating(a));
+
+  // Sort by Elo rating descending (deterministic ranking)
+  allThirds.sort((a, b) => getTeamRating(b.teamName) - getTeamRating(a.teamName));
   const bestThirds = allThirds.slice(0, 8);
-  // Fallback if less than 8
-  while (bestThirds.length < 8) {
-    bestThirds.push('In attesa...');
+
+  // 2. Perform backtracking bipartite matching between group winners and 3rd placed teams
+  function matchThirds(bestThirdsList) {
+    const winners = [
+      { id: 'E', allowed: ['A', 'B', 'C', 'D', 'F'] },
+      { id: 'I', allowed: ['C', 'D', 'F', 'G', 'H'] },
+      { id: 'A', allowed: ['C', 'E', 'F', 'H', 'I'] },
+      { id: 'L', allowed: ['E', 'H', 'I', 'J', 'K'] },
+      { id: 'G', allowed: ['A', 'E', 'H', 'I', 'J'] },
+      { id: 'D', allowed: ['B', 'E', 'F', 'I', 'J'] },
+      { id: 'B', allowed: ['E', 'F', 'G', 'I', 'J'] },
+      { id: 'K', allowed: ['D', 'E', 'I', 'J', 'L'] }
+    ];
+
+    const assigned = Array(8).fill(null);
+    const used = Array(8).fill(false);
+
+    function dfs(winnerIndex) {
+      if (winnerIndex === 8) return true;
+      const allowedGroups = winners[winnerIndex].allowed;
+      for (let i = 0; i < bestThirdsList.length; i++) {
+        if (!used[i] && allowedGroups.includes(bestThirdsList[i].groupKey)) {
+          used[i] = true;
+          assigned[winnerIndex] = i;
+          if (dfs(winnerIndex + 1)) return true;
+          used[i] = false;
+          assigned[winnerIndex] = null;
+        }
+      }
+      return false;
+    }
+
+    const success = dfs(0);
+
+    if (!success) {
+      // Fallback greedy matching if DFS fails
+      const fallbackUsed = Array(8).fill(false);
+      for (let w = 0; w < 8; w++) {
+        let found = false;
+        const allowedGroups = winners[w].allowed;
+        for (let i = 0; i < bestThirdsList.length; i++) {
+          if (!fallbackUsed[i] && allowedGroups.includes(bestThirdsList[i].groupKey)) {
+            fallbackUsed[i] = true;
+            assigned[w] = i;
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
+          for (let i = 0; i < bestThirdsList.length; i++) {
+            if (!fallbackUsed[i]) {
+              fallbackUsed[i] = true;
+              assigned[w] = i;
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    const result = {};
+    winners.forEach((w, idx) => {
+      const thirdIdx = assigned[idx];
+      result[w.id] = (thirdIdx !== null && bestThirdsList[thirdIdx]) ? bestThirdsList[thirdIdx].teamName : 'In attesa...';
+    });
+    return result;
   }
 
+  const thirdsMatch = matchThirds(bestThirds);
+
+  // 3. Define Round of 32 Pairings (Official FIFA 2026 Regulations)
   const r32Matches = [
-    [getTeamName('E', 0), bestThirds[0]], // M0
-    [getTeamName('I', 0), bestThirds[1]], // M1
-    [getTeamName('A', 1), getTeamName('B', 1)],   // M2
-    [getTeamName('F', 0), getTeamName('C', 1)],   // M3
-    [getTeamName('K', 1), getTeamName('L', 1)],   // M4
-    [getTeamName('H', 0), getTeamName('J', 1)],   // M5
-    [getTeamName('D', 0), bestThirds[2]], // M6
-    [getTeamName('G', 0), bestThirds[3]], // M7
-    [getTeamName('C', 0), getTeamName('F', 1)],   // M8
-    [getTeamName('E', 1), getTeamName('I', 1)],   // M9
-    [getTeamName('A', 0), bestThirds[4]], // M10
-    [getTeamName('L', 0), bestThirds[5]], // M11
-    [getTeamName('J', 0), getTeamName('H', 1)],   // M12
-    [getTeamName('D', 1), getTeamName('G', 1)],   // M13
-    [getTeamName('B', 0), bestThirds[6]], // M14
-    [getTeamName('K', 0), bestThirds[7]]  // M15
+    [getTeamName('E', 0), thirdsMatch.E || 'In attesa...'], // Match 0 (Winner E vs 3rd A/B/C/D/F)
+    [getTeamName('I', 0), thirdsMatch.I || 'In attesa...'], // Match 1 (Winner I vs 3rd C/D/F/G/H)
+    [getTeamName('A', 1), getTeamName('B', 1)],             // Match 2 (2A vs 2B - Gara 73)
+    [getTeamName('F', 0), getTeamName('C', 1)],             // Match 3 (1F vs 2C - Gara 75)
+    [getTeamName('K', 1), getTeamName('L', 1)],             // Match 4 (2K vs 2L - Gara 83)
+    [getTeamName('H', 0), getTeamName('J', 1)],             // Match 5 (1H vs 2J - Gara 84)
+    [getTeamName('D', 0), thirdsMatch.D || 'In attesa...'], // Match 6 (Winner D vs 3rd B/E/F/I/J)
+    [getTeamName('G', 0), thirdsMatch.G || 'In attesa...'], // Match 7 (Winner G vs 3rd A/E/H/I/J)
+    [getTeamName('C', 0), getTeamName('F', 1)],             // Match 8 (1C vs 2F - Gara 76)
+    [getTeamName('E', 1), getTeamName('I', 1)],             // Match 9 (2E vs 2I - Gara 78)
+    [getTeamName('A', 0), thirdsMatch.A || 'In attesa...'], // Match 10 (Winner A vs 3rd C/E/F/H/I)
+    [getTeamName('L', 0), thirdsMatch.L || 'In attesa...'], // Match 11 (Winner L vs 3rd E/H/I/J/K)
+    [getTeamName('J', 0), getTeamName('H', 1)],             // Match 12 (1J vs 2H - Gara 86)
+    [getTeamName('D', 1), getTeamName('G', 1)],             // Match 13 (2D vs 2G - Gara 88)
+    [getTeamName('B', 0), thirdsMatch.B || 'In attesa...'], // Match 14 (Winner B vs 3rd E/F/G/I/J)
+    [getTeamName('K', 0), thirdsMatch.K || 'In attesa...']  // Match 15 (Winner K vs 3rd D/E/I/J/L)
   ];
 
   const r16Matches = [
-    [ko.r32 ? ko.r32[0] : null, ko.r32 ? ko.r32[1] : null], // R16 0
-    [ko.r32 ? ko.r32[2] : null, ko.r32 ? ko.r32[3] : null], // R16 1
-    [ko.r32 ? ko.r32[4] : null, ko.r32 ? ko.r32[5] : null], // R16 2
-    [ko.r32 ? ko.r32[6] : null, ko.r32 ? ko.r32[7] : null], // R16 3
-    [ko.r32 ? ko.r32[8] : null, ko.r32 ? ko.r32[9] : null], // R16 4
-    [ko.r32 ? ko.r32[10] : null, ko.r32 ? ko.r32[11] : null], // R16 5
-    [ko.r32 ? ko.r32[12] : null, ko.r32 ? ko.r32[13] : null], // R16 6
-    [ko.r32 ? ko.r32[14] : null, ko.r32 ? ko.r32[15] : null]  // R16 7
+    [ko.r32 ? ko.r32[2] : null, ko.r32 ? ko.r32[3] : null], // R16 Match 0: Winner Gara 73 (Match 2) vs Winner Gara 75 (Match 3)
+    [ko.r32 ? ko.r32[0] : null, ko.r32 ? ko.r32[1] : null], // R16 Match 1: Winner Match 0 vs Winner Match 1
+    [ko.r32 ? ko.r32[4] : null, ko.r32 ? ko.r32[5] : null], // R16 Match 2: Winner Match 4 vs Winner Match 5
+    [ko.r32 ? ko.r32[6] : null, ko.r32 ? ko.r32[7] : null], // R16 Match 3: Winner Match 6 vs Winner Match 7
+    [ko.r32 ? ko.r32[8] : null, ko.r32 ? ko.r32[9] : null], // R16 Match 4: Winner Match 8 vs Winner Match 9
+    [ko.r32 ? ko.r32[10] : null, ko.r32 ? ko.r32[11] : null], // R16 Match 5: Winner Match 10 vs Winner Match 11
+    [ko.r32 ? ko.r32[12] : null, ko.r32 ? ko.r32[13] : null], // R16 Match 6: Winner Match 12 vs Winner Match 13
+    [ko.r32 ? ko.r32[14] : null, ko.r32 ? ko.r32[15] : null]  // R16 Match 7: Winner Match 14 vs Winner Match 15
   ];
 
   const qfMatches = [
@@ -4655,14 +4723,24 @@ function getTournamentTree() {
     [ko.qf ? ko.qf[2] : null, ko.qf ? ko.qf[3] : null]  // SF 1
   ];
 
+  const sf0Winner = ko.sf ? ko.sf[0] : null;
+  const sf0Participants = sfMatches[0];
+  const sf0Loser = sf0Winner ? (sf0Participants[0] === sf0Winner ? sf0Participants[1] : sf0Participants[0]) : null;
+
+  const sf1Winner = ko.sf ? ko.sf[1] : null;
+  const sf1Participants = sfMatches[1];
+  const sf1Loser = sf1Winner ? (sf1Participants[0] === sf1Winner ? sf1Participants[1] : sf1Participants[0]) : null;
+
   const finalMatch = [ko.sf ? ko.sf[0] : null, ko.sf ? ko.sf[1] : null];
+  const thirdPlaceMatch = [sf0Loser, sf1Loser];
 
   return {
     r32: r32Matches,
     r16: r16Matches,
     qf: qfMatches,
     sf: sfMatches,
-    final: finalMatch
+    final: finalMatch,
+    thirdPlace: thirdPlaceMatch
   };
 }
 
@@ -4670,7 +4748,7 @@ function validateKnockoutWinners() {
   if (!state.tournament || !state.tournament.groups || !state.tournament.groups.A || !state.tournament.knockout) return false;
 
   let changed = false;
-  for (let step = 0; step < 5; step++) {
+  for (let step = 0; step < 6; step++) {
     const tree = getTournamentTree();
     const ko = state.tournament.knockout;
 
@@ -4724,6 +4802,14 @@ function validateKnockoutWinners() {
           changed = true;
         }
       }
+    } else if (step === 5) {
+      if (ko.thirdPlaceWinner !== null && ko.thirdPlaceWinner !== undefined) {
+        const parts = tree.thirdPlace;
+        if (!parts.includes(ko.thirdPlaceWinner) || parts.includes(undefined) || parts.includes(null)) {
+          ko.thirdPlaceWinner = null;
+          changed = true;
+        }
+      }
     }
   }
 
@@ -4754,6 +4840,7 @@ function selectKnockoutWinner(roundKey, matchIndex, winnerName) {
   else if (roundKey === 'qf') currentWinner = ko.qf[matchIndex];
   else if (roundKey === 'sf') currentWinner = ko.sf[matchIndex];
   else if (roundKey === 'final') currentWinner = ko.final;
+  else if (roundKey === 'thirdPlace') currentWinner = ko.thirdPlaceWinner;
 
   const newWinner = (currentWinner === winnerName) ? null : winnerName;
 
@@ -4765,6 +4852,7 @@ function selectKnockoutWinner(roundKey, matchIndex, winnerName) {
   else if (roundKey === 'qf') ko.qf[matchIndex] = newWinner;
   else if (roundKey === 'sf') ko.sf[matchIndex] = newWinner;
   else if (roundKey === 'final') ko.final = newWinner;
+  else if (roundKey === 'thirdPlace') ko.thirdPlaceWinner = newWinner;
 
   validateKnockoutWinners();
   autoSave();
@@ -4848,6 +4936,7 @@ function simulateEntireTournament() {
 
   tree = getTournamentTree();
   ko.final = simMatchWinner(tree.final[0], tree.final[1]);
+  ko.thirdPlaceWinner = simMatchWinner(tree.thirdPlace[0], tree.thirdPlace[1]);
 
   validateKnockoutWinners();
   autoSave();
@@ -4914,6 +5003,7 @@ function simulateAiPrediction() {
 
     tree = getTournamentTree();
     ko.final = getStrongerTeam(tree.final[0], tree.final[1]);
+    ko.thirdPlaceWinner = getStrongerTeam(tree.thirdPlace[0], tree.thirdPlace[1]);
 
     validateKnockoutWinners();
     autoSave();
@@ -5179,6 +5269,11 @@ function renderKnockoutBracket(container) {
   const finalTeamB = tree.final[1];
   const finalWinner = ko.final;
   html += renderBracketMatchCard('final', 0, finalTeamA, finalTeamB, finalWinner, 'Finale', userTeam);
+
+  const thirdTeamA = tree.thirdPlace[0];
+  const thirdTeamB = tree.thirdPlace[1];
+  const thirdWinner = ko.thirdPlaceWinner;
+  html += renderBracketMatchCard('thirdPlace', 0, thirdTeamA, thirdTeamB, thirdWinner, 'Finale 3° Posto 🥉', userTeam);
   html += `</div>`;
 
   // Vincitore
