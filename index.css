@@ -2692,7 +2692,6 @@ body.ai-modal-open::before {
   position: absolute;
   right: 0;
   top: 100%;
-  margin-top: 4px;
   z-index: 1000;
   background: #1e1b4b;
   border: 1px solid rgba(99, 102, 241, 0.3);
