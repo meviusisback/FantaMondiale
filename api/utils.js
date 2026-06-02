@@ -74,13 +74,18 @@ Rispondi esclusivamente con un array JSON di stringhe in lingua italiana (es. ["
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          tools: [{ googleSearch: {} }],
-          generationConfig: { responseMimeType: "application/json" }
+          tools: [{ googleSearch: {} }]
         })
       });
       if (response.ok) {
         const data = await response.json();
         text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!text) {
+          console.error("Gemini Native Utils API returned empty candidates. Full payload:", JSON.stringify(data));
+        }
+      } else {
+        const errText = await response.text();
+        console.error(`Errore dall'API Gemini in utils.js: ${errText}`);
       }
     }
 

@@ -115,10 +115,7 @@ Rispondi esclusivamente con il codice JSON, senza alcun blocco di codice markdow
           }],
           tools: [{
             googleSearch: {}
-          }],
-          generationConfig: {
-            responseMimeType: "application/json"
-          }
+          }]
         })
       });
 
@@ -129,6 +126,9 @@ Rispondi esclusivamente con il codice JSON, senza alcun blocco di codice markdow
 
       const data = await response.json();
       text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text) {
+        console.error("Gemini Native Team Analysis API returned empty candidates. Full payload:", JSON.stringify(data));
+      }
     }
 
     if (!text) {
