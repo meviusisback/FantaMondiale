@@ -4509,7 +4509,7 @@ window.logoutCloudSession = logoutCloudSession;
 // --- TOURNAMENT SIMULATOR AND BRACKET FUNCTIONS ---
 
 function initializeTournament(force = false) {
-  if (state.tournament && !force) {
+  if (state.tournament && state.tournament.groups && state.tournament.knockout && !force) {
     return;
   }
 
@@ -4758,7 +4758,7 @@ function simulateGroups() {
 }
 
 function simulateEntireTournament() {
-  if (!state.tournament) {
+  if (!state.tournament || !state.tournament.groups || !state.tournament.knockout) {
     initializeTournament();
   }
 
@@ -4813,7 +4813,7 @@ function simulateEntireTournament() {
 }
 
 function simulateAiPrediction() {
-  if (!state.tournament) {
+  if (!state.tournament || !state.tournament.groups || !state.tournament.knockout) {
     initializeTournament();
   }
 
@@ -4885,7 +4885,7 @@ function renderTournament() {
   const container = document.getElementById('tournament-views-container');
   if (!container) return;
 
-  if (!state.tournament) {
+  if (!state.tournament || !state.tournament.groups || !state.tournament.knockout) {
     initializeTournament();
   }
 

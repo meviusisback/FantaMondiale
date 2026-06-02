@@ -2470,8 +2470,6 @@ body.ai-modal-open::before {
   align-items: center;
   gap: 0.4rem;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .slot-winner-icon {
