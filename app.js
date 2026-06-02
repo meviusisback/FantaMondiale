@@ -4519,16 +4519,20 @@ function initializeTournament(force = false) {
   // Get unique countries in the players database (only those with players)
   const dbCountries = [...new Set(state.players.map(p => p.country).filter(Boolean))];
 
-  // Base tournament teams list (Group A to H, 4 per group)
+  // Base tournament teams list (Group A to L, 4 per group) - Official 2026 FIFA World Cup Groups
   const defaultGroups = {
-    A: ['Paesi Bassi', 'Egitto', 'Senegal', 'Canada'],
-    B: ['Inghilterra', 'USA', 'Nigeria', 'Iran'],
-    C: ['Argentina', 'Polonia', 'Messico', 'Arabia Saudita'],
-    D: ['Francia', 'Australia', 'Danimarca', 'Tunisia'],
-    E: ['Spagna', 'Germania', 'Giappone', 'Turchia'],
-    F: ['Belgio', 'Croazia', 'Marocco', 'Norvegia'],
-    G: ['Brasile', 'Svizzera', 'Serbia', 'Camerun'],
-    H: ['Portogallo', 'Uruguay', 'Corea del Sud', 'Italia']
+    A: ['Messico', 'Sudafrica', 'Corea del Sud', 'Rep. Ceca'],
+    B: ['Canada', 'Bosnia ed Erzegovina', 'Qatar', 'Svizzera'],
+    C: ['Brasile', 'Marocco', 'Haiti', 'Scozia'],
+    D: ['Stati Uniti', 'Paraguay', 'Australia', 'Turchia'],
+    E: ['Germania', 'Curaçao', 'Costa d\'Avorio', 'Ecuador'],
+    F: ['Paesi Bassi', 'Giappone', 'Svezia', 'Tunisia'],
+    G: ['Belgio', 'Egitto', 'Iran', 'Nuova Zelanda'],
+    H: ['Spagna', 'Capo Verde', 'Arabia Saudita', 'Uruguay'],
+    I: ['Francia', 'Senegal', 'Iraq', 'Norvegia'],
+    J: ['Argentina', 'Algeria', 'Austria', 'Giordania'],
+    K: ['Portogallo', 'Repubblica Democratica del Congo', 'Uzbekistan', 'Colombia'],
+    L: ['Inghilterra', 'Croazia', 'Ghana', 'Panama']
   };
 
   // Convert defaultGroups to a flat list of teams for easier replacement
@@ -4561,8 +4565,11 @@ function initializeTournament(force = false) {
     });
   }
 
-  // Re-group currentTeams into A-H
-  const finalGroups = { A: [], B: [], C: [], D: [], E: [], F: [], G: [], H: [] };
+  // Re-group currentTeams into A-L
+  const finalGroups = {
+    A: [], B: [], C: [], D: [], E: [], F: [],
+    G: [], H: [], I: [], J: [], K: [], L: []
+  };
   currentTeams.forEach(t => {
     if (finalGroups[t.group]) {
       finalGroups[t.group].push(t.name);
@@ -4572,6 +4579,7 @@ function initializeTournament(force = false) {
   state.tournament = {
     groups: finalGroups,
     knockout: {
+      r32: Array(16).fill(null),
       r16: Array(8).fill(null),
       qf: Array(4).fill(null),
       sf: Array(2).fill(null),
@@ -4585,12 +4593,16 @@ function getTeamRating(teamName) {
   const baseRatings = {
     'Francia': 94, 'Argentina': 93, 'Brasile': 92, 'Inghilterra': 92, 'Spagna': 91,
     'Portogallo': 90, 'Germania': 89, 'Belgio': 88, 'Paesi Bassi': 88, 'Italia': 87,
-    'Marocco': 86, 'Croazia': 86, 'Uruguay': 85, 'Giappone': 83, 'Danimarca': 82,
-    'Svizzera': 82, 'Senegal': 82, 'Turchia': 82, 'USA': 81, 'Nigeria': 81,
-    'Norvegia': 80, 'Polonia': 80, 'Messico': 80, 'Corea del Sud': 79, 'Egitto': 78,
-    'Serbia': 78, 'Camerun': 77, 'Canada': 77, 'Ghana': 76, 'Ecuador': 76,
-    'Australia': 76, 'Tunisia': 75, 'Arabia Saudita': 74, 'Costa Rica': 74,
-    'Iran': 73, 'Qatar': 70
+    'Marocco': 86, 'Croazia': 86, 'Uruguay': 85, 'Colombia': 84, 'Giappone': 83,
+    'Danimarca': 82, 'Svizzera': 82, 'Senegal': 82, 'Turchia': 82, 'Svezia': 82,
+    'USA': 81, 'Stati Uniti': 81, 'Costa d\'Avorio': 81, 'Nigeria': 81, 'Norvegia': 80,
+    'Polonia': 80, 'Messico': 80, 'Rep. Ceca': 80, 'Austria': 80, 'Corea del Sud': 79,
+    'Algeria': 79, 'Egitto': 78, 'Serbia': 78, 'Bosnia ed Erzegovina': 78, 'Scozia': 78,
+    'Paraguay': 78, 'Camerun': 77, 'Canada': 77, 'Galles': 77, 'Ghana': 76,
+    'Ecuador': 76, 'Australia': 76, 'Tunisia': 75, 'Capo Verde': 75,
+    'Repubblica Democratica del Congo': 74, 'Sudafrica': 74, 'Arabia Saudita': 74,
+    'Costa Rica': 74, 'Uzbekistan': 73, 'Iran': 73, 'Haiti': 72, 'Giordania': 72,
+    'Panama': 72, 'Nuova Zelanda': 71, 'Iraq': 71, 'Qatar': 70, 'Curaçao': 68
   };
 
   let rating = baseRatings[teamName] || 78;
@@ -4613,35 +4625,75 @@ function getTeamRating(teamName) {
 }
 
 function getTournamentTree() {
-  const groups = state.tournament.groups;
-  const ko = state.tournament.knockout;
+  const groups = state.tournament.groups || {};
+  const ko = state.tournament.knockout || {};
+
+  const getTeamName = (groupKey, index) => {
+    return (groups[groupKey] && groups[groupKey][index]) ? groups[groupKey][index] : 'In attesa...';
+  };
+
+  // Calculate best 3rd placed teams across all 12 groups A to L
+  const allThirds = [];
+  const groupKeys = ['A','B','C','D','E','F','G','H','I','J','K','L'];
+  groupKeys.forEach(k => {
+    if (groups[k] && groups[k][2]) {
+      allThirds.push(groups[k][2]);
+    }
+  });
+  // Sort by Elo rating descending
+  allThirds.sort((a, b) => getTeamRating(b) - getTeamRating(a));
+  const bestThirds = allThirds.slice(0, 8);
+  // Fallback if less than 8
+  while (bestThirds.length < 8) {
+    bestThirds.push('In attesa...');
+  }
+
+  const r32Matches = [
+    [getTeamName('E', 0), bestThirds[0]], // M0
+    [getTeamName('I', 0), bestThirds[1]], // M1
+    [getTeamName('A', 1), getTeamName('B', 1)],   // M2
+    [getTeamName('F', 0), getTeamName('C', 1)],   // M3
+    [getTeamName('K', 1), getTeamName('L', 1)],   // M4
+    [getTeamName('H', 0), getTeamName('J', 1)],   // M5
+    [getTeamName('D', 0), bestThirds[2]], // M6
+    [getTeamName('G', 0), bestThirds[3]], // M7
+    [getTeamName('C', 0), getTeamName('F', 1)],   // M8
+    [getTeamName('E', 1), getTeamName('I', 1)],   // M9
+    [getTeamName('A', 0), bestThirds[4]], // M10
+    [getTeamName('L', 0), bestThirds[5]], // M11
+    [getTeamName('J', 0), getTeamName('H', 1)],   // M12
+    [getTeamName('D', 1), getTeamName('G', 1)],   // M13
+    [getTeamName('B', 0), bestThirds[6]], // M14
+    [getTeamName('K', 0), bestThirds[7]]  // M15
+  ];
 
   const r16Matches = [
-    [groups.A[0], groups.B[1]], // Match 0: 1A vs 2B
-    [groups.C[0], groups.D[1]], // Match 1: 1C vs 2D
-    [groups.E[0], groups.F[1]], // Match 2: 1E vs 2F
-    [groups.G[0], groups.H[1]], // Match 3: 1G vs 2H
-    [groups.B[0], groups.A[1]], // Match 4: 1B vs 2A
-    [groups.D[0], groups.C[1]], // Match 5: 1D vs 2C
-    [groups.F[0], groups.E[1]], // Match 6: 1F vs 2E
-    [groups.H[0], groups.G[1]]  // Match 7: 1H vs 2G
+    [ko.r32 ? ko.r32[0] : null, ko.r32 ? ko.r32[1] : null], // R16 0
+    [ko.r32 ? ko.r32[2] : null, ko.r32 ? ko.r32[3] : null], // R16 1
+    [ko.r32 ? ko.r32[4] : null, ko.r32 ? ko.r32[5] : null], // R16 2
+    [ko.r32 ? ko.r32[6] : null, ko.r32 ? ko.r32[7] : null], // R16 3
+    [ko.r32 ? ko.r32[8] : null, ko.r32 ? ko.r32[9] : null], // R16 4
+    [ko.r32 ? ko.r32[10] : null, ko.r32 ? ko.r32[11] : null], // R16 5
+    [ko.r32 ? ko.r32[12] : null, ko.r32 ? ko.r32[13] : null], // R16 6
+    [ko.r32 ? ko.r32[14] : null, ko.r32 ? ko.r32[15] : null]  // R16 7
   ];
 
   const qfMatches = [
-    [ko.r16[0], ko.r16[1]], // QF 0: Winner M0 vs Winner M1
-    [ko.r16[2], ko.r16[3]], // QF 1: Winner M2 vs Winner M3
-    [ko.r16[4], ko.r16[5]], // QF 2: Winner M4 vs Winner M5
-    [ko.r16[6], ko.r16[7]]  // QF 3: Winner M6 vs Winner M7
+    [ko.r16 ? ko.r16[0] : null, ko.r16 ? ko.r16[1] : null], // QF 0
+    [ko.r16 ? ko.r16[2] : null, ko.r16 ? ko.r16[3] : null], // QF 1
+    [ko.r16 ? ko.r16[4] : null, ko.r16 ? ko.r16[5] : null], // QF 2
+    [ko.r16 ? ko.r16[6] : null, ko.r16 ? ko.r16[7] : null]  // QF 3
   ];
 
   const sfMatches = [
-    [ko.qf[0], ko.qf[1]], // SF 0: Winner QF0 vs Winner QF1
-    [ko.qf[2], ko.qf[3]]  // SF 1: Winner QF2 vs Winner QF3
+    [ko.qf ? ko.qf[0] : null, ko.qf ? ko.qf[1] : null], // SF 0
+    [ko.qf ? ko.qf[2] : null, ko.qf ? ko.qf[3] : null]  // SF 1
   ];
 
-  const finalMatch = [ko.sf[0], ko.sf[1]];
+  const finalMatch = [ko.sf ? ko.sf[0] : null, ko.sf ? ko.sf[1] : null];
 
   return {
+    r32: r32Matches,
     r16: r16Matches,
     qf: qfMatches,
     sf: sfMatches,
@@ -4653,11 +4705,23 @@ function validateKnockoutWinners() {
   if (!state.tournament || !state.tournament.groups || !state.tournament.groups.A || !state.tournament.knockout) return false;
 
   let changed = false;
-  for (let step = 0; step < 4; step++) {
+  for (let step = 0; step < 5; step++) {
     const tree = getTournamentTree();
     const ko = state.tournament.knockout;
 
     if (step === 0) {
+      if (ko.r32) {
+        for (let i = 0; i < 16; i++) {
+          if (ko.r32[i] !== null) {
+            const parts = tree.r32[i];
+            if (!parts.includes(ko.r32[i]) || parts.includes(undefined) || parts.includes(null)) {
+              ko.r32[i] = null;
+              changed = true;
+            }
+          }
+        }
+      }
+    } else if (step === 1) {
       for (let i = 0; i < 8; i++) {
         if (ko.r16[i] !== null) {
           const parts = tree.r16[i];
@@ -4667,7 +4731,7 @@ function validateKnockoutWinners() {
           }
         }
       }
-    } else if (step === 1) {
+    } else if (step === 2) {
       for (let i = 0; i < 4; i++) {
         if (ko.qf[i] !== null) {
           const parts = tree.qf[i];
@@ -4677,7 +4741,7 @@ function validateKnockoutWinners() {
           }
         }
       }
-    } else if (step === 2) {
+    } else if (step === 3) {
       for (let i = 0; i < 2; i++) {
         if (ko.sf[i] !== null) {
           const parts = tree.sf[i];
@@ -4687,7 +4751,7 @@ function validateKnockoutWinners() {
           }
         }
       }
-    } else if (step === 3) {
+    } else if (step === 4) {
       if (ko.final !== null) {
         const parts = tree.final;
         if (!parts.includes(ko.final) || parts.includes(undefined) || parts.includes(null)) {
@@ -4720,14 +4784,19 @@ function selectKnockoutWinner(roundKey, matchIndex, winnerName) {
 
   const ko = state.tournament.knockout;
   let currentWinner = null;
-  if (roundKey === 'r16') currentWinner = ko.r16[matchIndex];
+  if (roundKey === 'r32') currentWinner = ko.r32 ? ko.r32[matchIndex] : null;
+  else if (roundKey === 'r16') currentWinner = ko.r16[matchIndex];
   else if (roundKey === 'qf') currentWinner = ko.qf[matchIndex];
   else if (roundKey === 'sf') currentWinner = ko.sf[matchIndex];
   else if (roundKey === 'final') currentWinner = ko.final;
 
   const newWinner = (currentWinner === winnerName) ? null : winnerName;
 
-  if (roundKey === 'r16') ko.r16[matchIndex] = newWinner;
+  if (roundKey === 'r32') {
+    if (!ko.r32) ko.r32 = Array(16).fill(null);
+    ko.r32[matchIndex] = newWinner;
+  }
+  else if (roundKey === 'r16') ko.r16[matchIndex] = newWinner;
   else if (roundKey === 'qf') ko.qf[matchIndex] = newWinner;
   else if (roundKey === 'sf') ko.sf[matchIndex] = newWinner;
   else if (roundKey === 'final') ko.final = newWinner;
@@ -4792,6 +4861,12 @@ function simulateEntireTournament() {
   const ko = state.tournament.knockout;
 
   let tree = getTournamentTree();
+  if (!ko.r32) ko.r32 = Array(16).fill(null);
+  for (let i = 0; i < 16; i++) {
+    ko.r32[i] = simMatchWinner(tree.r32[i][0], tree.r32[i][1]);
+  }
+
+  tree = getTournamentTree();
   for (let i = 0; i < 8; i++) {
     ko.r16[i] = simMatchWinner(tree.r16[i][0], tree.r16[i][1]);
   }
@@ -4852,6 +4927,12 @@ function simulateAiPrediction() {
     const ko = state.tournament.knockout;
 
     let tree = getTournamentTree();
+    if (!ko.r32) ko.r32 = Array(16).fill(null);
+    for (let i = 0; i < 16; i++) {
+      ko.r32[i] = getStrongerTeam(tree.r32[i][0], tree.r32[i][1]);
+    }
+
+    tree = getTournamentTree();
     for (let i = 0; i < 8; i++) {
       ko.r16[i] = getStrongerTeam(tree.r16[i][0], tree.r16[i][1]);
     }
@@ -5032,7 +5113,7 @@ function renderGroupStage(container) {
         const tooltipText = `Calciatori in rosa: ${userPlayers.map(p => `${p.name} (${p.role})`).join(', ')}`;
         badgeHtml = `
           <span class="team-user-badge" data-tooltip="${tooltipText}" title="${tooltipText}">
-            ${pCount} 🏅
+            ${pCount}
           </span>
         `;
       }
@@ -5086,6 +5167,16 @@ function renderKnockoutBracket(container) {
   const userTeam = state.teams.find(t => t.isUserTeam);
 
   let html = `<div class="bracket-wrapper">`;
+
+  // Sedicesimi
+  html += `<div class="bracket-column"><div class="bracket-column-header">Sedicesimi di Finale</div>`;
+  for (let i = 0; i < 16; i++) {
+    const teamA = tree.r32[i][0];
+    const teamB = tree.r32[i][1];
+    const winner = ko.r32 ? ko.r32[i] : null;
+    html += renderBracketMatchCard('r32', i, teamA, teamB, winner, `Sedicesimo ${i+1}`, userTeam);
+  }
+  html += `</div>`;
 
   // Ottavi
   html += `<div class="bracket-column"><div class="bracket-column-header">Ottavi di Finale</div>`;
@@ -5197,7 +5288,7 @@ function renderBracketMatchCard(roundKey, matchIndex, teamA, teamB, winner, titl
       const tooltipText = `Calciatori in rosa: ${userPlayers.map(p => `${p.name} (${p.role})`).join(', ')}`;
       badgeHtml = `
         <span class="team-user-badge" data-tooltip="${tooltipText}" title="${tooltipText}" style="margin-left: 0.35rem; padding: 0.05rem 0.25rem; font-size: 0.6rem;">
-          ${pCount} 🏅
+          ${pCount}
         </span>
       `;
     }

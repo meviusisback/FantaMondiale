@@ -193,6 +193,7 @@ header {
 /* Tabs System */
 .tab-container {
   margin-bottom: 2rem;
+  min-width: 0;
 }
 
 .tabs-header {
@@ -2359,6 +2360,8 @@ body.ai-modal-open::before {
   display: flex;
   gap: 2.25rem;
   overflow-x: auto;
+  max-width: 100%;
+  box-sizing: border-box;
   padding: 1.5rem 0.5rem;
   scrollbar-width: thin;
   position: relative;
@@ -2370,7 +2373,7 @@ body.ai-modal-open::before {
   flex-direction: column;
   justify-content: space-around;
   min-width: 210px;
-  min-height: 640px;
+  min-height: 1300px;
   position: relative;
 }
 
