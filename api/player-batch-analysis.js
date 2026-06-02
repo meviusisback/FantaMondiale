@@ -59,7 +59,7 @@ Nazioni attualmente eliminate o assenti dal Mondiale ad oggi: ${ELIMINATED_COUNT
   * Inizia 'formState' con la dicitura: "ELIMINATO: [Spiegazione dettagliata]".
 
 VALUTAZIONE E ANALISI STRATEGICA:
-- **matchStrength**: valore numerico da 1 a 100 che indichi la forza relativa del calciatore in questo Mondiale come voto di base (da 1 a 100).
+- **matchStrength**: valore numerico da 1 a 100 che indichi la forza relativa del calciatore in questo Mondiale come voto di base (da 1 a 100). Per Centrocampisti (CEN) e Difensori (DIF), considera la loro attitudine a portare costanza ed elevati voti puri (senza bonus) per ottimizzare i modificatori di reparto (difesa: bonus con 3, 4, o 5 difensori da media >= 6.5, >= 6.25, >= 6.25; centrocampo: bonus con 3, 4, o 5 centrocampisti da media >= 6.75, >= 6.5, >= 6.25).
 - **nextOpponent**: deve trattarsi tassativamente ed esclusivamente del nome proprio di una reale nazionale di calcio (es. "Brasile", "Francia", "Spagna"). Se non trovi la partita esatta, indica uno degli altri 3 paesi presenti in tale girone.
 - **expectedBonuses**: breve descrizione (1-2 frasi) dei bonus fantacalcistici attesi (es. gol, assist, rigori, punizioni).
 - **groupAnalysis**:

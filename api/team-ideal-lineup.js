@@ -48,7 +48,12 @@ REGOLE DI SELEZIONE E SCHIERAMENTO (MANDATORIE E RIGIDE):
    - La scelta di chi schierare titolare deve basarsi rigorosamente sulla **Forza del Turno (matchStrength)** e sulla **Probabilità Titolare** che ti sono state fornite.
    - Privilegia in assoluto i calciatori con i valori di "Forza del Turno" più elevati. È vietato schierare titolare un giocatore che ha una Forza del Turno molto bassa o pari a 0 (ad esempio perché infortunato o escluso/eliminato), se in rosa disponi di un'alternativa attiva e performante nello stesso ruolo.
    - **IGNORA COMPLETAMENTE** considerazioni tattiche o di posizionamento del calcio reale (es. non ha alcuna utilità escludere un centrocampista ultra-offensivo da bonus perché "è un'ala e non garantisce equilibrio difensivo"). Nel FantaMondiale contano esclusivamente il voto e i bonus/malus.
-6. **DIVIETO ASSOLUTO DI DUPLICAZIONE (MANDATORIO E STRICHE):** Ciascun calciatore della rosa fornita deve apparire UNA SOLA VOLTA nell'intero schieramento: o nei titolari ('starters') o nei panchinari ('bench'), mai in entrambi! È assolutamente vietato che un giocatore compaia contemporaneamente sia tra i titolari che in panchina.
+6. **MODIFICATORI DI DIFESA E CENTROCAMPO (MANDATORI PER LA SCELTA DEL MODULO):**
+   Tieni conto dei modificatori di reparto per ottimizzare il modulo e gli schieramenti:
+   - Modificatore Difesa: basato sulla media voto pura (senza bonus/malus) dei difensori. Con 3 difensori: bonus di +1 con media >= 6.5, sale di +1 ogni 0.25 di media in più. Con 4 difensori: bonus scatta a >= 6.25 (+1), a 6.5 è +2, e così via. Con 5 difensori (modulo più premiato): bonus scatta a >= 6.25 (+2), a 6.5 è +3.
+   - Modificatore Centrocampo: basato sulla media voto pura dei centrocampisti. Con 3 centrocampisti: bonus di +1 con media >= 6.75. Con 4 centrocampisti: bonus di +1 con media >= 6.5. Con 5 centrocampisti: bonus di +1 con media >= 6.25.
+   Usa queste regole per selezionare il modulo tattico ottimale e motivare la scelta nella "tacticalJustification".
+7. **DIVIETO ASSOLUTO DI DUPLICAZIONE (MANDATORIO E STRICHE):** Ciascun calciatore della rosa fornita deve apparire UNA SOLA VOLTA nell'intero schieramento: o nei titolari ('starters') o nei panchinari ('bench'), mai in entrambi! È assolutamente vietato che un giocatore compaia contemporaneamente sia tra i titolari che in panchina.
 
 REGOLE DI VALUTAZIONE E CATEGORIA:
 Assegna a ciascun calciatore della rosa una valutazione 'playerCategory' rigorosamente tra questi 5 valori in base alle sue ultime performance reali e prospettive nel Mondiale:
