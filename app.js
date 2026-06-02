@@ -3663,7 +3663,9 @@ async function showTeamAIAnalysis(buttonEl, forceRefresh = false) {
     if (cachedData) {
       try {
         const parsed = JSON.parse(cachedData);
-        renderTeamAnalysisPopoverData(popover, team, parsed.analysis, buttonEl);
+        const textVal = parsed.analysisText || parsed.analysis;
+        const recommendedIds = parsed.recommendedPlayerIds || [];
+        renderTeamAnalysisPopoverData(popover, team, textVal, recommendedIds, buttonEl);
         return;
       } catch (e) {
         sessionStorage.removeItem(cacheKey);
@@ -3671,7 +3673,23 @@ async function showTeamAIAnalysis(buttonEl, forceRefresh = false) {
     }
   }
 
-  // 7. Group roster by role with minimal details
+  // 7. Compile free prospects
+  const freePlayers = state.players.filter(p => !p.ownerId && !state.eliminatedCountries.includes(p.country));
+  const sortedFreePlayers = [...freePlayers].sort((a, b) => {
+    const ratingA = getPlayerPerformanceRating(a);
+    const ratingB = getPlayerPerformanceRating(b);
+    return ratingB - ratingA || b.initialValue - a.initialValue;
+  });
+  const topFreePlayers = sortedFreePlayers.slice(0, 25).map(p => ({
+    id: p.id,
+    name: p.name,
+    role: p.role,
+    country: p.country,
+    initialValue: p.initialValue,
+    rating: getPlayerPerformanceRating(p)
+  }));
+
+  // 8. Group roster by role with minimal details
   const rosterData = {
     POR: team.players.filter(p => p.role === 'POR').map(p => ({ name: p.name, country: p.country })),
     DIF: team.players.filter(p => p.role === 'DIF').map(p => ({ name: p.name, country: p.country })),
@@ -3679,7 +3697,7 @@ async function showTeamAIAnalysis(buttonEl, forceRefresh = false) {
     ATT: team.players.filter(p => p.role === 'ATT').map(p => ({ name: p.name, country: p.country }))
   };
 
-  // 8. Fetch analysis from Serverless API
+  // 9. Fetch analysis from Serverless API
   try {
     const response = await fetch('/api/team-analysis', {
       method: 'POST',
@@ -3689,6 +3707,8 @@ async function showTeamAIAnalysis(buttonEl, forceRefresh = false) {
       body: JSON.stringify({
         teamName: team.name,
         roster: rosterData,
+        budget: team.budget,
+        freePlayers: topFreePlayers,
         provider: state.settings.aiProvider || 'openrouter',
         openRouterModel: state.settings.openRouterModel || 'openai/gpt-oss-120b:free'
       })
@@ -3709,15 +3729,54 @@ async function showTeamAIAnalysis(buttonEl, forceRefresh = false) {
     sessionStorage.setItem(cacheKey, JSON.stringify(result));
 
     // Render Data
-    renderTeamAnalysisPopoverData(popover, team, result.analysis, buttonEl);
+    const textVal = result.analysisText || result.analysis;
+    const recommendedIds = result.recommendedPlayerIds || [];
+    renderTeamAnalysisPopoverData(popover, team, textVal, recommendedIds, buttonEl);
   } catch (error) {
     console.error(error);
     renderPopoverError(popover, error.message);
   }
 }
 
-function renderTeamAnalysisPopoverData(popover, team, analysisText, buttonEl) {
+function renderTeamAnalysisPopoverData(popover, team, analysisText, recommendedPlayerIds, buttonEl) {
   const parsedHtml = parseMarkdown(analysisText);
+
+  let recommendedHtml = '';
+  if (recommendedPlayerIds && recommendedPlayerIds.length > 0) {
+    let itemsHtml = '';
+    recommendedPlayerIds.forEach(id => {
+      const p = state.players.find(x => x.id === id);
+      if (p) {
+        const range = calculateIdealBidRange(p);
+        const escapedName = p.name.replace(/'/g, "\\'");
+        const escapedCountry = p.country.replace(/'/g, "\\'");
+        
+        itemsHtml += `
+          <div class="mini-player-item" style="display: flex; justify-content: space-between; align-items: center; padding: 0.35rem 0.5rem; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.04); border-radius: 6px; margin-bottom: 0.35rem;">
+            <div style="display: flex; align-items: center; gap: 0.35rem; min-width: 0; flex: 1;">
+              <span class="badge badge-${p.role.toLowerCase()}" style="font-size: 0.58rem; padding: 0.1rem 0.25rem; border-radius: 4px; line-height: 1; flex-shrink: 0;">${p.role}</span>
+              <span style="font-size: 0.72rem; font-weight: 600; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${p.name} <span style="color: var(--color-text-muted); font-size: 0.65rem;">(${p.country})</span></span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0;">
+              <span style="font-size: 0.72rem; font-weight: 800; color: #f59e0b; font-family: monospace;">${range.min}-${range.max} cr</span>
+              <button class="btn-ai-sparkle" style="width: 22px; height: 22px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; font-size: 0.65rem; padding: 0;" onclick="showPlayerAIAnalysis('${p.id}', '${escapedName}', '${escapedCountry}', '${p.role}', this); event.stopPropagation();" title="Analisi IA giocatore ✨">✨</button>
+            </div>
+          </div>
+        `;
+      }
+    });
+
+    if (itemsHtml) {
+      recommendedHtml = `
+        <div class="ai-recommendations-section" style="margin-top: 0.75rem; border-top: 1px dashed rgba(255, 255, 255, 0.1); padding-top: 0.75rem;">
+          <span style="display: block; font-size: 0.62rem; color: #a855f7; text-transform: uppercase; font-weight: 800; letter-spacing: 0.05em; margin-bottom: 0.45rem;">Prospetti Consigliati Rimasti 🔮</span>
+          <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+            ${itemsHtml}
+          </div>
+        </div>
+      `;
+    }
+  }
 
   popover.innerHTML = `
     <div class="ai-popover-header">
@@ -3733,6 +3792,8 @@ function renderTeamAnalysisPopoverData(popover, team, analysisText, buttonEl) {
     </div>
 
     ${parsedHtml}
+
+    ${recommendedHtml}
   `;
 
   // Bind refresh click programmatically using closure variables
