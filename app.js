@@ -1124,7 +1124,29 @@ function calculateIdealBidRange(player) {
   let minPrice = Math.round(base * perfMult * 0.9);
   let maxPrice = Math.round(base * perfMult * 1.25);
   
-  // Now let's adjust based on the "mia squadra" (user's team) situation!
+  const cache = state.aiCache[player.id] || {};
+  const starterProb = cache.starterProbability || "50%";
+  const playerCat = cache.playerCategory || "buono";
+  const qualProb = cache.groupAnalysis?.qualificationProbability || "50%";
+  
+  let justificationParts = [];
+  
+  // 1. Force & Performance rating
+  justificationParts.push(`forza giocatore (${playerCat}, valutazione ${performance.toFixed(1)})`);
+  
+  // 2. National team weight
+  if (cache.groupAnalysis?.qualificationProbability) {
+    justificationParts.push(`chance passaggio girone ${player.country} al ${qualProb}`);
+  } else {
+    justificationParts.push(`nazionale ${player.country}`);
+  }
+  
+  // 3. Form & Starter chance
+  if (cache.starterProbability) {
+    justificationParts.push(`titolare stimato al ${starterProb}`);
+  }
+  
+  // Now adjust based on the "mia squadra" (user's team) situation!
   const userTeam = state.teams.find(t => t.isUserTeam);
   if (userTeam) {
     const remainingCredits = userTeam.budget;
@@ -1139,22 +1161,33 @@ function calculateIdealBidRange(player) {
     // Also check role saturation
     const roleCount = userTeam.players.filter(p => p.role === player.role).length;
     let roleSaturationFactor = 1.0;
+    let roleExplanation = "";
     if (roleCount >= 8) {
       roleSaturationFactor = 0.6; // already have plenty of this role, bid less!
+      roleExplanation = "ruolo già saturo";
     } else if (roleCount >= 5) {
       roleSaturationFactor = 0.8;
+      roleExplanation = "ruolo ben coperto";
     } else if (roleCount === 0) {
       roleSaturationFactor = 1.2; // desperately need at least one, bid more!
+      roleExplanation = "nessun giocatore comprato in questo ruolo (urgente)";
+    } else {
+      roleExplanation = `hai già ${roleCount} giocatori in questo ruolo`;
     }
     
     minPrice = Math.round(minPrice * teamFactor * roleSaturationFactor);
     maxPrice = Math.round(maxPrice * teamFactor * roleSaturationFactor);
+    
+    justificationParts.push(`budget residuo di ${remainingCredits} cr (${Math.round(avgCreditsPerPlayer)} cr/slot rimasti)`);
+    justificationParts.push(roleExplanation);
   }
   
   minPrice = Math.max(1, minPrice);
   maxPrice = Math.max(minPrice, maxPrice);
   
-  return { min: minPrice, max: maxPrice };
+  const justification = "Calcolato in base a: " + justificationParts.join(", ") + ".";
+  
+  return { min: minPrice, max: maxPrice, justification };
 }
 
 function calculateMaxBid(team) {
@@ -1184,6 +1217,13 @@ function normalizePlayerAnalysis(data) {
         nextOpponent: "Da verificare",
         criteriaText: "Analisi del turno in fase di elaborazione."
       },
+      groupAnalysis: {
+        groupName: "Da verificare",
+        qualificationProbability: "50%",
+        groupAnalysisText: "Analisi del girone in fase di elaborazione.",
+        postGroupPath: "Percorso post-gironi in fase di definizione."
+      },
+      expectedBonuses: "Nessun bonus specifico atteso segnalato.",
       alternatives: []
     };
   }
@@ -1238,29 +1278,29 @@ function normalizePlayerAnalysis(data) {
   }
   normalized.matchStrength = !isNaN(parseInt(strength)) ? parseInt(strength) : 50;
 
-  // 7. matchAnalysis object
+  // 7. matchAnalysis object (derived/retained for legacy)
   let rawMatch = normalized.matchAnalysis;
-  let opponent = 'Da verificare';
-  let criteria = 'Analisi del turno in fase di elaborazione.';
-
-  if (rawMatch && typeof rawMatch === 'object') {
-    opponent = rawMatch.nextOpponent || rawMatch.opponent || rawMatch.nextMatch || normalized.nextOpponent || normalized.opponent || normalized.vs || 'Da verificare';
-    criteria = rawMatch.criteriaText || rawMatch.description || rawMatch.text || rawMatch.criteria || normalized.criteriaText || normalized.criteria || 'Analisi del turno in fase di elaborazione.';
-  } else if (typeof rawMatch === 'string') {
-    criteria = rawMatch;
-    const match = rawMatch.match(/vs\s+([A-Za-zÀ-ÿ\s]+)/i);
-    opponent = match ? match[1].trim() : 'Da verificare';
-  } else {
-    opponent = normalized.nextOpponent || normalized.opponent || normalized.vs || 'Da verificare';
-    criteria = normalized.criteriaText || normalized.criteria || 'Analisi del turno in fase di elaborazione.';
-  }
-
+  let opponent = normalized.nextOpponent || (rawMatch && (rawMatch.nextOpponent || rawMatch.opponent || rawMatch.nextMatch)) || 'Da verificare';
+  let criteria = (rawMatch && (rawMatch.criteriaText || rawMatch.description || rawMatch.text)) || 'Analisi in fase di elaborazione.';
+  
   normalized.matchAnalysis = {
     nextOpponent: typeof opponent === 'string' ? opponent.trim() : 'Da verificare',
-    criteriaText: typeof criteria === 'string' ? criteria.trim() : 'Analisi del turno in fase di elaborazione.'
+    criteriaText: typeof criteria === 'string' ? criteria.trim() : 'Analisi in fase di elaborazione.'
   };
 
-  // 8. alternatives array
+  // 8. groupAnalysis object
+  let rawGroup = normalized.groupAnalysis || {};
+  normalized.groupAnalysis = {
+    groupName: rawGroup.groupName || normalized.groupName || 'Da verificare',
+    qualificationProbability: rawGroup.qualificationProbability || normalized.qualificationProbability || '50%',
+    groupAnalysisText: rawGroup.groupAnalysisText || rawGroup.analysisText || normalized.groupAnalysisText || 'Analisi del girone in fase di elaborazione.',
+    postGroupPath: rawGroup.postGroupPath || rawGroup.path || normalized.postGroupPath || 'Percorso post-gironi in fase di definizione.'
+  };
+
+  // 9. expectedBonuses
+  normalized.expectedBonuses = normalized.expectedBonuses || normalized.bonuses || 'Nessun bonus specifico atteso segnalato.';
+
+  // 10. alternatives array
   let alts = normalized.alternatives || normalized.alternativesList || normalized.concorrenti || [];
   if (!Array.isArray(alts)) {
     alts = [];
@@ -1621,13 +1661,17 @@ function renderTeamDashboard() {
       const sortedPlayers = [...t.players].sort((a, b) => rolePriority[a.role] - rolePriority[b.role] || a.name.localeCompare(b.name));
       
       sortedPlayers.forEach(p => {
+        const isEliminated = state.eliminatedCountries.includes(p.country);
         rosterHtml += `
-          <div class="mini-player-item">
-            <span class="mini-player-name">
-              ${p.name} <span style="color: var(--color-text-muted); font-size: 0.7rem;">(${p.country})</span>
-              ${state.eliminatedCountries.includes(p.country) ? ' <span style="font-size: 0.6rem; color: var(--color-danger); font-weight: 700;">[ELIMINATO]</span>' : ''}
+          <div class="mini-player-item ${isEliminated ? 'player-eliminated' : ''}">
+            <span class="mini-player-name" style="display: inline-flex; align-items: center; gap: 0.25rem;">
+              <span class="badge badge-${p.role.toLowerCase()}" style="font-size: 0.6rem; padding: 0.1rem 0.25rem; border-radius: 4px; display: inline-flex; flex-shrink: 0; line-height: 1;">${p.role}</span>
+              <span class="player-name-text" style="display: inline-block;">${p.name} <span style="color: var(--color-text-muted); font-size: 0.7rem;">(${p.country})</span></span>
             </span>
-            <span class="mini-player-cost" style="font-weight: 700; color: #fff;">${p.purchaseCost} cr</span>
+            <span class="mini-player-cost" style="font-weight: 700; color: #fff;">
+              ${isEliminated ? '<span style="color: var(--color-danger); font-weight: 700; margin-right: 0.35rem; font-size: 0.65rem; display: inline-block;">[ELIMINATO]</span>' : ''}
+              ${p.purchaseCost} cr
+            </span>
           </div>
         `;
       });
@@ -1642,10 +1686,6 @@ function renderTeamDashboard() {
         <div class="team-credits">${t.budget} <span>cr</span></div>
       </div>
       
-      <div class="team-max-bid-banner" style="background: ${isRosterFull ? 'rgba(239, 68, 68, 0.1)' : 'rgba(99, 102, 241, 0.12)'}; border-color: ${isRosterFull ? 'rgba(239, 68, 68, 0.25)' : 'rgba(99, 102, 241, 0.25)'};">
-        ${isRosterFull ? '<span style="color: var(--color-danger)">ROSA COMPLETA</span>' : `Offerta Massima: <span>${maxBid} cr</span>`}
-      </div>
-
       <div class="team-roles-progress">
         <div class="role-bar-container">
           <div class="role-bar-label">POR</div>
@@ -1665,9 +1705,18 @@ function renderTeamDashboard() {
         </div>
       </div>
 
-      <div class="team-players-mini">
-        <div style="font-size: 0.7rem; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase; margin-bottom: 0.25rem;">Roster (${totalCount}/35 giocatori)</div>
-        ${rosterHtml}
+      <!-- Toggle button for mobile -->
+      <button class="mobile-section-toggle" onclick="this.classList.toggle('open'); document.getElementById('roster-collapsible-${t.id}').classList.toggle('open');" style="margin-top: 0.75rem; margin-bottom: 0;">
+        <span>Roster (${totalCount}/35 giocatori)</span>
+        <svg class="toggle-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+      </button>
+
+      <!-- Collapsible wrapper -->
+      <div id="roster-collapsible-${t.id}" class="mobile-collapsible">
+        <div class="team-players-mini" style="border-top: none; padding-top: 0;">
+          <div class="desktop-only-roster-header" style="font-size: 0.7rem; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase; margin-bottom: 0.25rem; margin-top: 0.5rem;">Roster (${totalCount}/35 giocatori)</div>
+          ${rosterHtml}
+        </div>
       </div>
       <button class="btn btn-accent" style="width: 100%; margin-top: 0.75rem; font-size: 0.75rem; padding: 0.4rem 0.8rem;" onclick="showTeamPitch('${t.id}')">Visualizza Campo ⚽</button>
     `;
@@ -2972,16 +3021,17 @@ function renderPitchPopoverData(popover, name, country, role, rawData, triggerEl
       </div>
     </div>
 
-    <!-- Match details (Strength + Explanation) -->
+    <!-- Group Analysis -->
     <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.04); border-radius: 8px; padding: 0.4rem 0.5rem; margin-bottom: 0.5rem;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
-        <span style="font-size: 0.6rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em;">Prossimo Turno: vs ${data.matchAnalysis?.nextOpponent || 'N/D'}</span>
-        <div style="width: 22px; height: 22px; border-radius: 50%; background: ${strengthBg}; border: 1px solid ${strengthBorder}; color: ${strengthColor}; display: flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: 800;" title="Forza del turno: ${strength}/100">
-          ${strength}
-        </div>
+        <span style="font-size: 0.6rem; color: #10b981; text-transform: uppercase; font-weight: 800; letter-spacing: 0.04em;">Girone: ${data.groupAnalysis?.groupName || 'Girone'} 📊</span>
+        <span style="font-size: 0.68rem; font-weight: 800; color: #10b981;">Passaggio: ${data.groupAnalysis?.qualificationProbability || '50%'}</span>
       </div>
-      <div style="background: rgba(0, 0, 0, 0.15); border-left: 2px solid ${strengthColor}; padding: 0.35rem 0.45rem; border-radius: 4px; font-size: 0.65rem; color: var(--color-text-muted); line-height: 1.35; font-style: italic;">
-        ${data.matchAnalysis?.criteriaText || 'Parametri di forza non calcolati.'}
+      <p style="margin: 0 0 0.35rem 0; font-size: 0.65rem; line-height: 1.35; color: #fff; font-weight: 500;">
+        ${data.groupAnalysis?.groupAnalysisText || 'Analisi del girone non disponibile.'}
+      </p>
+      <div style="background: rgba(0, 0, 0, 0.15); border-left: 2px solid #10b981; padding: 0.3rem 0.4rem; border-radius: 4px; font-size: 0.62rem; color: var(--color-text-muted); line-height: 1.3;">
+        <strong>Percorso post-gironi:</strong> ${data.groupAnalysis?.postGroupPath || 'Non disponibile.'}
       </div>
     </div>
 
@@ -2991,6 +3041,12 @@ function renderPitchPopoverData(popover, name, country, role, rawData, triggerEl
       <p style="margin: 0; font-size: 0.65rem; line-height: 1.35; color: #fff; font-weight: 500;">
         ${data.formState || 'Nessuna notizia recente.'}
       </p>
+    </div>
+
+    <!-- Expected Bonuses -->
+    <div style="background: rgba(168, 85, 247, 0.04); border: 1px dashed rgba(168, 85, 247, 0.25); border-radius: 8px; padding: 0.4rem 0.5rem; margin-bottom: 0.5rem; font-size: 0.65rem;">
+      <span style="color: #c084fc; font-weight: 700; display: block; margin-bottom: 0.15rem;">🎁 Bonus Attesi:</span>
+      <span style="color: #fff; font-weight: 500;">${data.expectedBonuses || 'Nessun bonus atteso segnalato.'}</span>
     </div>
 
     <!-- Alternatives -->
@@ -3038,14 +3094,18 @@ async function showPitchPlayerTooltip(playerId, triggerEl, isMobile) {
 
   let shouldFetchInBg = false;
   if (cachedData) {
-    const opp = cachedData.matchAnalysis?.nextOpponent;
-    const isPlaceholderOpponent = !opp || 
-                                  opp === 'Da verificare' || 
-                                  opp === 'Da definire' || 
-                                  opp === 'Non disponibile' || 
-                                  opp === 'Da stabilire' ||
-                                  opp === 'N/D';
-    if (isPlaceholderOpponent) {
+    const grName = cachedData.groupAnalysis?.groupName;
+    const grText = cachedData.groupAnalysis?.groupAnalysisText;
+    const isPlaceholderGroup = !grName || 
+                               grName === 'Da verificare' || 
+                               grName === 'Da definire' || 
+                               grName === 'Non disponibile' || 
+                               grName === 'Da stabilire' ||
+                               grName === 'N/D' ||
+                               !grText ||
+                               grText.includes('in fase di elaborazione') ||
+                               grText.includes('non disponibile');
+    if (isPlaceholderGroup) {
       shouldFetchInBg = true;
     }
   }
@@ -3182,14 +3242,18 @@ async function showPlayerAIAnalysis(playerId, name, country, role, buttonEl, for
 
   let shouldFetchInBg = false;
   if (cachedData) {
-    const opp = cachedData.matchAnalysis?.nextOpponent;
-    const isPlaceholderOpponent = !opp || 
-                                  opp === 'Da verificare' || 
-                                  opp === 'Da definire' || 
-                                  opp === 'Non disponibile' || 
-                                  opp === 'Da stabilire' ||
-                                  opp === 'N/D';
-    if (isPlaceholderOpponent) {
+    const grName = cachedData.groupAnalysis?.groupName;
+    const grText = cachedData.groupAnalysis?.groupAnalysisText;
+    const isPlaceholderGroup = !grName || 
+                               grName === 'Da verificare' || 
+                               grName === 'Da definire' || 
+                               grName === 'Non disponibile' || 
+                               grName === 'Da stabilire' ||
+                               grName === 'N/D' ||
+                               !grText ||
+                               grText.includes('in fase di elaborazione') ||
+                               grText.includes('non disponibile');
+    if (isPlaceholderGroup) {
       shouldFetchInBg = true;
     }
   }
@@ -3321,7 +3385,6 @@ function renderPopoverLoading(popover, name) {
 
 function renderPopoverData(popover, name, country, role, rawData, buttonEl) {
   const data = normalizePlayerAnalysis(rawData);
-  const qpClass = data.valueForMoney ? data.valueForMoney.toLowerCase().replace(/[^a-z]/g, '') : 'buono';
 
   const categoryValue = (data.playerCategory || '').toLowerCase().trim();
   let categoryClass = 'buono';
@@ -3356,40 +3419,38 @@ function renderPopoverData(popover, name, country, role, rawData, buttonEl) {
   if (playerObj && !playerObj.ownerId) {
     const range = calculateIdealBidRange(playerObj);
     bidRangeHtml = `
-      <div class="ai-bid-range-section" style="background: rgba(245, 158, 11, 0.06); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 8px; padding: 0.5rem 0.6rem; margin-bottom: 0.55rem; display: flex; justify-content: space-between; align-items: center;">
-        <span style="font-size: 0.62rem; color: #f59e0b; text-transform: uppercase; font-weight: 800; letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.25rem;">Offerta Ideale Consigliata 💡</span>
-        <span style="font-size: 0.8rem; font-weight: 800; color: #f59e0b; font-family: monospace;">${range.min} - ${range.max} cr</span>
+      <div class="ai-bid-range-container" style="margin-bottom: 0.55rem;">
+        <div class="ai-bid-range-section" style="background: rgba(245, 158, 11, 0.06); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 8px; padding: 0.5rem 0.6rem; display: flex; justify-content: space-between; align-items: center; border-bottom-left-radius: 0; border-bottom-right-radius: 0;">
+          <span style="font-size: 0.62rem; color: #f59e0b; text-transform: uppercase; font-weight: 800; letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.25rem;">Offerta Ideale Consigliata 💡</span>
+          <span style="font-size: 0.8rem; font-weight: 800; color: #f59e0b; font-family: monospace;">${range.min} - ${range.max} cr</span>
+        </div>
+        <div style="background: rgba(245, 158, 11, 0.02); border: 1px solid rgba(245, 158, 11, 0.15); border-top: none; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; padding: 0.4rem 0.5rem; font-size: 0.62rem; color: var(--color-text-muted); line-height: 1.35;">
+          ${range.justification}
+        </div>
       </div>
     `;
   }
 
-  // 2. Format Next Match and 1-100 Strength Circle
-  const nextOpp = data.matchAnalysis?.nextOpponent || 'Non disponibile';
+  // 2. Format Group Analysis block
   const strength = parseInt(data.matchStrength) || 50;
-  
   let strengthColor = '#f43f5e'; // Red/Rose
-  let strengthBg = 'rgba(244, 63, 94, 0.12)';
-  let strengthBorder = 'rgba(244, 63, 94, 0.3)';
   if (strength >= 80) {
     strengthColor = '#10b981'; // Emerald
-    strengthBg = 'rgba(16, 185, 129, 0.12)';
-    strengthBorder = 'rgba(16, 185, 129, 0.3)';
   } else if (strength >= 50) {
     strengthColor = '#f59e0b'; // Amber
-    strengthBg = 'rgba(245, 158, 11, 0.12)';
-    strengthBorder = 'rgba(245, 158, 11, 0.3)';
   }
 
-  const nextMatchHtml = `
-    <div class="ai-next-match-section" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.04); border-radius: 8px; padding: 0.5rem 0.6rem; margin-bottom: 0.55rem;">
+  const groupAnalysisHtml = `
+    <div class="ai-group-analysis-section" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.04); border-radius: 8px; padding: 0.5rem 0.6rem; margin-bottom: 0.55rem;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
-        <span style="font-size: 0.62rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em;">Prossimo Turno: vs ${nextOpp} 📅</span>
-        <div style="width: 26px; height: 26px; border-radius: 50%; background: ${strengthBg}; border: 1px solid ${strengthBorder}; color: ${strengthColor}; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 800;" title="Forza relativa per il turno: ${strength}/100">
-          ${strength}
-        </div>
+        <span style="font-size: 0.62rem; color: #10b981; text-transform: uppercase; font-weight: 800; letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.25rem;">Analisi Girone: ${data.groupAnalysis?.groupName || 'Girone'} 📊</span>
+        <span style="font-size: 0.72rem; font-weight: 800; color: #10b981;">Passaggio: ${data.groupAnalysis?.qualificationProbability || '50%'}</span>
       </div>
-      <div style="background: rgba(0, 0, 0, 0.2); border-left: 2px solid ${strengthColor}; padding: 0.4rem 0.5rem; border-radius: 4px; font-size: 0.68rem; color: var(--color-text-muted); line-height: 1.4; font-style: italic;">
-        ${data.matchAnalysis?.criteriaText || 'Criteri di calcolo della forza del turno non disponibili.'}
+      <p style="margin: 0 0 0.4rem 0; font-size: 0.68rem; line-height: 1.4; color: #fff; font-weight: 500;">
+        ${data.groupAnalysis?.groupAnalysisText || 'Analisi del girone non disponibile.'}
+      </p>
+      <div style="background: rgba(0, 0, 0, 0.15); border-left: 2px solid #10b981; padding: 0.35rem 0.45rem; border-radius: 4px; font-size: 0.65rem; color: var(--color-text-muted); line-height: 1.35;">
+        <strong>Percorso post-gironi:</strong> ${data.groupAnalysis?.postGroupPath || 'Percorso non disponibile.'}
       </div>
     </div>
   `;
@@ -3449,8 +3510,8 @@ function renderPopoverData(popover, name, country, role, rawData, buttonEl) {
         <span class="ai-stat-value" title="${data.starterProbability || 'N/D'}">${data.starterProbability || 'N/D'}</span>
       </div>
       <div class="ai-stat-card">
-        <span class="ai-stat-label">Rapporto Q/P</span>
-        <span class="ai-stat-value badge-qp-${qpClass}">${data.valueForMoney || 'N/D'}</span>
+        <span class="ai-stat-label">Forza Giocatore ⭐</span>
+        <span class="ai-stat-value" style="color: ${strengthColor}; font-weight: 800;">${strength}/100</span>
       </div>
     </div>
 
@@ -3464,7 +3525,7 @@ function renderPopoverData(popover, name, country, role, rawData, buttonEl) {
 
     ${bidRangeHtml}
 
-    ${nextMatchHtml}
+    ${groupAnalysisHtml}
 
     ${alternativesHtml}
 
@@ -3477,7 +3538,13 @@ function renderPopoverData(popover, name, country, role, rawData, buttonEl) {
 
     <div class="ai-profile-section">
       <span class="ai-stat-label" style="display:block; margin-bottom:0.25rem">Profilo Calciatore</span>
-      <p class="ai-profile-text" style="font-size: 0.68rem; line-height: 1.4; color: var(--color-text-muted); margin: 0;">${data.description || 'Nessuna descrizione disponibile.'}</p>
+      <p class="ai-profile-text" style="font-size: 0.68rem; line-height: 1.4; color: var(--color-text-muted); margin: 0 0 0.45rem 0;">${data.description || 'Nessuna descrizione disponibile.'}</p>
+      
+      <div style="background: rgba(168, 85, 247, 0.05); border: 1px dashed rgba(168, 85, 247, 0.25); border-radius: 6px; padding: 0.4rem 0.5rem; font-size: 0.65rem;">
+        <span style="color: #c084fc; font-weight: 700; display: block; margin-bottom: 0.15rem;">🎁 Bonus Attesi:</span>
+        <span style="color: #fff; font-weight: 500;">${data.expectedBonuses || 'Nessun bonus atteso segnalato.'}</span>
+      </div>
+    </div>
     </div>
   `;
 

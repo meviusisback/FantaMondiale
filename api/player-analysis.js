@@ -62,7 +62,6 @@ Regole FantaMondiale per formulare la tua risposta:
    - Se la sua nazionale è inclusa nell'elenco di quelle eliminate o non partecipa (incluso in 'ELIMINATED_COUNTRIES'):
      * Imposta la chiave 'starterProbability' tassativamente a '0%'.
      * Imposta la chiave 'playerCategory' tassativamente a 'scarso'.
-     * Imposta la chiave 'valueForMoney' tassativamente a 'Sopravvalutato'.
      * Modifica la chiave 'description' iniziando obbligatoriamente con la dicitura in maiuscolo: "ELIMINATO: [Spiegazione del fatto che la nazionale non partecipa o è stata eliminata]". Il resto della descrizione deve riflettere questa inutilizzabilità fantacalcistica.
 
 Fornisci i dati strutturati RIGOROSAMENTE in formato JSON con le seguenti chiavi:
@@ -70,16 +69,19 @@ Fornisci i dati strutturati RIGOROSAMENTE in formato JSON con le seguenti chiavi
 ${appearancesJsonDesc}
 - starterProbability: stima percentuale (es. "85%" o "30%") che giochi effettivamente come titolare durante questo Mondiale.
 - playerCategory: la classificazione del giocatore a livello FantaMondiale (scegli rigorosamente tra: "scarso", "accettabile", "buono", "ottimo", "stella"). Assegna il valore valutando attentamente i criteri definiti sopra.
-- valueForMoney: valutazione sintetica del rapporto qualità/prezzo all'asta FantaMondiale (scegli rigorosamente tra: "Ottimo", "Buono", "Rischioso", "Sopravvalutato").
 - formState: una breve descrizione testuale (1 riga o massimo 2 frasi) dello stato di forma e notizie reali del calciatore aggiornate a questa settimana. **DIVIETO ASSOLUTO:** Non descrivere le caratteristiche generiche del giocatore o che tipo di giocatore è (es. NON scrivere "è un attaccante tecnico", "un terzino veloce", o simili). Devi indicare **esclusivamente e tassativamente** lo stato di forma fisica attuale, notizie reali su infortuni, convocazioni, allenamento, ultime prestazioni sul campo e se partirà titolare o meno (es. "Fisicamente al top dopo l'ultimo gol in campionato", "Recuperato dal risentimento muscolare, si allena regolarmente", "In ottima forma ma partirà dalla panchina in questo turno"). Per i panchinari attivi non scrivere 'ELIMINATO', ma scrivi semplicemente che non giocherà o partirà dalla panchina.
 - description: descrizione del profilo del calciatore, valutando le performance recenti e le aspettative/performance al Mondiale in ottica FantaMondiale (2-3 frasi chiare).
+- expectedBonuses: una breve descrizione testuale (1-2 frasi) dei bonus fantacalcistici attesi dal calciatore (es. rigori, calci di punizione, assist da piazzato, colpi di testa, gol da inserimento) in base alla sua storia calcistica e al suo ruolo.
 - alternatives: un array di massimo 2 oggetti reali rappresentanti i calciatori alternativi nello stesso ruolo in quella specifica Nazionale che potrebbero insidiare la titolarità, con le chiavi: name (nome dell'alternativa) e playProbability (probabilità percentuale, es: "35%").
   * **REQUISITO MATEMATICO DEL 100% (MANDATORIO E CRUCIALE):** La somma tra la probabilità di essere titolare del giocatore oggetto di analisi (\`starterProbability\` / es. 85%) e le probabilità di impiego/titolarietà delle alternative concorrenti indicate in \`alternatives\` (es. 15%) **deve essere tassativamente pari al 100% in totale** (ad esempio: se il titolare analizzato ha l'80%, le alternative devono sommare esattamente al 20%; se il titolare ha il 90%, l'alternativa concorrente deve avere il 10%; ecc.).
   * **COMPOSIZIONE ALTERNATIVE (MANDATORIA):** Questa lista deve **sempre** contenere esattamente 1 o 2 concorrenti reali dello stesso ruolo in quella Nazionale (es. per Lukaku indica Openda; per Haaland indica Strand Larsen o Sørloth; per Courtois indica Casteels e Sels) che andranno in panchina se gioca il titolare analizzato. NON lasciare mai l'array vuoto per i giocatori attivi.
-- matchStrength: valore numerico (intero da 1 a 100) che indichi la forza relativa del calciatore in questo specifico prossimo turno in base a valore, forma recente, livello dell'avversario reale del prossimo turno, probabilità di bonus e importanza del match. NOTA: in caso di partita proibitiva o avversario durissimo, questo valore deve scendere drasticamente.
-- matchAnalysis: un oggetto strutturato con le seguenti chiavi:
-  - nextOpponent: la nazionale avversaria reale del prossimo turno (es: "Francia", "Spagna"). **REGOLA CRUCIALE E MANDATORIA:** Deve trattarsi tassativamente del nome proprio di una reale nazionale di calcio (es. "Brasile", "Francia", "Spagna"). **DIVIETO ASSOLUTO:** È severamente e totalmente vietato usare termini generici, placeholders o diciture di gironi (come ad esempio "Avversario Girone", "Fase a gironi", "Girone E", "Avversario del girone", "TBD" o "Nessuno"). **FALLBACK MANDATORIO:** Se la ricerca online non fornisce con certezza l'avversario esatto del prossimo turno, identifica il girone reale della nazionale del calciatore nel Mondiale 2026 ed indica come avversario uno degli altri 3 paesi reali presenti in tale girone (es. se analizzi un giocatore del Belgio e non trovi la partita esatta, indica "Slovacchia" o "Romania" che sono nel suo stesso girone reale, mai scrivere diciture generiche).
-  - criteriaText: spiegazione dettagliata ed esplicita (in 2-3 frasi chiare) dei criteri e dei parametri considerati per formulare il punteggio numerico di forza (es. spiegando come la forma e l'avversario prossimo influenzano il voto da 1 a 100).
+- matchStrength: valore numerico (intero da 1 a 100) che indichi la forza relativa del calciatore in questo Mondiale come voto di base (da 1 a 100).
+- nextOpponent: la nazionale avversaria reale del prossimo turno (es: "Francia", "Spagna"). **REGOLA CRUCIALE E MANDATORIA:** Deve trattarsi tassativamente del nome proprio di una reale nazionale di calcio (es. "Brasile", "Francia", "Spagna"). **DIVIETO ASSOLUTO:** È severamente e totalmente vietato usare termini generici, placeholders o diciture di gironi. **FALLBACK MANDATORIO:** Se la ricerca online non fornisce con certezza l'avversario esatto del prossimo turno, identifica il girone reale della nazionale del calciatore nel Mondiale 2026 ed indica come avversario uno degli altri 3 paesi reali presenti in tale girone.
+- groupAnalysis: un oggetto strutturato con le seguenti chiavi:
+  - groupName: il nome del girone reale (es. "Girone A", "Girone B").
+  - qualificationProbability: stima percentuale (es. "80%", "35%") di probabilità della sua Nazionale di passare il turno di girone e qualificarsi agli ottavi di finale.
+  - groupAnalysisText: spiegazione dettagliata (2-3 frasi) del girone in cui si trova la sua Nazionale, analizzando la forza delle avversarie del girone per capire se ha buone probabilità di passare o meno.
+  - postGroupPath: analisi dettagliata (2 frasi) di dove e contro chi finirebbe a giocare nei turni successivi dopo la fase a gironi (es. "Passando come prima del Girone B, sfiderebbe a San Francisco la seconda del Girone A, con possibili quarti a Boston contro la Spagna").
 
 Rispondi esclusivamente con il codice JSON, senza alcun blocco di codice markdown o testo introduttivo.`;
 
@@ -180,15 +182,18 @@ Rispondi esclusivamente con il codice JSON, senza alcun blocco di codice markdow
     if (ELIMINATED_COUNTRIES.includes(country)) {
       parsedData.starterProbability = "0%";
       parsedData.playerCategory = "scarso";
-      parsedData.valueForMoney = "Sopravvalutato";
       parsedData.description = `ELIMINATO: La nazionale dell'${country} non partecipa o è stata eliminata da questo Mondiale. Il calciatore non è utilizzabile fantacalcisticamente.`;
       parsedData.formState = `La nazionale dell'${country} è esclusa dal Mondiale.`;
       parsedData.matchStrength = 0;
-      parsedData.alternatives = [];
-      parsedData.matchAnalysis = {
-        nextOpponent: "Nessuno",
-        criteriaText: "La nazionale di appartenenza è stata eliminata o non partecipa al Mondiale."
+      parsedData.nextOpponent = "Nessuno";
+      parsedData.expectedBonuses = "Nessun bonus atteso (nazionale eliminata).";
+      parsedData.groupAnalysis = {
+        groupName: "Eliminato",
+        qualificationProbability: "0%",
+        groupAnalysisText: "La nazionale di appartenenza è stata eliminata o non partecipa al Mondiale.",
+        postGroupPath: "Nessun percorso disponibile."
       };
+      parsedData.alternatives = [];
     }
 
     return res.status(200).json(parsedData);

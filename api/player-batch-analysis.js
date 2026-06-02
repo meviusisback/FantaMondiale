@@ -42,12 +42,10 @@ REGOLE DI ACCURATEZZA CRONOLOGICA E VERIFICA NEWS (MANDATORIE E CRUCIALI):
 REGOLE DI ESATTEZZA NUMERICA DELLE PRESENZE (CRUCIALE):
 - Per la chiave 'appearances' di ogni calciatore, devi identificare tramite ricerca statistica reale il numero ESATTO di presenze registrate in campionato nella stagione calcistica più recente 2025/2026 (escludendo coppe nazionali o coppe continentali).
   * Se il ruolo è 'POR', riporta: presenze, clean sheet e gol subiti (es. "34 presenze, 12 clean sheet, 28 gol subiti nella stagione 25/26").
-  * Per tutti gli altri ruoli, riporta: presenze, gol e assist (es. "32 presenze, 10 gol, 4 assist in campionato nella stagione 25/26").
   * Se dopo molteplici tentativi non trovi dati certi, scrivi "Dati non disponibili nella stagione 25/26".
 
 REGOLE DI VALUTAZIONE E CATEGORIA:
 - Scegli la 'playerCategory' rigorosamente tra: "scarso", "accettabile", "buono", "ottimo", "stella".
-- Scegli 'valueForMoney' rigorosamente tra: "Ottimo", "Buono", "Rischioso", "Sopravvalutato".
 - Sotto 'alternatives', includi sempre esattamente 1 o 2 concorrenti reali dello stesso ruolo in quella Nazionale (es. Casteels per Courtois; Openda per Lukaku; Strand Larsen per Haaland).
   * **MATEMATICA AL 100% (CRUCIALE):** La somma tra 'starterProbability' del calciatore analizzato (es. 80%) e le 'playProbability' dei suoi concorrenti (es. 20%) deve essere tassativamente pari al 100%.
 
@@ -60,11 +58,15 @@ Nazioni attualmente eliminate o assenti dal Mondiale ad oggi: ${ELIMINATED_COUNT
   * Imposta 'matchStrength' tassativamente a 0.
   * Inizia 'formState' con la dicitura: "ELIMINATO: [Spiegazione dettagliata]".
 
-VALUTAZIONE PROSSIMO TURNO (matchStrength & matchAnalysis):
-- **matchStrength**: valore numerico da 1 a 100 che indichi la forza relativa del calciatore specificamente per il prossimo turno in base a valore, forma e livello dell'avversario reale. NOTA: in caso di partita proibitiva o avversario durissimo, questo valore deve scendere drasticamente.
-- **matchAnalysis**:
-  - **nextOpponent**: deve trattarsi tassativamente ed esclusivamente del nome proprio di una reale nazionale di calcio (es. "Brasile", "Francia", "Spagna"). **DIVIETO ASSOLUTO:** È severamente vietato usare diciture generiche o di gironi (come "Avversario Girone", "Fase a gironi", "Girone E", "TBD"). **FALLBACK MANDATORIO:** Se non trovi la partita esatta, identifica il girone reale della nazione nel Mondiale 2026 ed indica uno degli altri 3 paesi presenti in tale girone.
-  - **criteriaText**: spiegazione esplicita in 2-3 frasi del punteggio di forza e dei criteri considerati.
+VALUTAZIONE E ANALISI STRATEGICA:
+- **matchStrength**: valore numerico da 1 a 100 che indichi la forza relativa del calciatore in questo Mondiale come voto di base (da 1 a 100).
+- **nextOpponent**: deve trattarsi tassativamente ed esclusivamente del nome proprio di una reale nazionale di calcio (es. "Brasile", "Francia", "Spagna"). Se non trovi la partita esatta, indica uno degli altri 3 paesi presenti in tale girone.
+- **expectedBonuses**: breve descrizione (1-2 frasi) dei bonus fantacalcistici attesi (es. gol, assist, rigori, punizioni).
+- **groupAnalysis**:
+  - **groupName**: nome del girone reale (es: "Girone A", "Girone B").
+  - **qualificationProbability**: stima percentuale chance qualificazione (es: "85%", "40%").
+  - **groupAnalysisText**: spiegazione di 2-3 frasi del girone, la forza degli avversari e probabilità di superarlo.
+  - **postGroupPath**: analisi di dove finirebbe a giocare e contro chi dopo i gironi (es. ottavi, quarti).
 
 FORMATO DELLA RISPOSTA (MANDATORIO):
 Fornisci la risposta RIGOROSAMENTE in formato JSON con la seguente struttura esatta (sostituendo le chiavi con i reali ID forniti nella lista sopra):
@@ -73,13 +75,16 @@ Fornisci la risposta RIGOROSAMENTE in formato JSON con la seguente struttura esa
     "id_del_giocatore_1": {
       "playerCategory": "stella",
       "starterProbability": "90%",
-      "valueForMoney": "Ottimo",
       "appearances": "32 presenze, 10 gol in campionato nella stagione 25/26",
-      "formState": "Descrizione fisica dello stato di forma e notizie reali su infortuni, allenamento o prestazioni di questa settimana (2 frasi max). DIVIETO ASSOLUTO: Non descrivere le sue caratteristiche generiche o che tipo di giocatore è.",
+      "formState": "Descrizione fisica dello stato di forma e notizie reali su infortuni di questa settimana (2 frasi max). DIVIETO ASSOLUTO: Non descrivere le sue caratteristiche generiche.",
       "matchStrength": 85,
-      "matchAnalysis": {
-        "nextOpponent": "Spagna",
-        "criteriaText": "Spiegazione esplicita del perché ha quel punteggio per questo turno in relazione all'avversario specifico."
+      "nextOpponent": "Spagna",
+      "expectedBonuses": "Gol su punizione e assist da fermo.",
+      "groupAnalysis": {
+        "groupName": "Girone B",
+        "qualificationProbability": "80%",
+        "groupAnalysisText": "Girone equilibrato con Spagna, Croazia e Albania, ma l'Italia ha buone chance di qualificazione.",
+        "postGroupPath": "Passando come seconda sfiderebbe la prima del Girone A a Berlino negli ottavi."
       },
       "alternatives": [
         {
@@ -216,13 +221,16 @@ Rispondi esclusivamente con il codice JSON, senza alcun blocco di codice markdow
         parsedData.playersAnalysis[p.id] = {
           playerCategory: "scarso",
           starterProbability: "0%",
-          valueForMoney: "Sopravvalutato",
           appearances: parsedData.playersAnalysis[p.id]?.appearances || "Dati non disponibili nella stagione 25/26",
           formState: `ELIMINATO: La nazionale dell'${p.country} non partecipa o è stata eliminata dal Mondiale 2026.`,
           matchStrength: 0,
-          matchAnalysis: {
-            nextOpponent: "Nessuno",
-            criteriaText: "La nazionale di appartenenza è stata eliminata o non partecipa al Mondiale."
+          nextOpponent: "Nessuno",
+          expectedBonuses: "Nessun bonus atteso (nazionale eliminata).",
+          groupAnalysis: {
+            groupName: "Eliminato",
+            qualificationProbability: "0%",
+            groupAnalysisText: "La nazionale di appartenenza è stata eliminata o non partecipa al Mondiale.",
+            postGroupPath: "Nessun percorso disponibile."
           },
           alternatives: []
         };
@@ -233,13 +241,16 @@ Rispondi esclusivamente con il codice JSON, senza alcun blocco di codice markdow
         parsedData.playersAnalysis[p.id] = {
           playerCategory: "buono",
           starterProbability: "50%",
-          valueForMoney: "Buono",
           appearances: "Dati non disponibili nella stagione 25/26",
           formState: "Valutazione in corso.",
           matchStrength: 50,
-          matchAnalysis: {
-            nextOpponent: "Da verificare",
-            criteriaText: "Analisi non disponibile per questo turno."
+          nextOpponent: "Da verificare",
+          expectedBonuses: "Nessun bonus atteso specificato.",
+          groupAnalysis: {
+            groupName: "Da verificare",
+            qualificationProbability: "50%",
+            groupAnalysisText: "Analisi del girone non disponibile.",
+            postGroupPath: "Percorso post-gironi da definire."
           },
           alternatives: []
         };
