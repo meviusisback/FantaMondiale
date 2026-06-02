@@ -97,7 +97,9 @@ let state = {
   teamIdealLineups: {},
   isAdmin: false,
   activeCloudSessionMetadata: null,
-  eliminatedCountries: ['Italia', 'Egitto', 'Nigeria']
+  eliminatedCountries: ['Italia', 'Egitto', 'Nigeria'],
+  tournament: null,
+  tournamentTab: 'gironi'
 };
 
 // --- DOM ELEMENTS CACHE & SELECTORS ---
@@ -175,7 +177,13 @@ const dom = {
 
   // Notifications
   toast: null,
-  checkboxUserTeam: null
+  checkboxUserTeam: null,
+  btnSimGroups: null,
+  btnSimAll: null,
+  btnSimAI: null,
+  btnResetTournament: null,
+  subtabGroups: null,
+  subtabBracket: null
 };
 
 // --- INITIALIZATION ---
@@ -204,6 +212,7 @@ document.addEventListener('DOMContentLoaded', () => {
     })
     .catch(err => console.log('Could not fetch eliminated countries, using defaults.'));
 
+  initializeTournament();
   renderAll();
 
   // Open the startup onboarding cloud dialog modal
@@ -276,6 +285,13 @@ function initDOM() {
   
   dom.toast = document.getElementById('toast-notification');
   dom.checkboxUserTeam = document.getElementById('checkbox-user-team');
+
+  dom.btnSimGroups = document.getElementById('btn-sim-groups');
+  dom.btnSimAll = document.getElementById('btn-sim-all');
+  dom.btnSimAI = document.getElementById('btn-sim-ai');
+  dom.btnResetTournament = document.getElementById('btn-reset-tournament');
+  dom.subtabGroups = document.getElementById('subtab-groups');
+  dom.subtabBracket = document.getElementById('subtab-bracket');
 
   // Fill config elements from state
   dom.configBudget.value = state.settings.budget;
@@ -504,8 +520,27 @@ function setupEventListeners() {
         if (isDialogContent) return;
         dialog.close();
       });
-    }
   });
+
+  // Tournament simulator event listeners
+  if (dom.btnSimGroups) dom.btnSimGroups.addEventListener('click', simulateGroups);
+  if (dom.btnSimAll) dom.btnSimAll.addEventListener('click', simulateEntireTournament);
+  if (dom.btnSimAI) dom.btnSimAI.addEventListener('click', simulateAiPrediction);
+  if (dom.btnResetTournament) dom.btnResetTournament.addEventListener('click', resetTournament);
+
+  if (dom.subtabGroups) {
+    dom.subtabGroups.addEventListener('click', () => {
+      state.tournamentTab = 'gironi';
+      renderTournament();
+    });
+  }
+
+  if (dom.subtabBracket) {
+    dom.subtabBracket.addEventListener('click', () => {
+      state.tournamentTab = 'tabellone';
+      renderTournament();
+    });
+  }
 }
 
 // --- STATE ACTIONS ---
@@ -518,6 +553,9 @@ function switchTab(tabId) {
   dom.tabContents.forEach(content => {
     content.classList.toggle('active', content.id === `tab-${tabId}`);
   });
+  if (tabId === 'tabellone') {
+    renderTournament();
+  }
 }
 
 function saveConfig() {
@@ -596,6 +634,7 @@ function handlePlayerDatabaseImport(e) {
         return;
       }
       state.players = parsedPlayers;
+      initializeTournament(true);
       autoSave();
       renderAll();
       showToast(`Caricati con successo ${parsedPlayers.length} giocatori!`, 'success');
@@ -725,6 +764,8 @@ function handleSessionImport(e) {
         state.activeTeamId = null;
       }
 
+      state.tournament = imported.tournament || null;
+      
       autoSave();
       renderAll();
       showToast('Sessione ripristinata con successo!', 'success');
@@ -767,6 +808,7 @@ function resetSession() {
   });
 
   state.teamIdealLineups = {};
+  initializeTournament(true);
 
   autoSave();
   renderAll();
@@ -806,7 +848,8 @@ function autoSave() {
               settings: state.settings,
               teams: state.teams,
               players: state.players,
-              teamIdealLineups: state.teamIdealLineups || {}
+              teamIdealLineups: state.teamIdealLineups || {},
+              tournament: state.tournament || null
             }
           })
         })
@@ -867,6 +910,7 @@ async function autoLoadCloudSession(id) {
     });
     state.players = result.players;
     state.teamIdealLineups = result.teamIdealLineups || {};
+    state.tournament = result.tournament || null;
     state.activeCloudSessionId = id;
     state.cloudSessionPassword = cachedPassword;
 
@@ -2761,6 +2805,7 @@ async function loadSpecificCloudSession(id, skipConfirm = false) {
     });
     state.players = result.players;
     state.teamIdealLineups = result.teamIdealLineups || {};
+    state.tournament = result.tournament || null;
     state.activeCloudSessionId = id;
     state.cloudSessionPassword = password;
 
@@ -4459,3 +4504,629 @@ window.loadStartupCloudSession = loadStartupCloudSession;
 window.resetSessionClean = resetSessionClean;
 window.loginAsAdmin = loginAsAdmin;
 window.logoutCloudSession = logoutCloudSession;
+
+// --- TOURNAMENT SIMULATOR AND BRACKET FUNCTIONS ---
+
+function initializeTournament(force = false) {
+  if (state.tournament && !force) {
+    return;
+  }
+
+  // Get unique countries in the players database (only those with players)
+  const dbCountries = [...new Set(state.players.map(p => p.country).filter(Boolean))];
+
+  // Base tournament teams list (Group A to H, 4 per group)
+  const defaultGroups = {
+    A: ['Paesi Bassi', 'Egitto', 'Senegal', 'Canada'],
+    B: ['Inghilterra', 'USA', 'Nigeria', 'Iran'],
+    C: ['Argentina', 'Polonia', 'Messico', 'Arabia Saudita'],
+    D: ['Francia', 'Australia', 'Danimarca', 'Tunisia'],
+    E: ['Spagna', 'Germania', 'Giappone', 'Turchia'],
+    F: ['Belgio', 'Croazia', 'Marocco', 'Norvegia'],
+    G: ['Brasile', 'Svizzera', 'Serbia', 'Camerun'],
+    H: ['Portogallo', 'Uruguay', 'Corea del Sud', 'Italia']
+  };
+
+  // Convert defaultGroups to a flat list of teams for easier replacement
+  let currentTeams = [];
+  for (const groupKey in defaultGroups) {
+    defaultGroups[groupKey].forEach(teamName => {
+      currentTeams.push({ name: teamName, group: groupKey });
+    });
+  }
+
+  // Find which of dbCountries are NOT in currentTeams
+  const missingCountries = dbCountries.filter(c => !currentTeams.some(t => t.name === c));
+
+  if (missingCountries.length > 0) {
+    // Count players for each current team
+    const teamPlayerCounts = currentTeams.map(t => {
+      const count = state.players.filter(p => p.country === t.name).length;
+      return { team: t, count: count };
+    });
+
+    // Sort by count ascending, so we replace teams with 0 players first
+    teamPlayerCounts.sort((a, b) => a.count - b.count);
+
+    // Replace the teams with the lowest count
+    missingCountries.forEach((c, idx) => {
+      if (idx < teamPlayerCounts.length) {
+        const teamToReplace = teamPlayerCounts[idx].team;
+        teamToReplace.name = c;
+      }
+    });
+  }
+
+  // Re-group currentTeams into A-H
+  const finalGroups = { A: [], B: [], C: [], D: [], E: [], F: [], G: [], H: [] };
+  currentTeams.forEach(t => {
+    if (finalGroups[t.group]) {
+      finalGroups[t.group].push(t.name);
+    }
+  });
+
+  state.tournament = {
+    groups: finalGroups,
+    knockout: {
+      r16: Array(8).fill(null),
+      qf: Array(4).fill(null),
+      sf: Array(2).fill(null),
+      final: null
+    },
+    showAiProbabilities: false
+  };
+}
+
+function getTeamRating(teamName) {
+  const baseRatings = {
+    'Francia': 94, 'Argentina': 93, 'Brasile': 92, 'Inghilterra': 92, 'Spagna': 91,
+    'Portogallo': 90, 'Germania': 89, 'Belgio': 88, 'Paesi Bassi': 88, 'Italia': 87,
+    'Marocco': 86, 'Croazia': 86, 'Uruguay': 85, 'Giappone': 83, 'Danimarca': 82,
+    'Svizzera': 82, 'Senegal': 82, 'Turchia': 82, 'USA': 81, 'Nigeria': 81,
+    'Norvegia': 80, 'Polonia': 80, 'Messico': 80, 'Corea del Sud': 79, 'Egitto': 78,
+    'Serbia': 78, 'Camerun': 77, 'Canada': 77, 'Ghana': 76, 'Ecuador': 76,
+    'Australia': 76, 'Tunisia': 75, 'Arabia Saudita': 74, 'Costa Rica': 74,
+    'Iran': 73, 'Qatar': 70
+  };
+
+  let rating = baseRatings[teamName] || 78;
+
+  if (state.players && Array.isArray(state.players)) {
+    const nationPlayers = state.players.filter(p => p.country === teamName);
+    if (nationPlayers.length > 0) {
+      const sortedVals = nationPlayers.map(p => p.initialValue || 1).sort((a, b) => b - a);
+      const topAvg = sortedVals.slice(0, 3).reduce((sum, v) => sum + v, 0) / Math.min(3, sortedVals.length);
+      const boost = Math.min(5, topAvg / 8);
+      rating += boost;
+    }
+  }
+
+  if (state.eliminatedCountries && state.eliminatedCountries.includes(teamName)) {
+    rating = 10;
+  }
+
+  return rating;
+}
+
+function getTournamentTree() {
+  const groups = state.tournament.groups;
+  const ko = state.tournament.knockout;
+
+  const r16Matches = [
+    [groups.A[0], groups.B[1]], // Match 0: 1A vs 2B
+    [groups.C[0], groups.D[1]], // Match 1: 1C vs 2D
+    [groups.E[0], groups.F[1]], // Match 2: 1E vs 2F
+    [groups.G[0], groups.H[1]], // Match 3: 1G vs 2H
+    [groups.B[0], groups.A[1]], // Match 4: 1B vs 2A
+    [groups.D[0], groups.C[1]], // Match 5: 1D vs 2C
+    [groups.F[0], groups.E[1]], // Match 6: 1F vs 2E
+    [groups.H[0], groups.G[1]]  // Match 7: 1H vs 2G
+  ];
+
+  const qfMatches = [
+    [ko.r16[0], ko.r16[1]], // QF 0: Winner M0 vs Winner M1
+    [ko.r16[2], ko.r16[3]], // QF 1: Winner M2 vs Winner M3
+    [ko.r16[4], ko.r16[5]], // QF 2: Winner M4 vs Winner M5
+    [ko.r16[6], ko.r16[7]]  // QF 3: Winner M6 vs Winner M7
+  ];
+
+  const sfMatches = [
+    [ko.qf[0], ko.qf[1]], // SF 0: Winner QF0 vs Winner QF1
+    [ko.qf[2], ko.qf[3]]  // SF 1: Winner QF2 vs Winner QF3
+  ];
+
+  const finalMatch = [ko.sf[0], ko.sf[1]];
+
+  return {
+    r16: r16Matches,
+    qf: qfMatches,
+    sf: sfMatches,
+    final: finalMatch
+  };
+}
+
+function validateKnockoutWinners() {
+  if (!state.tournament) return false;
+
+  let changed = false;
+  for (let step = 0; step < 4; step++) {
+    const tree = getTournamentTree();
+    const ko = state.tournament.knockout;
+
+    if (step === 0) {
+      for (let i = 0; i < 8; i++) {
+        if (ko.r16[i] !== null) {
+          const parts = tree.r16[i];
+          if (!parts.includes(ko.r16[i]) || parts.includes(undefined) || parts.includes(null)) {
+            ko.r16[i] = null;
+            changed = true;
+          }
+        }
+      }
+    } else if (step === 1) {
+      for (let i = 0; i < 4; i++) {
+        if (ko.qf[i] !== null) {
+          const parts = tree.qf[i];
+          if (!parts.includes(ko.qf[i]) || parts.includes(undefined) || parts.includes(null)) {
+            ko.qf[i] = null;
+            changed = true;
+          }
+        }
+      }
+    } else if (step === 2) {
+      for (let i = 0; i < 2; i++) {
+        if (ko.sf[i] !== null) {
+          const parts = tree.sf[i];
+          if (!parts.includes(ko.sf[i]) || parts.includes(undefined) || parts.includes(null)) {
+            ko.sf[i] = null;
+            changed = true;
+          }
+        }
+      }
+    } else if (step === 3) {
+      if (ko.final !== null) {
+        const parts = tree.final;
+        if (!parts.includes(ko.final) || parts.includes(undefined) || parts.includes(null)) {
+          ko.final = null;
+          changed = true;
+        }
+      }
+    }
+  }
+
+  return changed;
+}
+
+function swapGroupTeams(groupKey, indexA, indexB) {
+  if (!state.tournament || !state.tournament.groups[groupKey]) return;
+  const group = state.tournament.groups[groupKey];
+  if (indexA < 0 || indexA > 3 || indexB < 0 || indexB > 3) return;
+
+  const temp = group[indexA];
+  group[indexA] = group[indexB];
+  group[indexB] = temp;
+
+  validateKnockoutWinners();
+  autoSave();
+  renderAll();
+}
+
+function selectKnockoutWinner(roundKey, matchIndex, winnerName) {
+  if (!state.tournament || !winnerName) return;
+
+  const ko = state.tournament.knockout;
+  let currentWinner = null;
+  if (roundKey === 'r16') currentWinner = ko.r16[matchIndex];
+  else if (roundKey === 'qf') currentWinner = ko.qf[matchIndex];
+  else if (roundKey === 'sf') currentWinner = ko.sf[matchIndex];
+  else if (roundKey === 'final') currentWinner = ko.final;
+
+  const newWinner = (currentWinner === winnerName) ? null : winnerName;
+
+  if (roundKey === 'r16') ko.r16[matchIndex] = newWinner;
+  else if (roundKey === 'qf') ko.qf[matchIndex] = newWinner;
+  else if (roundKey === 'sf') ko.sf[matchIndex] = newWinner;
+  else if (roundKey === 'final') ko.final = newWinner;
+
+  validateKnockoutWinners();
+  autoSave();
+  renderAll();
+}
+
+function simulateGroups() {
+  if (!state.tournament) return;
+
+  state.tournament.showAiProbabilities = false;
+
+  for (const groupKey in state.tournament.groups) {
+    const teams = state.tournament.groups[groupKey];
+    const ratedTeams = teams.map(t => {
+      const rating = getTeamRating(t);
+      const noise = (Math.random() - 0.5) * 10;
+      return { name: t, strength: rating + noise };
+    });
+
+    ratedTeams.sort((a, b) => b.strength - a.strength);
+    state.tournament.groups[groupKey] = ratedTeams.map(t => t.name);
+  }
+
+  validateKnockoutWinners();
+  autoSave();
+  renderAll();
+  showToast('Gironi simulati con successo! 🎲', 'success');
+}
+
+function simulateEntireTournament() {
+  if (!state.tournament) {
+    initializeTournament();
+  }
+
+  state.tournament.showAiProbabilities = false;
+
+  for (const groupKey in state.tournament.groups) {
+    const teams = state.tournament.groups[groupKey];
+    const ratedTeams = teams.map(t => {
+      const rating = getTeamRating(t);
+      const noise = (Math.random() - 0.5) * 8;
+      return { name: t, strength: rating + noise };
+    });
+    ratedTeams.sort((a, b) => b.strength - a.strength);
+    state.tournament.groups[groupKey] = ratedTeams.map(t => t.name);
+  }
+
+  validateKnockoutWinners();
+
+  const simMatchWinner = (teamA, teamB) => {
+    if (!teamA) return teamB;
+    if (!teamB) return teamA;
+    const ratingA = getTeamRating(teamA);
+    const ratingB = getTeamRating(teamB);
+    const probA = 1 / (1 + Math.pow(10, (ratingB - ratingA) / 20));
+    return Math.random() < probA ? teamA : teamB;
+  };
+
+  const ko = state.tournament.knockout;
+
+  let tree = getTournamentTree();
+  for (let i = 0; i < 8; i++) {
+    ko.r16[i] = simMatchWinner(tree.r16[i][0], tree.r16[i][1]);
+  }
+
+  tree = getTournamentTree();
+  for (let i = 0; i < 4; i++) {
+    ko.qf[i] = simMatchWinner(tree.qf[i][0], tree.qf[i][1]);
+  }
+
+  tree = getTournamentTree();
+  for (let i = 0; i < 2; i++) {
+    ko.sf[i] = simMatchWinner(tree.sf[i][0], tree.sf[i][1]);
+  }
+
+  tree = getTournamentTree();
+  ko.final = simMatchWinner(tree.final[0], tree.final[1]);
+
+  validateKnockoutWinners();
+  autoSave();
+  renderAll();
+  showToast(`Mondiale simulato completamente! 🚀 Vincitore: ${ko.final}`, 'success');
+}
+
+function simulateAiPrediction() {
+  if (!state.tournament) {
+    initializeTournament();
+  }
+
+  state.tournament.showAiProbabilities = true;
+
+  const container = document.getElementById('tournament-views-container');
+  if (container) {
+    container.innerHTML = `
+      <div class="empty-state" style="animation: pulse 1.5s infinite; min-height: 400px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+        <div class="champion-trophy" style="font-size: 3.5rem; margin-bottom: 1rem; animation: trophy-bounce 1s infinite alternate;">🔮</div>
+        <h3 style="margin-bottom: 0.5rem;">Analisi Predittiva IA in corso...</h3>
+        <p style="font-size: 0.8rem; color: var(--color-text-muted);">Calcolo delle probabilità del tabellone e simulazione dei turni in corso...</p>
+      </div>
+    `;
+  }
+
+  setTimeout(() => {
+    for (const groupKey in state.tournament.groups) {
+      const teams = state.tournament.groups[groupKey];
+      const ratedTeams = teams.map(t => ({ name: t, strength: getTeamRating(t) }));
+      ratedTeams.sort((a, b) => b.strength - a.strength);
+      state.tournament.groups[groupKey] = ratedTeams.map(t => t.name);
+    }
+
+    validateKnockoutWinners();
+
+    const getStrongerTeam = (teamA, teamB) => {
+      if (!teamA) return teamB;
+      if (!teamB) return teamA;
+      return getTeamRating(teamA) >= getTeamRating(teamB) ? teamA : teamB;
+    };
+
+    const ko = state.tournament.knockout;
+
+    let tree = getTournamentTree();
+    for (let i = 0; i < 8; i++) {
+      ko.r16[i] = getStrongerTeam(tree.r16[i][0], tree.r16[i][1]);
+    }
+
+    tree = getTournamentTree();
+    for (let i = 0; i < 4; i++) {
+      ko.qf[i] = getStrongerTeam(tree.qf[i][0], tree.qf[i][1]);
+    }
+
+    tree = getTournamentTree();
+    for (let i = 0; i < 2; i++) {
+      ko.sf[i] = getStrongerTeam(tree.sf[i][0], tree.sf[i][1]);
+    }
+
+    tree = getTournamentTree();
+    ko.final = getStrongerTeam(tree.final[0], tree.final[1]);
+
+    validateKnockoutWinners();
+    autoSave();
+    renderAll();
+    showToast('Previsione probabilistica IA calcolata! 🔮', 'success');
+  }, 800);
+}
+
+function resetTournament() {
+  if (!confirm('Sei sicuro di voler resettare la simulazione del mondiale?')) return;
+  initializeTournament(true);
+  autoSave();
+  renderAll();
+  showToast('Simulazione del mondiale resettata.', 'info');
+}
+
+function renderTournament() {
+  const container = document.getElementById('tournament-views-container');
+  if (!container) return;
+
+  if (!state.tournament) {
+    initializeTournament();
+  }
+
+  const tabGroups = document.getElementById('subtab-groups');
+  const tabBracket = document.getElementById('subtab-bracket');
+  if (tabGroups && tabBracket) {
+    tabGroups.classList.toggle('active', state.tournamentTab === 'gironi');
+    tabBracket.classList.toggle('active', state.tournamentTab === 'tabellone');
+  }
+
+  if (state.tournamentTab === 'gironi') {
+    renderGroupStage(container);
+  } else {
+    renderKnockoutBracket(container);
+  }
+}
+
+function renderGroupStage(container) {
+  const groups = state.tournament.groups;
+  const userTeam = state.teams.find(t => t.isUserTeam);
+
+  let html = `<div class="groups-grid">`;
+
+  for (const groupKey in groups) {
+    const teams = groups[groupKey];
+    html += `
+      <div class="group-card">
+        <h3 class="group-card-title">Gruppo ${groupKey}</h3>
+        <div class="group-team-list">
+    `;
+
+    teams.forEach((teamName, idx) => {
+      const pCount = userTeam ? state.players.filter(p => p.ownerId === userTeam.id && p.country === teamName).length : 0;
+      const userPlayers = userTeam ? state.players.filter(p => p.ownerId === userTeam.id && p.country === teamName) : [];
+
+      let badgeHtml = '';
+      if (pCount > 0) {
+        const tooltipText = `Calciatori in rosa: ${userPlayers.map(p => `${p.name} (${p.role})`).join(', ')}`;
+        badgeHtml = `
+          <span class="team-user-badge" data-tooltip="${tooltipText}">
+            ${pCount} 🏅
+          </span>
+        `;
+      }
+
+      const upDisabled = idx === 0 ? 'disabled' : '';
+      const downDisabled = idx === 3 ? 'disabled' : '';
+
+      html += `
+        <div class="group-team-row">
+          <div class="team-info-left">
+            <span class="team-pos">${idx + 1}</span>
+            <span class="team-name" title="${teamName}">${teamName}</span>
+            ${badgeHtml}
+          </div>
+          <div class="reorder-controls">
+            <button class="btn-reorder" ${upDisabled} onclick="swapGroupTeams('${groupKey}', ${idx}, ${idx - 1})">▲</button>
+            <button class="btn-reorder" ${downDisabled} onclick="swapGroupTeams('${groupKey}', ${idx}, ${idx + 1})">▼</button>
+          </div>
+        </div>
+      `;
+    });
+
+    html += `
+        </div>
+      </div>
+    `;
+  }
+
+  html += `</div>`;
+  container.innerHTML = html;
+}
+
+function renderKnockoutBracket(container) {
+  const tree = getTournamentTree();
+  const ko = state.tournament.knockout;
+  const userTeam = state.teams.find(t => t.isUserTeam);
+
+  let html = `<div class="bracket-wrapper">`;
+
+  // Ottavi
+  html += `<div class="bracket-column"><div class="bracket-column-header">Ottavi di Finale</div>`;
+  for (let i = 0; i < 8; i++) {
+    const teamA = tree.r16[i][0];
+    const teamB = tree.r16[i][1];
+    const winner = ko.r16[i];
+    html += renderBracketMatchCard('r16', i, teamA, teamB, winner, `Ottavo ${i+1}`, userTeam);
+  }
+  html += `</div>`;
+
+  // Quarti
+  html += `<div class="bracket-column"><div class="bracket-column-header">Quarti di Finale</div>`;
+  for (let i = 0; i < 4; i++) {
+    const teamA = tree.qf[i][0];
+    const teamB = tree.qf[i][1];
+    const winner = ko.qf[i];
+    html += renderBracketMatchCard('qf', i, teamA, teamB, winner, `Quarto ${i+1}`, userTeam);
+  }
+  html += `</div>`;
+
+  // Semifinali
+  html += `<div class="bracket-column"><div class="bracket-column-header">Semifinali</div>`;
+  for (let i = 0; i < 2; i++) {
+    const teamA = tree.sf[i][0];
+    const teamB = tree.sf[i][1];
+    const winner = ko.sf[i];
+    html += renderBracketMatchCard('sf', i, teamA, teamB, winner, `Semifinale ${i+1}`, userTeam);
+  }
+  html += `</div>`;
+
+  // Finale
+  html += `<div class="bracket-column"><div class="bracket-column-header">Finale</div>`;
+  const finalTeamA = tree.final[0];
+  const finalTeamB = tree.final[1];
+  const finalWinner = ko.final;
+  html += renderBracketMatchCard('final', 0, finalTeamA, finalTeamB, finalWinner, 'Finale', userTeam);
+  html += `</div>`;
+
+  // Vincitore
+  html += `
+    <div class="bracket-column">
+      <div class="bracket-column-header">Vincitore 🏆</div>
+      <div class="champion-container">
+  `;
+  if (ko.final) {
+    const champPlayers = userTeam ? state.players.filter(p => p.ownerId === userTeam.id && p.country === ko.final) : [];
+    let champPlayersHtml = '';
+    if (champPlayers.length > 0) {
+      champPlayersHtml = `
+        <div class="champion-user-players">
+          Hai <strong>${champPlayers.length}</strong> campioni in rosa:<br>
+          <span style="font-size: 0.65rem; color: #fff; font-weight: 500;">
+            ${champPlayers.map(p => p.name).join(', ')}
+          </span>
+        </div>
+      `;
+    } else {
+      champPlayersHtml = `
+        <div class="champion-user-players">Nessun calciatore della tua rosa in questa nazionale.</div>
+      `;
+    }
+
+    html += `
+      <div class="champion-box">
+        <h4>Campione del Mondo</h4>
+        <div class="champion-trophy">🏆</div>
+        <div class="champion-team-name">${ko.final}</div>
+        ${champPlayersHtml}
+      </div>
+    `;
+  } else {
+    html += `
+      <div class="champion-box" style="opacity: 0.4; border-style: dotted; background: transparent; box-shadow: none; animation: none;">
+        <h4>Campione del Mondo</h4>
+        <div class="champion-trophy" style="filter: grayscale(1); animation: none; opacity: 0.5;">🏆</div>
+        <div style="font-size: 0.72rem; color: var(--color-text-muted); font-style: italic;">Simula la finale</div>
+      </div>
+    `;
+  }
+  html += `</div></div></div>`;
+
+  container.innerHTML = html;
+}
+
+function renderBracketMatchCard(roundKey, matchIndex, teamA, teamB, winner, title, userTeam) {
+  const showProb = state.tournament.showAiProbabilities && teamA && teamB;
+  let probA = 50;
+  let probB = 50;
+  if (showProb) {
+    const ratingA = getTeamRating(teamA);
+    const ratingB = getTeamRating(teamB);
+    probA = Math.round(100 / (1 + Math.pow(10, (ratingB - ratingA) / 20)));
+    probB = 100 - probA;
+  }
+
+  const renderSlot = (teamName, isTeamB) => {
+    if (!teamName) {
+      return `<div class="bracket-team-slot empty-team">In attesa...</div>`;
+    }
+
+    const isWinner = winner === teamName;
+    const isEliminated = winner && winner !== teamName;
+    const pCount = userTeam ? state.players.filter(p => p.ownerId === userTeam.id && p.country === teamName).length : 0;
+    const userPlayers = userTeam ? state.players.filter(p => p.ownerId === userTeam.id && p.country === teamName) : [];
+
+    let badgeHtml = '';
+    if (pCount > 0) {
+      const tooltipText = `Calciatori in rosa: ${userPlayers.map(p => `${p.name} (${p.role})`).join(', ')}`;
+      badgeHtml = `
+        <span class="team-user-badge" data-tooltip="${tooltipText}" style="margin-left: 0.35rem; padding: 0.05rem 0.25rem; font-size: 0.6rem;">
+          ${pCount} 🏅
+        </span>
+      `;
+    }
+
+    let classes = 'bracket-team-slot';
+    if (isWinner) classes += ' selected-winner';
+    if (isEliminated) classes += ' eliminated-team';
+
+    const probText = showProb ? `<span class="slot-prob-text">${isTeamB ? probB : probA}%</span>` : '';
+    const trophyIcon = isWinner ? '<span class="slot-winner-icon">🏆</span>' : '';
+
+    return `
+      <div class="${classes}" onclick="selectKnockoutWinner('${roundKey}', ${matchIndex}, '${teamName}')">
+        <div class="slot-team-name-area">
+          <span class="team-name" style="font-size: 0.72rem;">${teamName}</span>
+          ${badgeHtml}
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.35rem;">
+          ${probText}
+          ${trophyIcon}
+        </div>
+      </div>
+    `;
+  };
+
+  let probBarHtml = '';
+  if (showProb) {
+    probBarHtml = `
+      <div class="match-prob-bar-wrapper">
+        <div class="match-prob-fill teamA" style="width: ${probA}%"></div>
+        <div class="match-prob-fill teamB" style="width: ${probB}%"></div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="bracket-match-card">
+      <div class="bracket-match-title">${title}</div>
+      ${renderSlot(teamA, false)}
+      ${renderSlot(teamB, true)}
+      ${probBarHtml}
+    </div>
+  `;
+}
+
+// Window globals to make functions accessible inline
+window.swapGroupTeams = swapGroupTeams;
+window.selectKnockoutWinner = selectKnockoutWinner;
+window.simulateGroups = simulateGroups;
+window.simulateEntireTournament = simulateEntireTournament;
+window.simulateAiPrediction = simulateAiPrediction;
+window.resetTournament = resetTournament;
+window.renderTournament = renderTournament;
+

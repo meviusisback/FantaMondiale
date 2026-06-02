@@ -177,6 +177,9 @@
           <button class="tab-btn" data-tab="impostazioni">
             Impostazioni Asta ⚙️
           </button>
+          <button class="tab-btn" data-tab="tabellone">
+            Tabellone & Gironi 🏆
+          </button>
         </nav>
 
         <!-- TAB 1: DATABASE LISTA GIOCATORI (FEATURING DYNAMIC QUICK BUY) -->
@@ -298,6 +301,35 @@
             <button id="btn-save-config" class="btn btn-primary" style="width: 250px; padding: 0.75rem;">
               Salva e Applica Modifiche
             </button>
+          </div>
+        </section>
+
+        <!-- TAB 4: TABELLONE E GIRONI SIMULATORE -->
+        <section id="tab-tabellone" class="tab-content">
+          <div class="panel">
+            <div class="tournament-actions-bar">
+              <div class="tournament-title-area">
+                <h2 class="panel-title">Tabellone & Simulatore Mondiale 🏆</h2>
+                <p class="panel-subtitle">Simula i risultati del mondiale e vedi il posizionamento dei tuoi calciatori.</p>
+              </div>
+              <div class="btn-group-tournament">
+                <button id="btn-sim-groups" class="btn btn-secondary btn-sm">Simula Gironi 🎲</button>
+                <button id="btn-sim-all" class="btn btn-secondary btn-sm">Simula Tutto 🚀</button>
+                <button id="btn-sim-ai" class="btn btn-accent btn-sm">Previsione IA 🔮</button>
+                <button id="btn-reset-tournament" class="btn btn-danger btn-sm">Reset 🔄</button>
+              </div>
+            </div>
+
+            <!-- Segmented Sub-Tab Navigation -->
+            <div class="tournament-tabs">
+              <button id="subtab-groups" class="subtab-btn active" data-subtab="gironi">Fase a Gironi 📊</button>
+              <button id="subtab-bracket" class="subtab-btn" data-subtab="tabellone">Tabellone Eliminazione 🏆</button>
+            </div>
+
+            <!-- Views Container -->
+            <div id="tournament-views-container">
+              <!-- Rendered dynamically in app.js -->
+            </div>
           </div>
         </section>
 
