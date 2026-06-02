@@ -1173,21 +1173,76 @@ function calculateIdealBidRange(player, targetTeam = null) {
     // Limit factor to prevent astronomical multipliers if playersNeeded is 1
     teamFactor = Math.min(6.0, teamFactor);
     
-    // Also check role saturation
+    // Also check role saturation and target rotation (POR:3, DIF:8, CEN:8, ATT:6)
     const roleCount = team.players.filter(p => p.role === player.role).length;
     let roleSaturationFactor = 1.0;
     let roleExplanation = "";
-    if (roleCount >= 8) {
-      roleSaturationFactor = 0.6; // already have plenty of this role, bid less!
-      roleExplanation = "ruolo già saturo";
-    } else if (roleCount >= 5) {
-      roleSaturationFactor = 0.8;
-      roleExplanation = "ruolo ben coperto";
-    } else if (roleCount === 0) {
-      roleSaturationFactor = 1.25; // desperately need at least one, bid more!
-      roleExplanation = "nessun giocatore comprato in questo ruolo (urgente)";
-    } else {
-      roleExplanation = `hai già ${roleCount} giocatori in questo ruolo`;
+    
+    if (player.role === 'POR') {
+      if (roleCount === 0) {
+        roleSaturationFactor = 1.35;
+        roleExplanation = "nessun portiere in rosa (estrema urgenza)";
+      } else if (roleCount === 1) {
+        roleSaturationFactor = 1.15;
+        roleExplanation = "hai 1 portiere (serve arrivare a 3)";
+      } else if (roleCount === 2) {
+        roleSaturationFactor = 1.0;
+        roleExplanation = "hai 2 portieri (manca 1 per rotazione completa)";
+      } else {
+        roleSaturationFactor = 0.5;
+        roleExplanation = `portieri saturi (${roleCount}/3)`;
+      }
+    } else if (player.role === 'DIF') {
+      if (roleCount === 0) {
+        roleSaturationFactor = 1.35;
+        roleExplanation = "nessun difensore in rosa (estrema urgenza)";
+      } else if (roleCount <= 3) {
+        roleSaturationFactor = 1.2;
+        roleExplanation = `solo ${roleCount} difensori (urgente arrivare a 8)`;
+      } else if (roleCount <= 6) {
+        roleSaturationFactor = 1.0;
+        roleExplanation = `hai ${roleCount} difensori (mancano slot per rotazione ideale)`;
+      } else if (roleCount === 7) {
+        roleSaturationFactor = 0.9;
+        roleExplanation = "hai 7 difensori (manca 1 slot)";
+      } else {
+        roleSaturationFactor = 0.6;
+        roleExplanation = `difensori saturi (${roleCount}/8)`;
+      }
+    } else if (player.role === 'CEN') {
+      if (roleCount === 0) {
+        roleSaturationFactor = 1.35;
+        roleExplanation = "nessun centrocampista in rosa (estrema urgenza)";
+      } else if (roleCount <= 3) {
+        roleSaturationFactor = 1.2;
+        roleExplanation = `solo ${roleCount} centrocampisti (urgente arrivare a 8)`;
+      } else if (roleCount <= 6) {
+        roleSaturationFactor = 1.0;
+        roleExplanation = `hai ${roleCount} centrocampisti (mancano slot per rotazione ideale)`;
+      } else if (roleCount === 7) {
+        roleSaturationFactor = 0.9;
+        roleExplanation = "hai 7 centrocampisti (manca 1 slot)";
+      } else {
+        roleSaturationFactor = 0.6;
+        roleExplanation = `centrocampisti saturi (${roleCount}/8)`;
+      }
+    } else if (player.role === 'ATT') {
+      if (roleCount === 0) {
+        roleSaturationFactor = 1.35;
+        roleExplanation = "nessun attaccante in rosa (estrema urgenza)";
+      } else if (roleCount <= 2) {
+        roleSaturationFactor = 1.2;
+        roleExplanation = `solo ${roleCount} attaccanti (urgente arrivare a 6)`;
+      } else if (roleCount <= 4) {
+        roleSaturationFactor = 1.0;
+        roleExplanation = `hai ${roleCount} attaccanti (mancano 2 slot per rotazione ideale)`;
+      } else if (roleCount === 5) {
+        roleSaturationFactor = 0.85;
+        roleExplanation = "hai 5 attaccanti (manca 1 slot)";
+      } else {
+        roleSaturationFactor = 0.5;
+        roleExplanation = `attaccanti saturi (${roleCount}/6)`;
+      }
     }
     
     minPrice = Math.round(minPrice * teamFactor * roleSaturationFactor);
