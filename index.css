@@ -2672,8 +2672,8 @@ body.ai-modal-open::before {
   border-left: 1px solid rgba(255, 255, 255, 0.15);
   border-top-right-radius: var(--radius-sm);
   border-bottom-right-radius: var(--radius-sm);
-  padding: 0.35rem 0.5rem;
-  font-size: 0.75rem;
+  padding: 0.35rem 0.9rem;
+  font-size: 0.85rem;
   cursor: pointer;
   display: flex;
   align-items: center;

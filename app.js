@@ -1171,7 +1171,7 @@ function assignPlayerDirect(playerId, targetTeamId = null) {
 
   autoSave();
   renderAll();
-  showToast(`${p.name} è stato assegnato a ${team.name} per ${cost} crediti!`, 'success');
+  showToast(`${p.name} è stato assegnato a ${team.name} per ${cost} crediti! <a href="#" onclick="undoPurchase('${p.id}'); this.closest('.toast').classList.remove('show'); return false;" style="color: #fff; font-weight: 800; margin-left: 0.75rem; text-decoration: underline;">Annulla ↩️</a>`, 'success');
 }
 
 function releasePlayer(playerId) {
@@ -1194,6 +1194,27 @@ function releasePlayer(playerId) {
   autoSave();
   renderAll();
   showToast(`${player.name} svincolato da ${team.name}. Crediti rimborsati!`, 'warning');
+}
+
+function undoPurchase(playerId) {
+  const player = state.players.find(p => p.id === playerId);
+  if (!player || !player.ownerId) return;
+
+  const team = state.teams.find(t => t.id === player.ownerId);
+  if (!team) return;
+
+  team.budget += player.purchaseCost;
+  team.players = team.players.filter(p => p.id !== playerId);
+
+  const playerName = player.name;
+  const teamName = team.name;
+
+  player.ownerId = null;
+  player.purchaseCost = null;
+
+  autoSave();
+  renderAll();
+  showToast(`Acquisto di ${playerName} per ${teamName} annullato!`, 'warning');
 }
 
 // --- FORMULAS & MATHS (REAL-WORLD ROSTER RULES) ---
@@ -4579,6 +4600,7 @@ async function recalculateIdealLineup(team) {
 
 // Window globals to wire up inline HTML onclick actions
 window.assignPlayerDirect = assignPlayerDirect;
+window.undoPurchase = undoPurchase;
 window.setPlayerRowTargetTeam = setPlayerRowTargetTeam;
 window.toggleSplitDropdown = toggleSplitDropdown;
 window.releasePlayer = releasePlayer;
