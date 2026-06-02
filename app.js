@@ -557,7 +557,7 @@ function switchTab(tabId) {
 
   const gridContainer = document.querySelector('.dashboard-grid');
   if (gridContainer) {
-    gridContainer.classList.toggle('hide-sidebar', tabId === 'tabellone');
+    gridContainer.classList.toggle('hide-sidebar', tabId === 'tabellone' || tabId === 'impostazioni');
   }
 
   if (tabId === 'tabellone') {
