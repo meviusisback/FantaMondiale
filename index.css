@@ -498,11 +498,11 @@ header {
     grid-area: value;
     justify-self: end;
     font-size: 0.8rem;
-    color: var(--color-text-muted);
-    font-weight: 600;
+    color: #f59e0b;
+    font-weight: 700;
   }
   .player-table td:nth-child(4)::before {
-    content: "Quotazione: ";
+    content: "Prezzo Ideale: ";
     color: var(--color-text-muted);
     font-weight: 400;
   }

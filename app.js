@@ -64,7 +64,7 @@ const SEED_PLAYERS = [
 // --- APP STATE ---
 let state = {
   settings: {
-    budget: 500,
+    budget: 300,
     slots: {
       POR: 3,
       DIF: 8,
@@ -75,10 +75,10 @@ let state = {
     openRouterModel: 'openai/gpt-oss-120b:free'
   },
   teams: [
-    { id: 't-1', name: 'Dream Team', budget: 500, players: [], module: '4-3-3', isUserTeam: false },
-    { id: 't-2', name: 'F.C. Fantasmi', budget: 500, players: [], module: '4-3-3', isUserTeam: false },
-    { id: 't-3', name: 'Galacticos', budget: 500, players: [], module: '4-3-3', isUserTeam: false },
-    { id: 't-4', name: 'Real Madrink', budget: 500, players: [], module: '4-3-3', isUserTeam: false }
+    { id: 't-1', name: 'Dream Team', budget: 300, players: [], module: '4-3-3', isUserTeam: false },
+    { id: 't-2', name: 'F.C. Fantasmi', budget: 300, players: [], module: '4-3-3', isUserTeam: false },
+    { id: 't-3', name: 'Galacticos', budget: 300, players: [], module: '4-3-3', isUserTeam: false },
+    { id: 't-4', name: 'Real Madrink', budget: 300, players: [], module: '4-3-3', isUserTeam: false }
   ],
   players: JSON.parse(JSON.stringify(SEED_PLAYERS)), // Clone seed data
   activeTab: 'giocatori', // default tab is players list
@@ -566,7 +566,7 @@ function switchTab(tabId) {
 }
 
 function saveConfig() {
-  const newBudget = parseInt(dom.configBudget.value) || 500;
+  const newBudget = parseInt(dom.configBudget.value) || 300;
   const newSlotPOR = dom.configSlotPOR ? (parseInt(dom.configSlotPOR.value) || 3) : 3;
   const newSlotDIF = dom.configSlotDIF ? (parseInt(dom.configSlotDIF.value) || 8) : 8;
   const newSlotCEN = dom.configSlotCEN ? (parseInt(dom.configSlotCEN.value) || 8) : 8;
@@ -809,7 +809,7 @@ function resetSession() {
   });
   
   state.teams.forEach(t => {
-    t.budget = state.settings.budget || 500;
+    t.budget = state.settings.budget || 300;
     t.players = [];
     t.module = '4-3-3';
   });
@@ -1022,7 +1022,7 @@ async function openStartupDialog() {
 function resetSessionClean() {
   // Reset settings to default
   state.settings = {
-    budget: 500,
+    budget: 300,
     slots: {
       POR: 3,
       DIF: 8,
@@ -1035,10 +1035,10 @@ function resetSessionClean() {
 
   // Reset teams to default
   state.teams = [
-    { id: 't-1', name: 'Dream Team', budget: 500, players: [], module: '4-3-3' },
-    { id: 't-2', name: 'F.C. Fantasmi', budget: 500, players: [], module: '4-3-3' },
-    { id: 't-3', name: 'Galacticos', budget: 500, players: [], module: '4-3-3' },
-    { id: 't-4', name: 'Real Madrink', budget: 500, players: [], module: '4-3-3' }
+    { id: 't-1', name: 'Dream Team', budget: 300, players: [], module: '4-3-3' },
+    { id: 't-2', name: 'F.C. Fantasmi', budget: 300, players: [], module: '4-3-3' },
+    { id: 't-3', name: 'Galacticos', budget: 300, players: [], module: '4-3-3' },
+    { id: 't-4', name: 'Real Madrink', budget: 300, players: [], module: '4-3-3' }
   ];
 
   // Restore players to default cloned from SEED_PLAYERS
@@ -1654,7 +1654,7 @@ function renderPlayerList() {
   if (filtered.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="6" class="text-center" style="padding: 2.5rem; color: var(--color-text-muted);">
+        <td colspan="5" class="text-center" style="padding: 2.5rem; color: var(--color-text-muted);">
           Nessun giocatore corrisponde ai filtri impostati.
         </td>
       </tr>
@@ -1746,7 +1746,6 @@ function renderPlayerList() {
       </td>
       <td><span class="badge badge-${p.role.toLowerCase()}">${p.role}</span></td>
       <td>${p.country}</td>
-      <td style="font-weight: 600; text-align: center;">${p.initialValue} cr</td>
       <td style="text-align: center;">${idealRangeHtml}</td>
       <td style="text-align: center;">${costCellHtml}</td>
       <td style="text-align: right;">${actionCellHtml}</td>
