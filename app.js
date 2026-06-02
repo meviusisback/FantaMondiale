@@ -5264,7 +5264,7 @@ function renderKnockoutBracket(container) {
   html += `</div>`;
 
   // Finale
-  html += `<div class="bracket-column"><div class="bracket-column-header">Finale</div>`;
+  html += `<div class="bracket-column final-column"><div class="bracket-column-header">Finale</div>`;
   const finalTeamA = tree.final[0];
   const finalTeamB = tree.final[1];
   const finalWinner = ko.final;
