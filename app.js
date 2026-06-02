@@ -142,8 +142,6 @@ const dom = {
   cloudLoadListContainer: null,
   btnTeamAIAnalysis: null,
   btnTeamIdealPitch: null,
-  btnRecalculatePlayersHeader: null,
-  btnAiLineupHeader: null,
 
   // Tabs buttons and contents
   tabButtons: [],
@@ -250,8 +248,6 @@ function initDOM() {
   dom.cloudLoadListContainer = document.getElementById('cloud-load-list-container');
   dom.btnTeamAIAnalysis = document.getElementById('btn-team-ai-analysis');
   dom.btnTeamIdealPitch = document.getElementById('btn-team-ideal-pitch');
-  dom.btnRecalculatePlayersHeader = document.getElementById('btn-recalculate-players-header');
-  dom.btnAiLineupHeader = document.getElementById('btn-ai-lineup-header');
 
   dom.tabButtons = Array.from(document.querySelectorAll('.tab-btn'));
   dom.tabContents = Array.from(document.querySelectorAll('.tab-content'));
@@ -442,33 +438,6 @@ function setupEventListeners() {
         return;
       }
       showTeamPitch(team.id, true);
-    });
-  }
-
-  if (dom.btnRecalculatePlayersHeader) {
-    dom.btnRecalculatePlayersHeader.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const team = state.teams.find(t => t.id === state.activeTeamId);
-      if (!team) {
-        showToast('Seleziona una squadra attiva nel pannello laterale per poter ricalcolare i giocatori!', 'warning');
-        return;
-      }
-      recalculatePlayerEvaluations(team);
-    });
-  }
-
-  if (dom.btnAiLineupHeader) {
-    dom.btnAiLineupHeader.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const team = state.teams.find(t => t.id === state.activeTeamId);
-      if (!team) {
-        showToast('Seleziona una squadra attiva nel pannello laterale per calcolare la formazione AI!', 'warning');
-        return;
-      }
-      showTeamPitch(team.id, true);
-      generateIdealLineup(team);
     });
   }
 
@@ -2191,20 +2160,37 @@ function showTeamPitch(teamId, showIdeal = false) {
     copyBtn.onclick = () => copyLineupToClipboard(team, showIdeal);
     buttonsWrapper.appendChild(copyBtn);
 
-    // If showing Ideal, add AI Update button
+    // If showing Ideal, add AI buttons inside the formation screen
     if (showIdeal) {
-      const refreshAIBtn = document.createElement('button');
-      refreshAIBtn.className = 'btn btn-team-ai-sparkle';
-      refreshAIBtn.style.padding = '0.4rem 0.8rem';
-      refreshAIBtn.style.fontSize = '0.75rem';
-      refreshAIBtn.style.display = 'flex';
-      refreshAIBtn.style.alignItems = 'center';
-      refreshAIBtn.style.gap = '0.35rem';
-      refreshAIBtn.style.background = 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)';
-      refreshAIBtn.style.borderColor = 'rgba(168, 85, 247, 0.4)';
-      refreshAIBtn.innerHTML = '⚽ Calcola Formazione AI';
-      refreshAIBtn.onclick = () => generateIdealLineup(team);
-      buttonsWrapper.appendChild(refreshAIBtn);
+      // 1. Ricalcolo Giocatori button
+      const recalcPlayersBtn = document.createElement('button');
+      recalcPlayersBtn.className = 'btn';
+      recalcPlayersBtn.style.padding = '0.4rem 0.8rem';
+      recalcPlayersBtn.style.fontSize = '0.75rem';
+      recalcPlayersBtn.style.display = 'flex';
+      recalcPlayersBtn.style.alignItems = 'center';
+      recalcPlayersBtn.style.gap = '0.35rem';
+      recalcPlayersBtn.style.background = 'rgba(168, 85, 247, 0.15)';
+      recalcPlayersBtn.style.borderColor = 'rgba(168, 85, 247, 0.4)';
+      recalcPlayersBtn.style.color = '#fff';
+      recalcPlayersBtn.innerHTML = 'Ricalcolo giocatori 🔄';
+      recalcPlayersBtn.onclick = () => recalculatePlayerEvaluations(team);
+      buttonsWrapper.appendChild(recalcPlayersBtn);
+
+      // 2. Formazione AI button
+      const aiLineupBtn = document.createElement('button');
+      aiLineupBtn.className = 'btn btn-team-ai-sparkle';
+      aiLineupBtn.style.padding = '0.4rem 0.8rem';
+      aiLineupBtn.style.fontSize = '0.75rem';
+      aiLineupBtn.style.display = 'flex';
+      aiLineupBtn.style.alignItems = 'center';
+      aiLineupBtn.style.gap = '0.35rem';
+      aiLineupBtn.style.background = 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)';
+      aiLineupBtn.style.borderColor = 'rgba(168, 85, 247, 0.4)';
+      aiLineupBtn.style.color = '#fff';
+      aiLineupBtn.innerHTML = 'Formazione AI 🔮';
+      aiLineupBtn.onclick = () => generateIdealLineup(team);
+      buttonsWrapper.appendChild(aiLineupBtn);
     }
   }
 
