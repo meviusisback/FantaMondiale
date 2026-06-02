@@ -1087,6 +1087,15 @@ function loadStartupCloudSession(id) {
 
 // --- DIRECT INLINE ASSIGNMENT ENGINE ---
 
+function setPlayerRowTargetTeam(playerId, teamId, teamName, isEligible) {
+  const btn = document.getElementById(`assign-btn-${playerId}`);
+  if (!btn) return;
+
+  btn.setAttribute('data-target-team-id', teamId);
+  btn.textContent = `Acquista per ${teamName}`;
+  btn.disabled = !isEligible;
+}
+
 function assignPlayerDirect(playerId, targetTeamId = null) {
   const p = state.players.find(x => x.id === playerId);
   if (!p) return;
@@ -1712,18 +1721,23 @@ function renderPlayerList() {
         buttonLabel = 'Seleziona Squadra';
       }
 
-      const otherTeams = state.teams.filter(t => t.id !== state.activeTeamId);
+      const allTeams = state.teams;
       let menuItemsHtml = '';
-      otherTeams.forEach(t => {
+      allTeams.forEach(t => {
+        const isActive = t.id === state.activeTeamId;
         const maxBid = calculateMaxBid(t);
         const hasSlots = countEmptySlots(t) > 0;
         const hasRoleOpen = hasRoleSlotAvailable(t, p.role);
         const isEligible = hasSlots && hasRoleOpen && maxBid >= 1;
+        const escapedTeamName = t.name.replace(/'/g, "\\'");
+        
+        let label = t.name;
+        if (isActive) label += ' ⭐';
         
         if (isEligible) {
           menuItemsHtml += `
-            <a href="#" class="dropdown-menu-item" onclick="assignPlayerDirect('${p.id}', '${t.id}'); return false;">
-              ${t.name}
+            <a href="#" class="dropdown-menu-item" onclick="setPlayerRowTargetTeam('${p.id}', '${t.id}', '${escapedTeamName}', true); return false;">
+              ${label}
             </a>
           `;
         } else {
@@ -1734,7 +1748,7 @@ function renderPlayerList() {
           
           menuItemsHtml += `
             <span class="dropdown-menu-item disabled" title="${reason}">
-              ${t.name} <small style="font-size:0.6rem; color:var(--color-danger)">(${reason})</small>
+              ${label} <small style="font-size:0.6rem; color:var(--color-danger)">(${reason})</small>
             </span>
           `;
         }
@@ -1742,13 +1756,13 @@ function renderPlayerList() {
 
       actionCellHtml = `
         <div class="split-button-container">
-          <button class="split-btn-main" ${disableAttr} onclick="assignPlayerDirect('${p.id}')">
+          <button id="assign-btn-${p.id}" class="split-btn-main" ${disableAttr} onclick="assignPlayerDirect('${p.id}', this.getAttribute('data-target-team-id'))">
             ${buttonLabel}
           </button>
           <div class="split-btn-dropdown">
             <button class="split-btn-arrow">▾</button>
             <div class="split-btn-menu">
-              <div class="dropdown-menu-header">Assegna a:</div>
+              <div class="dropdown-menu-header">Seleziona Squadra:</div>
               ${menuItemsHtml}
             </div>
           </div>
@@ -4532,6 +4546,7 @@ async function recalculateIdealLineup(team) {
 
 // Window globals to wire up inline HTML onclick actions
 window.assignPlayerDirect = assignPlayerDirect;
+window.setPlayerRowTargetTeam = setPlayerRowTargetTeam;
 window.releasePlayer = releasePlayer;
 window.showTeamPitch = showTeamPitch;
 window.loadSpecificCloudSession = loadSpecificCloudSession;
