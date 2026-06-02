@@ -1094,6 +1094,19 @@ function setPlayerRowTargetTeam(playerId, teamId, teamName, isEligible) {
   btn.setAttribute('data-target-team-id', teamId);
   btn.textContent = `Acquista per ${teamName}`;
   btn.disabled = !isEligible;
+
+  // Temporarily force hide the dropdown menu so it closes immediately on click
+  const container = btn.closest('.split-button-container');
+  if (container) {
+    const menu = container.querySelector('.split-btn-menu');
+    if (menu) {
+      menu.style.display = 'none';
+      // Reset the inline style on mouseleave so hover opens it next time
+      container.addEventListener('mouseleave', () => {
+        menu.style.removeProperty('display');
+      }, { once: true });
+    }
+  }
 }
 
 function assignPlayerDirect(playerId, targetTeamId = null) {
