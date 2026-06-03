@@ -2630,19 +2630,17 @@ async function submitRosterWebhook(team) {
       players
     };
 
-    const bodyStr = JSON.stringify(payload);
-    const signature = await calculateHmacSha256('fantacalcio-secret-2026', bodyStr);
-
     showToast('Invio rosa in corso...', 'info');
 
-    const response = await fetch('https://exposed-port-8644-8b56f0c59a8d9036d9b7-mzr5d4vzoe.h24.openclaw.agent37.com/webhooks/fantacalcio-formazioni', {
+    const response = await fetch('/api/submit-webhook', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'X-Event-Type': 'rosa',
-        'X-Hub-Signature-256': `sha256=${signature}`
+        'Content-Type': 'application/json'
       },
-      body: bodyStr
+      body: JSON.stringify({
+        eventType: 'rosa',
+        payload
+      })
     });
 
     if (response.ok) {
@@ -2673,19 +2671,17 @@ async function submitFormationWebhook(team, showIdeal, round) {
       formation: formationStrings
     };
 
-    const bodyStr = JSON.stringify(payload);
-    const signature = await calculateHmacSha256('fantacalcio-secret-2026', bodyStr);
-
     showToast(`Invio formazione (${round}) in corso...`, 'info');
 
-    const response = await fetch('https://exposed-port-8644-8b56f0c59a8d9036d9b7-mzr5d4vzoe.h24.openclaw.agent37.com/webhooks/fantacalcio-formazioni', {
+    const response = await fetch('/api/submit-webhook', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'X-Event-Type': 'formazione',
-        'X-Hub-Signature-256': `sha256=${signature}`
+        'Content-Type': 'application/json'
       },
-      body: bodyStr
+      body: JSON.stringify({
+        eventType: 'formazione',
+        payload
+      })
     });
 
     if (response.ok) {
