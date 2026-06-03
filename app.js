@@ -3695,6 +3695,17 @@ function renderPitchPopoverData(popover, name, country, role, rawData, triggerEl
       </div>
     </div>
 
+    <!-- Next Match Analysis -->
+    <div style="background: rgba(239, 68, 68, 0.03); border: 1px solid rgba(239, 68, 68, 0.15); border-radius: 8px; padding: 0.4rem 0.5rem; margin-bottom: 0.5rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+        <span style="font-size: 0.6rem; color: #f43f5e; text-transform: uppercase; font-weight: 800; letter-spacing: 0.04em;">Prossimo Match ⚔️</span>
+        <span style="font-size: 0.68rem; font-weight: 800; color: #f43f5e; text-transform: uppercase;">vs ${data.matchAnalysis?.nextOpponent || 'Da verificare'}</span>
+      </div>
+      <p style="margin: 0; font-size: 0.65rem; line-height: 1.35; color: #fff; font-weight: 500;">
+        ${data.matchAnalysis?.criteriaText || 'Analisi del match non disponibile.'}
+      </p>
+    </div>
+
     <!-- Form State -->
     <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.04); border-radius: 8px; padding: 0.4rem 0.5rem; margin-bottom: 0.5rem;">
       <span style="display:block; margin-bottom:0.15rem; font-size: 0.6rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em;">Stato di Forma (Settimana) 📈</span>

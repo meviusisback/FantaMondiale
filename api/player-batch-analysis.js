@@ -59,8 +59,11 @@ Nazioni attualmente eliminate o assenti dal Mondiale ad oggi: ${ELIMINATED_COUNT
   * Inizia 'formState' con la dicitura: "ELIMINATO: [Spiegazione dettagliata]".
 
 VALUTAZIONE E ANALISI STRATEGICA:
-- **matchStrength**: valore numerico da 1 a 100 che indichi la forza relativa del calciatore in questo Mondiale come voto di base (da 1 a 100). Per Centrocampisti (CEN) e Difensori (DIF), considera la loro attitudine a portare costanza ed elevati voti puri (senza bonus) per ottimizzare i modificatori di reparto (difesa: bonus con 3, 4, o 5 difensori da media >= 6.5, >= 6.25, >= 6.25; centrocampo: bonus con 3, 4, o 5 centrocampisti da media >= 6.75, >= 6.5, >= 6.25).
+- **matchStrength**: valore numerico da 1 a 100 che indica la forza del calciatore per il prossimo specifico match/turno del Mondiale (voto da 1 a 100). Questa valutazione DEVE risentire fortemente della difficoltà della partita contro il prossimo avversario (nextOpponent): penalizza significativamente il valore se il match è difficile contro una nazionale favorita o difesa solida, e premialo in caso di matchup agevole. Per Centrocampisti (CEN) e Difensori (DIF), considera la loro attitudine a portare costanza ed elevati voti puri (senza bonus) per ottimizzare i modificatori di reparto (difesa: bonus con 3, 4, o 5 difensori da media >= 6.5, >= 6.25, >= 6.25; centrocampo: bonus con 3, 4, o 5 centrocampisti da media >= 6.75, >= 6.5, >= 6.25).
 - **nextOpponent**: deve trattarsi tassativamente ed esclusivamente del nome proprio di una reale nazionale di calcio (es. "Brasile", "Francia", "Spagna"). Se non trovi la partita esatta, indica uno degli altri 3 paesi presenti in tale girone.
+- **matchAnalysis**: un oggetto con le seguenti chiavi:
+  * **nextOpponent**: lo stesso nome della nazionale avversaria del prossimo turno.
+  * **criteriaText**: spiegazione in lingua italiana di 1-2 frasi della difficoltà di questo specifico prossimo match e l'impatto fantacalcistico atteso (es: "Sfida complicata contro la solida retroguardia francese, dove l'attaccante potrebbe faticare a ricevere palloni giocabili.").
 - **expectedBonuses**: breve descrizione (1-2 frasi) dei bonus fantacalcistici attesi (es. gol, assist, rigori, punizioni).
 - **groupAnalysis**:
   - **groupName**: nome del girone reale (es: "Girone A", "Girone B").
@@ -79,6 +82,10 @@ Fornisci la risposta RIGOROSAMENTE in formato JSON con la seguente struttura esa
       "formState": "Descrizione fisica dello stato di forma e notizie reali su infortuni di questa settimana (2 frasi max). DIVIETO ASSOLUTO: Non descrivere le sue caratteristiche generiche.",
       "matchStrength": 85,
       "nextOpponent": "Spagna",
+      "matchAnalysis": {
+        "nextOpponent": "Spagna",
+        "criteriaText": "Sfida molto complicata contro la forte difesa della Spagna, il giocatore potrebbe faticare a incidere."
+      },
       "expectedBonuses": "Gol su punizione e assist da fermo.",
       "groupAnalysis": {
         "groupName": "Girone B",
@@ -228,6 +235,10 @@ Rispondi esclusivamente con il codice JSON, senza alcun blocco di codice markdow
           formState: `ELIMINATO: La nazionale dell'${p.country} non partecipa o è stata eliminata dal Mondiale 2026.`,
           matchStrength: 0,
           nextOpponent: "Nessuno",
+          matchAnalysis: {
+            nextOpponent: "Nessuno",
+            criteriaText: "La nazionale di appartenenza è stata eliminata o non partecipa al Mondiale."
+          },
           expectedBonuses: "Nessun bonus atteso (nazionale eliminata).",
           groupAnalysis: {
             groupName: "Eliminato",
@@ -248,6 +259,10 @@ Rispondi esclusivamente con il codice JSON, senza alcun blocco di codice markdow
           formState: "Valutazione in corso.",
           matchStrength: 50,
           nextOpponent: "Da verificare",
+          matchAnalysis: {
+            nextOpponent: "Da verificare",
+            criteriaText: "Analisi del match in corso."
+          },
           expectedBonuses: "Nessun bonus atteso specificato.",
           groupAnalysis: {
             groupName: "Da verificare",
