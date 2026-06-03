@@ -1176,45 +1176,56 @@ function assignPlayerDirect(playerId, targetTeamId = null) {
 
 function releasePlayer(playerId) {
   const player = state.players.find(p => p.id === playerId);
-  if (!player || !player.ownerId) return;
-
-  const team = state.teams.find(t => t.id === player.ownerId);
-  if (!team) return;
-
-  if (!confirm(`Vuoi davvero svincolare ${player.name} da ${team.name}? I crediti spesi (${player.purchaseCost}) verranno restituiti.`)) {
+  const team = state.teams.find(t => t.players.some(p => p.id === playerId));
+  
+  if (!team) {
+    showToast("Impossibile trovare la squadra proprietaria di questo calciatore.", "danger");
     return;
   }
 
-  team.budget += player.purchaseCost;
+  const teamPlayer = team.players.find(p => p.id === playerId);
+  const cost = teamPlayer ? teamPlayer.purchaseCost : (player ? player.purchaseCost : 0);
+  const name = teamPlayer ? teamPlayer.name : (player ? player.name : 'Calciatore');
+
+  if (!confirm(`Vuoi davvero svincolare ${name} da ${team.name}? I crediti spesi (${cost}) verranno restituiti.`)) {
+    return;
+  }
+
+  team.budget += cost;
   team.players = team.players.filter(p => p.id !== playerId);
 
-  player.ownerId = null;
-  player.purchaseCost = null;
+  if (player) {
+    player.ownerId = null;
+    player.purchaseCost = null;
+  }
 
   autoSave();
   renderAll();
-  showToast(`${player.name} svincolato da ${team.name}. Crediti rimborsati!`, 'warning');
+  showToast(`${name} svincolato da ${team.name}. Crediti rimborsati!`, 'warning');
 }
 
 function undoPurchase(playerId) {
   const player = state.players.find(p => p.id === playerId);
-  if (!player || !player.ownerId) return;
-
-  const team = state.teams.find(t => t.id === player.ownerId);
+  const team = state.teams.find(t => t.players.some(p => p.id === playerId));
   if (!team) return;
 
-  team.budget += player.purchaseCost;
+  const teamPlayer = team.players.find(p => p.id === playerId);
+  const cost = teamPlayer ? teamPlayer.purchaseCost : (player ? player.purchaseCost : 0);
+  const name = teamPlayer ? teamPlayer.name : (player ? player.name : 'Calciatore');
+
+  team.budget += cost;
   team.players = team.players.filter(p => p.id !== playerId);
 
-  const playerName = player.name;
-  const teamName = team.name;
+  if (player) {
+    player.ownerId = null;
+    player.purchaseCost = null;
+  }
 
-  player.ownerId = null;
-  player.purchaseCost = null;
+  const teamName = team.name;
 
   autoSave();
   renderAll();
-  showToast(`Acquisto di ${playerName} per ${teamName} annullato!`, 'warning');
+  showToast(`Acquisto annullato: ${name} rimosso da ${teamName}.`, 'warning');
 }
 
 // --- FORMULAS & MATHS (REAL-WORLD ROSTER RULES) ---
