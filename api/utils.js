@@ -29,7 +29,7 @@ function writeCacheFile(data) {
   } catch (e) {}
 }
 
-export async function getEliminatedCountries(apiKey, provider, openRouterModel) {
+export async function getEliminatedCountries(apiKey, provider, openRouterModel, geminiModel) {
   const cacheDuration = 24 * 60 * 60 * 1000; // 24 hours
   let cache = readCacheFile();
 
@@ -68,7 +68,8 @@ Rispondi esclusivamente con un array JSON di stringhe in lingua italiana (es. ["
         text = data.choices?.[0]?.message?.content;
       }
     } else {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key=${apiKey}`;
+      const modelToUse = geminiModel || 'gemini-flash-lite-latest';
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelToUse}:generateContent?key=${apiKey}`;
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

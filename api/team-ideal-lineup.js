@@ -5,7 +5,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { teamName, players, provider, openRouterModel } = req.body || {};
+  const { teamName, players, provider, openRouterModel, geminiModel } = req.body || {};
   const useOpenRouter = provider === 'openrouter';
   const apiKey = useOpenRouter ? process.env.OPENROUTER_API_KEY : process.env.GEMINI_API_KEY;
 
@@ -23,7 +23,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Dati incompleti: la lista dei calciatori è obbligatoria ed è richiesto un array.' });
     }
 
-    const ELIMINATED_COUNTRIES = await getEliminatedCountries(apiKey, provider, openRouterModel);    // Format roster with pre-calculated evaluations for the AI model
+    const ELIMINATED_COUNTRIES = await getEliminatedCountries(apiKey, provider, openRouterModel, geminiModel);    // Format roster with pre-calculated evaluations for the AI model
     const playersListText = players.map(p => 
       `- ID: ${p.id} | Ruolo: ${p.role} | Nome: ${p.name} | Nazionale: ${p.country} | Costo d'acquisto: ${p.purchaseCost || 0} cr | Categoria IA: ${p.playerCategory || 'buono'} | Probabilità Titolare: ${p.starterProbability || '50%'} | Forza del Turno (1-100): ${p.matchStrength || 50} | Avversario prossimo: ${p.nextOpponent || 'Da verificare'} | Stato Forma/News: ${p.formState || 'Nessuna news'}`
     ).join('\n');
@@ -120,7 +120,8 @@ Rispondi esclusivamente con il codice JSON, senza alcun blocco di codice markdow
       const openRouterData = await openRouterResponse.json();
       text = openRouterData.choices?.[0]?.message?.content;
     } else {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key=${apiKey}`;
+      const modelToUse = geminiModel || 'gemini-flash-lite-latest';
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelToUse}:generateContent?key=${apiKey}`;
 
       const response = await fetch(url, {
         method: 'POST',

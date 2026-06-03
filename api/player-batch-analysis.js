@@ -5,7 +5,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { players, provider, openRouterModel } = req.body || {};
+  const { players, provider, openRouterModel, geminiModel } = req.body || {};
   const useOpenRouter = provider === 'openrouter';
   const apiKey = useOpenRouter ? process.env.OPENROUTER_API_KEY : process.env.GEMINI_API_KEY;
 
@@ -23,7 +23,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Dati incompleti: la lista dei calciatori (array) è obbligatoria.' });
     }
 
-    const ELIMINATED_COUNTRIES = await getEliminatedCountries(apiKey, provider, openRouterModel);
+    const ELIMINATED_COUNTRIES = await getEliminatedCountries(apiKey, provider, openRouterModel, geminiModel);
 
     // Format roster players for the AI
     const targetPlayersText = players.map(p => 
@@ -127,7 +127,8 @@ Rispondi esclusivamente con il codice JSON, senza alcun blocco di codice markdow
       const openRouterData = await openRouterResponse.json();
       text = openRouterData.choices?.[0]?.message?.content;
     } else {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key=${apiKey}`;
+      const modelToUse = geminiModel || 'gemini-flash-lite-latest';
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelToUse}:generateContent?key=${apiKey}`;
 
       const response = await fetch(url, {
         method: 'POST',

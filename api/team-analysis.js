@@ -5,7 +5,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { teamName, roster, budget, freePlayers, provider, openRouterModel } = req.body || {};
+  const { teamName, roster, budget, freePlayers, provider, openRouterModel, geminiModel } = req.body || {};
   const useOpenRouter = provider === 'openrouter';
   const apiKey = useOpenRouter ? process.env.OPENROUTER_API_KEY : process.env.GEMINI_API_KEY;
 
@@ -23,7 +23,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Dati incompleti: roster è obbligatorio.' });
     }
 
-    const ELIMINATED_COUNTRIES = await getEliminatedCountries(apiKey, provider, openRouterModel);
+    const ELIMINATED_COUNTRIES = await getEliminatedCountries(apiKey, provider, openRouterModel, geminiModel);
 
     const systemPrompt = `Tu sei un esperto analista di Fantacalcio specializzato nel Fantamondiale. Il tuo compito è analizzare il roster attuale dell'utente e generare un'analisi strategica ultra-concisa, adatta a essere letta in un piccolo box/fumetto UI (massimo 150-180 parole totali). Usa un tono diretto, esperto e fortemente focalizzato sul gioco FantaMondiale.
 L'analisi DEVE essere interamente centrata sulle dinamiche del FantaMondiale, con lo scopo primario di indicare le soluzioni migliori per ottenere BONUS (gol, assist, reti inviolate) e MASSIMIZZARE I PUNTEGGI, evitando commenti generici sul calcio reale.
@@ -105,7 +105,8 @@ Rispondi esclusivamente con il codice JSON, senza alcun blocco di codice markdow
       const openRouterData = await openRouterResponse.json();
       text = openRouterData.choices?.[0]?.message?.content;
     } else {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key=${apiKey}`;
+      const modelToUse = geminiModel || 'gemini-flash-lite-latest';
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelToUse}:generateContent?key=${apiKey}`;
 
       const response = await fetch(url, {
         method: 'POST',

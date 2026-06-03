@@ -72,7 +72,8 @@ let state = {
       ATT: 6
     },
     aiProvider: 'google',
-    openRouterModel: 'openai/gpt-oss-120b:free'
+    openRouterModel: 'openai/gpt-oss-120b:free',
+    geminiModel: 'gemini-flash-lite-latest'
   },
   teams: [
     { id: 't-1', name: 'Dream Team', budget: 300, players: [], module: '4-3-3', isUserTeam: false },
@@ -229,6 +230,7 @@ function initDOM() {
   dom.btnSaveConfig = document.getElementById('btn-save-config');
   dom.configAIProvider = document.getElementById('config-ai-provider');
   dom.configOpenRouterModel = document.getElementById('config-openrouter-model');
+  dom.configGeminiModel = document.getElementById('config-gemini-model');
 
   dom.fileDatabaseInput = document.getElementById('file-import-players');
   dom.fileSessionInput = document.getElementById('file-import-session');
@@ -304,11 +306,14 @@ function initDOM() {
   // Fill AI settings from state
   if (dom.configAIProvider) dom.configAIProvider.value = state.settings.aiProvider || 'google';
   if (dom.configOpenRouterModel) dom.configOpenRouterModel.value = state.settings.openRouterModel || 'openai/gpt-oss-120b:free';
+  if (dom.configGeminiModel) dom.configGeminiModel.value = state.settings.geminiModel || 'gemini-flash-lite-latest';
   
   // Apply dynamic show/hide style
   const isOR = (state.settings.aiProvider || 'google') === 'openrouter';
   const divORModel = document.getElementById('div-openrouter-model');
   if (divORModel) divORModel.style.display = isOR ? 'block' : 'none';
+  const divGeminiModel = document.getElementById('div-gemini-model');
+  if (divGeminiModel) divGeminiModel.style.display = isOR ? 'none' : 'block';
 }
 
 function setupEventListeners() {
@@ -329,6 +334,8 @@ function setupEventListeners() {
       const isOR = e.target.value === 'openrouter';
       const divORModel = document.getElementById('div-openrouter-model');
       if (divORModel) divORModel.style.display = isOR ? 'block' : 'none';
+      const divGeminiModel = document.getElementById('div-gemini-model');
+      if (divGeminiModel) divGeminiModel.style.display = isOR ? 'none' : 'block';
     });
   }
 
@@ -580,6 +587,7 @@ function saveConfig() {
   const newSlotATT = dom.configSlotATT ? (parseInt(dom.configSlotATT.value) || 6) : 6;
   const newAIProvider = dom.configAIProvider ? dom.configAIProvider.value : 'google';
   const newOpenRouterModel = dom.configOpenRouterModel ? dom.configOpenRouterModel.value.trim() : 'openai/gpt-oss-120b:free';
+  const newGeminiModel = dom.configGeminiModel ? dom.configGeminiModel.value.trim() : 'gemini-flash-lite-latest';
 
   const rawTeamNames = dom.teamListInput.value.split('\n').map(name => name.trim()).filter(Boolean);
 
@@ -596,6 +604,7 @@ function saveConfig() {
   state.settings.slots.ATT = newSlotATT;
   state.settings.aiProvider = newAIProvider;
   state.settings.openRouterModel = newOpenRouterModel;
+  state.settings.geminiModel = newGeminiModel;
 
   // Process Teams
   const newTeams = [];
@@ -768,9 +777,12 @@ function handleSessionImport(e) {
       // Restore AI settings
       if (dom.configAIProvider) dom.configAIProvider.value = state.settings.aiProvider || 'google';
       if (dom.configOpenRouterModel) dom.configOpenRouterModel.value = state.settings.openRouterModel || 'openai/gpt-oss-120b:free';
+      if (dom.configGeminiModel) dom.configGeminiModel.value = state.settings.geminiModel || 'gemini-flash-lite-latest';
       const isOR = (state.settings.aiProvider || 'google') === 'openrouter';
       const divORModel = document.getElementById('div-openrouter-model');
       if (divORModel) divORModel.style.display = isOR ? 'block' : 'none';
+      const divGeminiModel = document.getElementById('div-gemini-model');
+      if (divGeminiModel) divGeminiModel.style.display = isOR ? 'none' : 'block';
 
       if (state.teams.length > 0) {
         state.activeTeamId = state.teams[0].id;
@@ -948,9 +960,12 @@ async function autoLoadCloudSession(id) {
     // Restore AI settings
     if (dom.configAIProvider) dom.configAIProvider.value = state.settings.aiProvider || 'google';
     if (dom.configOpenRouterModel) dom.configOpenRouterModel.value = state.settings.openRouterModel || 'openai/gpt-oss-120b:free';
+    if (dom.configGeminiModel) dom.configGeminiModel.value = state.settings.geminiModel || 'gemini-flash-lite-latest';
     const isOR = (state.settings.aiProvider || 'google') === 'openrouter';
     const divORModel = document.getElementById('div-openrouter-model');
     if (divORModel) divORModel.style.display = isOR ? 'block' : 'none';
+    const divGeminiModel = document.getElementById('div-gemini-model');
+    if (divGeminiModel) divGeminiModel.style.display = isOR ? 'none' : 'block';
 
     if (state.teams.length > 0) {
       state.activeTeamId = state.teams[0].id;
@@ -1037,7 +1052,8 @@ function resetSessionClean() {
       ATT: 6
     },
     aiProvider: 'google',
-    openRouterModel: 'openai/gpt-oss-120b:free'
+    openRouterModel: 'openai/gpt-oss-120b:free',
+    geminiModel: 'gemini-flash-lite-latest'
   };
 
   // Reset teams to default
@@ -3348,9 +3364,12 @@ async function loadSpecificCloudSession(id, skipConfirm = false) {
     // Restore AI settings
     if (dom.configAIProvider) dom.configAIProvider.value = state.settings.aiProvider || 'google';
     if (dom.configOpenRouterModel) dom.configOpenRouterModel.value = state.settings.openRouterModel || 'openai/gpt-oss-120b:free';
+    if (dom.configGeminiModel) dom.configGeminiModel.value = state.settings.geminiModel || 'gemini-flash-lite-latest';
     const isOR = (state.settings.aiProvider || 'google') === 'openrouter';
     const divORModel = document.getElementById('div-openrouter-model');
     if (divORModel) divORModel.style.display = isOR ? 'block' : 'none';
+    const divGeminiModel = document.getElementById('div-gemini-model');
+    if (divGeminiModel) divGeminiModel.style.display = isOR ? 'none' : 'block';
 
     if (state.teams.length > 0) {
       state.activeTeamId = state.teams[0].id;
@@ -3770,7 +3789,8 @@ async function showPitchPlayerTooltip(playerId, triggerEl, isMobile) {
           country: player.country,
           role: player.role,
           provider: state.settings.aiProvider || 'google',
-          openRouterModel: state.settings.openRouterModel || 'openai/gpt-oss-120b:free'
+          openRouterModel: state.settings.openRouterModel || 'openai/gpt-oss-120b:free',
+          geminiModel: state.settings.geminiModel || 'gemini-flash-lite-latest'
         })
       });
       const result = await response.json();
@@ -3916,7 +3936,8 @@ async function showPlayerAIAnalysis(playerId, name, country, role, buttonEl, for
         country, 
         role,
         provider: state.settings.aiProvider || 'google',
-        openRouterModel: state.settings.openRouterModel || 'openai/gpt-oss-120b:free'
+        openRouterModel: state.settings.openRouterModel || 'openai/gpt-oss-120b:free',
+        geminiModel: state.settings.geminiModel || 'gemini-flash-lite-latest'
       })
     });
 
@@ -4339,7 +4360,8 @@ async function showTeamAIAnalysis(buttonEl, forceRefresh = false) {
         budget: team.budget,
         freePlayers: topFreePlayers,
         provider: state.settings.aiProvider || 'google',
-        openRouterModel: state.settings.openRouterModel || 'openai/gpt-oss-120b:free'
+        openRouterModel: state.settings.openRouterModel || 'openai/gpt-oss-120b:free',
+        geminiModel: state.settings.geminiModel || 'gemini-flash-lite-latest'
       })
     });
 
@@ -4686,7 +4708,8 @@ async function recalculatePlayerEvaluations(team) {
             body: JSON.stringify({
               players: batchPlayers,
               provider: state.settings.aiProvider || 'google',
-              openRouterModel: state.settings.openRouterModel || 'openai/gpt-oss-120b:free'
+              openRouterModel: state.settings.openRouterModel || 'openai/gpt-oss-120b:free',
+              geminiModel: state.settings.geminiModel || 'gemini-flash-lite-latest'
             })
           });
 
@@ -4783,7 +4806,8 @@ async function recalculatePlayerEvaluations(team) {
               body: JSON.stringify({
                 players: retryBatchPlayers,
                 provider: state.settings.aiProvider || 'google',
-                openRouterModel: state.settings.openRouterModel || 'openai/gpt-oss-120b:free'
+                openRouterModel: state.settings.openRouterModel || 'openai/gpt-oss-120b:free',
+                geminiModel: state.settings.geminiModel || 'gemini-flash-lite-latest'
               })
             });
             
@@ -4942,7 +4966,8 @@ async function generateIdealLineup(team) {
         teamName: team.name,
         players: playersWithEvaluations,
         provider: state.settings.aiProvider || 'google',
-        openRouterModel: state.settings.openRouterModel || 'openai/gpt-oss-120b:free'
+        openRouterModel: state.settings.openRouterModel || 'openai/gpt-oss-120b:free',
+        geminiModel: state.settings.geminiModel || 'gemini-flash-lite-latest'
       })
     });
 
