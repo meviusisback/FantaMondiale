@@ -2412,6 +2412,294 @@ function renderPitch() {
   }
 }
 
+// Country mapping helper for webhooks
+const countryToCode = {
+  'Argentina': 'ARG',
+  'Algeria': 'ALG',
+  'Australia': 'AUS',
+  'Austria': 'AUT',
+  'Arabia Saudita': 'KSA',
+  'Belgio': 'BEL',
+  'Bosnia ed Erzegovina': 'BIH',
+  'Brasile': 'BRA',
+  'Canada': 'CAN',
+  'Capo Verde': 'CPV',
+  'Colombia': 'COL',
+  'Corea del Sud': 'KOR',
+  'Costa d\'Avorio': 'CIV',
+  'Croazia': 'CRO',
+  'Curaçao': 'CUW',
+  'Ecuador': 'ECU',
+  'Egitto': 'EGY',
+  'Francia': 'FRA',
+  'Germania': 'GER',
+  'Ghana': 'GHA',
+  'Giappone': 'JPN',
+  'Giordania': 'JOR',
+  'Haiti': 'HAI',
+  'Inghilterra': 'ENG',
+  'Iran': 'IRN',
+  'Iraq': 'IRQ',
+  'Italia': 'ITA',
+  'Marocco': 'MAR',
+  'Messico': 'MEX',
+  'Norvegia': 'NOR',
+  'Nuova Zelanda': 'NZL',
+  'Paesi Bassi': 'NED',
+  'Panama': 'PAN',
+  'Paraguay': 'PAR',
+  'Portogallo': 'POR',
+  'Qatar': 'QAT',
+  'Rep. Ceca': 'CZE',
+  'Repubblica Democratica del Congo': 'COD',
+  'Scozia': 'SCO',
+  'Senegal': 'SEN',
+  'Spagna': 'ESP',
+  'Stati Uniti': 'USA',
+  'Sudafrica': 'RSA',
+  'Svezia': 'SWE',
+  'Svizzera': 'SUI',
+  'Tunisia': 'TUN',
+  'Turchia': 'TUR',
+  'Uruguay': 'URU',
+  'Uzbekistan': 'UZB'
+};
+
+async function calculateHmacSha256(secret, message) {
+  const encoder = new TextEncoder();
+  const keyData = encoder.encode(secret);
+  const messageData = encoder.encode(message);
+  
+  const cryptoKey = await window.crypto.subtle.importKey(
+    'raw',
+    keyData,
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  
+  const signature = await window.crypto.subtle.sign(
+    'HMAC',
+    cryptoKey,
+    messageData
+  );
+  
+  const hashArray = Array.from(new Uint8Array(signature));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  return hashHex;
+}
+
+function compileLineupData(team, showIdeal) {
+  const module = team.module || '4-3-3';
+  const parts = module.split('-').map(x => parseInt(x));
+  
+  const defNeeded = parts[0] || 4;
+  const cenNeeded = parts[1] || 3;
+  const attNeeded = parts[2] || 3;
+  const porNeeded = 1;
+
+  const idealLineup = state.teamIdealLineups?.[team.id];
+  let porStarters, porBench, difStarters, difBench, cenStarters, cenBench, attStarters, attBench;
+
+  if (showIdeal && idealLineup) {
+    const startersList = team.players.filter(p => idealLineup.starters.includes(p.id));
+    const benchList = team.players.filter(p => idealLineup.bench.includes(p.id));
+
+    porStarters = startersList.filter(p => p.role === 'POR');
+    porBench = benchList.filter(p => p.role === 'POR');
+
+    difStarters = startersList.filter(p => p.role === 'DIF');
+    difBench = benchList.filter(p => p.role === 'DIF');
+
+    cenStarters = startersList.filter(p => p.role === 'CEN');
+    cenBench = benchList.filter(p => p.role === 'CEN');
+
+    attStarters = startersList.filter(p => p.role === 'ATT');
+    attBench = benchList.filter(p => p.role === 'ATT');
+  } else {
+    let porPlayers = team.players.filter(p => p.role === 'POR');
+    let difPlayers = team.players.filter(p => p.role === 'DIF');
+    let cenPlayers = team.players.filter(p => p.role === 'CEN');
+    let attPlayers = team.players.filter(p => p.role === 'ATT');
+
+    if (showIdeal) {
+      const getPlayerFormScore = (player) => {
+        const cachedRaw = state.aiCache[player.id] || JSON.parse(sessionStorage.getItem(`fantamondiale_ai_${player.id}`) || 'null');
+        if (!cachedRaw) return 50;
+        const cached = normalizePlayerAnalysis(cachedRaw);
+        let score = 50;
+        const cat = (cached.playerCategory || '').toLowerCase();
+        if (cat.includes('stella')) score += 40;
+        else if (cat.includes('ottimo')) score += 30;
+        else if (cat.includes('buono')) score += 20;
+        else if (cat.includes('accettabile')) score += 10;
+        else if (cat.includes('scarso')) score -= 20;
+        if (cached.starterProbability) {
+          const prob = parseInt(cached.starterProbability.replace(/[^0-9]/g, '')) || 50;
+          score += prob * 0.2;
+        }
+        score += (player.purchaseCost || 0) * 0.1;
+        return score;
+      };
+
+      porPlayers = [...porPlayers].sort((a, b) => getPlayerFormScore(b) - getPlayerFormScore(a));
+      difPlayers = [...difPlayers].sort((a, b) => getPlayerFormScore(b) - getPlayerFormScore(a));
+      cenPlayers = [...cenPlayers].sort((a, b) => getPlayerFormScore(b) - getPlayerFormScore(a));
+      attPlayers = [...attPlayers].sort((a, b) => getPlayerFormScore(b) - getPlayerFormScore(a));
+    }
+
+    porStarters = porPlayers.slice(0, porNeeded);
+    porBench = porPlayers.slice(porNeeded);
+
+    difStarters = difPlayers.slice(0, defNeeded);
+    difBench = difPlayers.slice(defNeeded);
+
+    cenStarters = cenPlayers.slice(0, cenNeeded);
+    cenBench = cenPlayers.slice(cenNeeded);
+
+    attStarters = attPlayers.slice(0, attNeeded);
+    attBench = attPlayers.slice(attNeeded);
+  }
+
+  let finalBench;
+  if (showIdeal && idealLineup) {
+    finalBench = idealLineup.bench.map(id => team.players.find(p => p.id === id)).filter(Boolean);
+  } else {
+    finalBench = [...porBench, ...difBench, ...cenBench, ...attBench];
+  }
+
+  const starters = [...porStarters, ...difStarters, ...cenStarters, ...attStarters];
+  return { starters, bench: finalBench };
+}
+
+async function submitRosterWebhook(team) {
+  try {
+    const porList = team.players.filter(p => p.role === 'POR');
+    const difList = team.players.filter(p => p.role === 'DIF');
+    const cenList = team.players.filter(p => p.role === 'CEN');
+    const attList = team.players.filter(p => p.role === 'ATT');
+    
+    const players = [];
+    
+    porList.forEach((p, idx) => {
+      if (idx < 4) {
+        players.push({
+          number: 4 + idx,
+          name: p.name,
+          nationality: countryToCode[p.country] || (p.country || '').substring(0, 3).toUpperCase(),
+          cost: parseInt(p.purchaseCost) || 0
+        });
+      }
+    });
+    
+    difList.forEach((p, idx) => {
+      if (idx < 14) {
+        players.push({
+          number: 9 + idx,
+          name: p.name,
+          nationality: countryToCode[p.country] || (p.country || '').substring(0, 3).toUpperCase(),
+          cost: parseInt(p.purchaseCost) || 0
+        });
+      }
+    });
+    
+    cenList.forEach((p, idx) => {
+      if (idx < 14) {
+        players.push({
+          number: 23 + idx,
+          name: p.name,
+          nationality: countryToCode[p.country] || (p.country || '').substring(0, 3).toUpperCase(),
+          cost: parseInt(p.purchaseCost) || 0
+        });
+      }
+    });
+    
+    attList.forEach((p, idx) => {
+      if (idx < 12) {
+        players.push({
+          number: 38 + idx,
+          name: p.name,
+          nationality: countryToCode[p.country] || (p.country || '').substring(0, 3).toUpperCase(),
+          cost: parseInt(p.purchaseCost) || 0
+        });
+      }
+    });
+
+    const payload = {
+      type: 'rosa',
+      players
+    };
+
+    const bodyStr = JSON.stringify(payload);
+    const signature = await calculateHmacSha256('fantacalcio-secret-2026', bodyStr);
+
+    showToast('Invio rosa in corso...', 'info');
+
+    const response = await fetch('https://exposed-port-8644-8b56f0c59a8d9036d9b7-mzr5d4vzoe.h24.openclaw.agent37.com/webhooks/fantacalcio-formazioni', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Event-Type': 'rosa',
+        'X-Hub-Signature-256': `sha256=${signature}`
+      },
+      body: bodyStr
+    });
+
+    if (response.ok) {
+      showToast('Rosa fissa inviata con successo! ✅', 'success');
+    } else {
+      const errText = await response.text();
+      showToast(`Errore invio rosa: ${response.status} - ${errText}`, 'danger');
+    }
+  } catch (error) {
+    console.error('Webhook error:', error);
+    showToast(`Errore: ${error.message || error}`, 'danger');
+  }
+}
+
+async function submitFormationWebhook(team, showIdeal, round) {
+  try {
+    const { starters, bench } = compileLineupData(team, showIdeal);
+    
+    const formationList = [...starters, ...bench].slice(0, 21);
+    const formationStrings = formationList.map(p => {
+      const code = countryToCode[p.country] || (p.country || '').substring(0, 3).toUpperCase();
+      return `${p.name} (${code})`;
+    });
+
+    const payload = {
+      type: 'formazione',
+      round: round,
+      formation: formationStrings
+    };
+
+    const bodyStr = JSON.stringify(payload);
+    const signature = await calculateHmacSha256('fantacalcio-secret-2026', bodyStr);
+
+    showToast(`Invio formazione (${round}) in corso...`, 'info');
+
+    const response = await fetch('https://exposed-port-8644-8b56f0c59a8d9036d9b7-mzr5d4vzoe.h24.openclaw.agent37.com/webhooks/fantacalcio-formazioni', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Event-Type': 'formazione',
+        'X-Hub-Signature-256': `sha256=${signature}`
+      },
+      body: bodyStr
+    });
+
+    if (response.ok) {
+      showToast('Formazione inviata con successo! ✅', 'success');
+    } else {
+      const errText = await response.text();
+      showToast(`Errore invio formazione: ${response.status} - ${errText}`, 'danger');
+    }
+  } catch (error) {
+    console.error('Webhook error:', error);
+    showToast(`Errore: ${error.message || error}`, 'danger');
+  }
+}
+
 function showTeamPitch(teamId, showIdeal = false) {
   const team = state.teams.find(t => t.id === teamId);
   if (!team) return;
@@ -2431,6 +2719,13 @@ function showTeamPitch(teamId, showIdeal = false) {
   if (buttonsWrapper) {
     buttonsWrapper.innerHTML = '';
     
+    // Create first row for normal pitch controls
+    const mainControlsRow = document.createElement('div');
+    mainControlsRow.style.display = 'flex';
+    mainControlsRow.style.gap = '0.5rem';
+    mainControlsRow.style.flexWrap = 'wrap';
+    mainControlsRow.style.width = '100%';
+    
     // Add Copy Lineup button
     const copyBtn = document.createElement('button');
     copyBtn.className = 'btn btn-secondary';
@@ -2441,7 +2736,7 @@ function showTeamPitch(teamId, showIdeal = false) {
     copyBtn.style.gap = '0.35rem';
     copyBtn.innerHTML = '📋 Copia Formazione';
     copyBtn.onclick = () => copyLineupToClipboard(team, showIdeal);
-    buttonsWrapper.appendChild(copyBtn);
+    mainControlsRow.appendChild(copyBtn);
 
     // If showing Ideal, add AI buttons inside the formation screen
     if (showIdeal) {
@@ -2458,7 +2753,7 @@ function showTeamPitch(teamId, showIdeal = false) {
       recalcPlayersBtn.style.color = '#fff';
       recalcPlayersBtn.innerHTML = 'Ricalcolo giocatori 🔄';
       recalcPlayersBtn.onclick = () => recalculatePlayerEvaluations(team);
-      buttonsWrapper.appendChild(recalcPlayersBtn);
+      mainControlsRow.appendChild(recalcPlayersBtn);
 
       // 2. Formazione AI button
       const aiLineupBtn = document.createElement('button');
@@ -2473,8 +2768,76 @@ function showTeamPitch(teamId, showIdeal = false) {
       aiLineupBtn.style.color = '#fff';
       aiLineupBtn.innerHTML = 'Formazione AI 🔮';
       aiLineupBtn.onclick = () => generateIdealLineup(team);
-      buttonsWrapper.appendChild(aiLineupBtn);
+      mainControlsRow.appendChild(aiLineupBtn);
     }
+    buttonsWrapper.appendChild(mainControlsRow);
+
+    // Create second row/container for webhooks
+    const webhookContainer = document.createElement('div');
+    webhookContainer.className = 'webhook-container';
+    webhookContainer.style.display = 'flex';
+    webhookContainer.style.alignItems = 'center';
+    webhookContainer.style.gap = '0.5rem';
+    webhookContainer.style.flexWrap = 'wrap';
+    webhookContainer.style.marginTop = '0.5rem';
+    webhookContainer.style.paddingTop = '0.5rem';
+    webhookContainer.style.borderTop = '1px dashed var(--border-light)';
+    webhookContainer.style.width = '100%';
+
+    // Round Selector
+    const roundLabel = document.createElement('label');
+    roundLabel.style.fontSize = '0.75rem';
+    roundLabel.style.fontWeight = '700';
+    roundLabel.style.color = 'var(--color-text-muted)';
+    roundLabel.innerText = 'TURNO:';
+    webhookContainer.appendChild(roundLabel);
+
+    const roundSelect = document.createElement('select');
+    roundSelect.className = 'input-control';
+    roundSelect.style.width = '100px';
+    roundSelect.style.padding = '0.25rem 0.5rem';
+    roundSelect.style.fontSize = '0.75rem';
+    roundSelect.style.borderRadius = '4px';
+    roundSelect.style.height = '30px';
+    
+    const rounds = ['G1', 'G2', 'G3', 'Sedicesimi', 'Ottavi', 'Quarti', 'Semifinale', 'Finale'];
+    rounds.forEach(r => {
+      const opt = document.createElement('option');
+      opt.value = r;
+      opt.innerText = r;
+      roundSelect.appendChild(opt);
+    });
+    webhookContainer.appendChild(roundSelect);
+
+    // Button Invio Rosa Fissa
+    const rosaBtn = document.createElement('button');
+    rosaBtn.className = 'btn btn-primary';
+    rosaBtn.style.padding = '0.4rem 0.8rem';
+    rosaBtn.style.fontSize = '0.75rem';
+    rosaBtn.style.height = '30px';
+    rosaBtn.style.display = 'flex';
+    rosaBtn.style.alignItems = 'center';
+    rosaBtn.style.gap = '0.35rem';
+    rosaBtn.innerHTML = '📤 Invio Rosa Fissa';
+    rosaBtn.onclick = () => submitRosterWebhook(team);
+    webhookContainer.appendChild(rosaBtn);
+
+    // Button Invio Formazione
+    const formationBtn = document.createElement('button');
+    formationBtn.className = 'btn btn-success';
+    formationBtn.style.padding = '0.4rem 0.8rem';
+    formationBtn.style.fontSize = '0.75rem';
+    formationBtn.style.height = '30px';
+    formationBtn.style.display = 'flex';
+    formationBtn.style.alignItems = 'center';
+    formationBtn.style.gap = '0.35rem';
+    formationBtn.style.background = 'var(--color-success)';
+    formationBtn.style.borderColor = 'var(--color-success)';
+    formationBtn.innerHTML = '📤 Invio Formazione';
+    formationBtn.onclick = () => submitFormationWebhook(team, showIdeal, roundSelect.value);
+    webhookContainer.appendChild(formationBtn);
+
+    buttonsWrapper.appendChild(webhookContainer);
   }
 
   renderPitch();
