@@ -2584,7 +2584,8 @@ async function submitRosterWebhook(team) {
     porList.forEach((p, idx) => {
       if (idx < 4) {
         players.push({
-          name: p.name
+          name: p.name,
+          cost: parseInt(p.purchaseCost) || 0
         });
       }
     });
@@ -2592,7 +2593,8 @@ async function submitRosterWebhook(team) {
     difList.forEach((p, idx) => {
       if (idx < 14) {
         players.push({
-          name: p.name
+          name: p.name,
+          cost: parseInt(p.purchaseCost) || 0
         });
       }
     });
@@ -2600,7 +2602,8 @@ async function submitRosterWebhook(team) {
     cenList.forEach((p, idx) => {
       if (idx < 14) {
         players.push({
-          name: p.name
+          name: p.name,
+          cost: parseInt(p.purchaseCost) || 0
         });
       }
     });
@@ -2608,7 +2611,8 @@ async function submitRosterWebhook(team) {
     attList.forEach((p, idx) => {
       if (idx < 12) {
         players.push({
-          name: p.name
+          name: p.name,
+          cost: parseInt(p.purchaseCost) || 0
         });
       }
     });
