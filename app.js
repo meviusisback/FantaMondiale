@@ -315,6 +315,12 @@ function initDOM() {
   if (divORModel) divORModel.style.display = isOR ? 'block' : 'none';
   const divGeminiModel = document.getElementById('div-gemini-model');
   if (divGeminiModel) divGeminiModel.style.display = isOR ? 'none' : 'block';
+
+  // R32 custom pairings editor elements
+  dom.r32EditorDialog = document.getElementById('r32-editor-dialog');
+  dom.r32EditorGrid = document.getElementById('r32-editor-grid');
+  dom.btnR32ResetCalc = document.getElementById('btn-r32-reset-calc');
+  dom.btnR32SaveCustom = document.getElementById('btn-r32-save-custom');
 }
 
 function setupEventListeners() {
@@ -550,6 +556,10 @@ function setupEventListeners() {
       renderTournament();
     });
   }
+
+  // R32 custom pairings actions
+  if (dom.btnR32ResetCalc) dom.btnR32ResetCalc.addEventListener('click', resetR32CustomPairings);
+  if (dom.btnR32SaveCustom) dom.btnR32SaveCustom.addEventListener('click', saveR32CustomPairings);
 
   // Global click listener to close split button menus when clicking outside
   document.addEventListener('click', () => {
@@ -5249,25 +5259,30 @@ function getTournamentTree() {
 
   const thirdsMatch = matchThirds(bestThirds);
 
-  // 3. Define Round of 32 Pairings (Official FIFA 2026 Regulations)
-  const r32Matches = [
-    [getTeamName('E', 0), thirdsMatch.E || 'In attesa...'], // Match 0 (Winner E vs 3rd A/B/C/D/F)
-    [getTeamName('I', 0), thirdsMatch.I || 'In attesa...'], // Match 1 (Winner I vs 3rd C/D/F/G/H)
-    [getTeamName('A', 1), getTeamName('B', 1)],             // Match 2 (2A vs 2B - Gara 73)
-    [getTeamName('F', 0), getTeamName('C', 1)],             // Match 3 (1F vs 2C - Gara 75)
-    [getTeamName('K', 1), getTeamName('L', 1)],             // Match 4 (2K vs 2L - Gara 83)
-    [getTeamName('H', 0), getTeamName('J', 1)],             // Match 5 (1H vs 2J - Gara 84)
-    [getTeamName('D', 0), thirdsMatch.D || 'In attesa...'], // Match 6 (Winner D vs 3rd B/E/F/I/J)
-    [getTeamName('G', 0), thirdsMatch.G || 'In attesa...'], // Match 7 (Winner G vs 3rd A/E/H/I/J)
-    [getTeamName('C', 0), getTeamName('F', 1)],             // Match 8 (1C vs 2F - Gara 76)
-    [getTeamName('E', 1), getTeamName('I', 1)],             // Match 9 (2E vs 2I - Gara 78)
-    [getTeamName('A', 0), thirdsMatch.A || 'In attesa...'], // Match 10 (Winner A vs 3rd C/E/F/H/I)
-    [getTeamName('L', 0), thirdsMatch.L || 'In attesa...'], // Match 11 (Winner L vs 3rd E/H/I/J/K)
-    [getTeamName('J', 0), getTeamName('H', 1)],             // Match 12 (1J vs 2H - Gara 86)
-    [getTeamName('D', 1), getTeamName('G', 1)],             // Match 13 (2D vs 2G - Gara 88)
-    [getTeamName('B', 0), thirdsMatch.B || 'In attesa...'], // Match 14 (Winner B vs 3rd E/F/G/I/J)
-    [getTeamName('K', 0), thirdsMatch.K || 'In attesa...']  // Match 15 (Winner K vs 3rd D/E/I/J/L)
-  ];
+  // 3. Define Round of 32 Pairings (Official FIFA 2026 Regulations or Custom Overrides)
+  let r32Matches;
+  if (state.tournament && state.tournament.customR32 && state.tournament.customR32.length === 16) {
+    r32Matches = state.tournament.customR32.map(pair => [pair[0] || 'In attesa...', pair[1] || 'In attesa...']);
+  } else {
+    r32Matches = [
+      [getTeamName('E', 0), thirdsMatch.E || 'In attesa...'], // Match 0 (Winner E vs 3rd A/B/C/D/F)
+      [getTeamName('I', 0), thirdsMatch.I || 'In attesa...'], // Match 1 (Winner I vs 3rd C/D/F/G/H)
+      [getTeamName('A', 1), getTeamName('B', 1)],             // Match 2 (2A vs 2B - Gara 73)
+      [getTeamName('F', 0), getTeamName('C', 1)],             // Match 3 (1F vs 2C - Gara 75)
+      [getTeamName('K', 1), getTeamName('L', 1)],             // Match 4 (2K vs 2L - Gara 83)
+      [getTeamName('H', 0), getTeamName('J', 1)],             // Match 5 (1H vs 2J - Gara 84)
+      [getTeamName('D', 0), thirdsMatch.D || 'In attesa...'], // Match 6 (Winner D vs 3rd B/E/F/I/J)
+      [getTeamName('G', 0), thirdsMatch.G || 'In attesa...'], // Match 7 (Winner G vs 3rd A/E/H/I/J)
+      [getTeamName('C', 0), getTeamName('F', 1)],             // Match 8 (1C vs 2F - Gara 76)
+      [getTeamName('E', 1), getTeamName('I', 1)],             // Match 9 (2E vs 2I - Gara 78)
+      [getTeamName('A', 0), thirdsMatch.A || 'In attesa...'], // Match 10 (Winner A vs 3rd C/E/F/H/I)
+      [getTeamName('L', 0), thirdsMatch.L || 'In attesa...'], // Match 11 (Winner L vs 3rd E/H/I/J/K)
+      [getTeamName('J', 0), getTeamName('H', 1)],             // Match 12 (1J vs 2H - Gara 86)
+      [getTeamName('D', 1), getTeamName('G', 1)],             // Match 13 (2D vs 2G - Gara 88)
+      [getTeamName('B', 0), thirdsMatch.B || 'In attesa...'], // Match 14 (Winner B vs 3rd E/F/G/I/J)
+      [getTeamName('K', 0), thirdsMatch.K || 'In attesa...']  // Match 15 (Winner K vs 3rd D/E/I/J/L)
+    ];
+  }
 
   const r16Matches = [
     [ko.r32 ? ko.r32[2] : null, ko.r32 ? ko.r32[3] : null], // R16 Match 0: Winner Gara 73 (Match 2) vs Winner Gara 75 (Match 3)
@@ -5459,7 +5474,7 @@ function swapGroupTeams(groupKey, indexA, indexB) {
 }
 
 function selectKnockoutWinner(roundKey, matchIndex, winnerName) {
-  if (!state.tournament || !winnerName) return;
+  if (!state.tournament || !winnerName || winnerName === 'In attesa...') return;
 
   const ko = state.tournament.knockout;
   let currentWinner = null;
@@ -5961,7 +5976,78 @@ function renderBracketMatchCard(roundKey, matchIndex, teamA, teamB, winner, titl
     probB = 100 - probA;
   }
 
-  const renderSlot = (teamName, isTeamB) => {
+  const renderSlot = (teamName, isTeamB, slotIdx) => {
+    if (roundKey === 'r32') {
+      const isWinner = winner === teamName;
+      const isEliminated = winner && winner !== teamName;
+      const pCount = userTeam ? (state.players || []).filter(p => p.ownerId === userTeam.id && p.country === teamName).length : 0;
+      const userPlayers = userTeam ? (state.players || []).filter(p => p.ownerId === userTeam.id && p.country === teamName) : [];
+
+      let badgeHtml = '';
+      if (pCount > 0 && teamName && teamName !== 'In attesa...') {
+        const tooltipText = `Calciatori in rosa: ${userPlayers.map(p => `${p.name} (${p.role})`).join(', ')}`;
+        badgeHtml = `
+          <span class="team-user-badge" data-tooltip="${tooltipText}" title="${tooltipText}" style="margin-left: 0.15rem; margin-right: 0.15rem; padding: 0.05rem 0.25rem; font-size: 0.6rem;">
+            ${pCount}
+          </span>
+        `;
+      }
+
+      let classes = 'bracket-team-slot';
+      if (isWinner) classes += ' selected-winner';
+      if (isEliminated) classes += ' eliminated-team';
+
+      const probText = showProb ? `<span class="slot-prob-text" style="font-size: 0.65rem;">${isTeamB ? probB : probA}%</span>` : '';
+
+      // Gather 48 teams
+      const allTeams = [];
+      const groups = (state.tournament && state.tournament.groups) ? state.tournament.groups : {};
+      for (const key in groups) {
+        if (Array.isArray(groups[key])) {
+          groups[key].forEach(t => {
+            if (t && !allTeams.includes(t)) {
+              allTeams.push(t);
+            }
+          });
+        }
+      }
+      allTeams.sort((a, b) => a.localeCompare(b));
+
+      const optionsHtml = ['In attesa...', ...allTeams].map(t => {
+        const selected = t === teamName ? 'selected' : '';
+        return `<option value="${t}" ${selected}>${t}</option>`;
+      }).join('');
+
+      const selectHtml = `
+        <select class="r32-team-select" 
+                style="background: transparent; color: #fff; border: none; font-size: 0.72rem; font-weight: 500; outline: none; width: 100%; cursor: pointer; padding: 0; min-width: 0; text-overflow: ellipsis;"
+                onchange="changeR32Team(${matchIndex}, ${slotIdx}, this.value)"
+                onclick="event.stopPropagation()">
+          ${optionsHtml}
+        </select>
+      `;
+
+      const winnerIndicator = `
+        <div class="r32-winner-indicator" 
+             style="width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid ${isWinner ? 'var(--color-success, #10b981)' : 'var(--border-light, rgba(255,255,255,0.15))'}; background: ${isWinner ? 'var(--color-success, #10b981)' : 'transparent'}; display: flex; align-items: center; justify-content: center; font-size: 0.5rem; cursor: pointer; flex-shrink: 0; color: #fff; line-height: 1;"
+             onclick="selectKnockoutWinner('r32', ${matchIndex}, '${teamName}')">
+          ${isWinner ? '✓' : ''}
+        </div>
+      `;
+
+      return `
+        <div class="${classes}" style="display: flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.5rem; justify-content: space-between;">
+          <div style="display: flex; align-items: center; gap: 0.25rem; flex: 1; min-width: 0;">
+            ${winnerIndicator}
+            ${badgeHtml}
+            ${selectHtml}
+          </div>
+          ${probText}
+        </div>
+      `;
+    }
+
+    // Standard non-R32 slots
     if (!teamName) {
       return `<div class="bracket-team-slot empty-team">In attesa...</div>`;
     }
@@ -6015,11 +6101,163 @@ function renderBracketMatchCard(roundKey, matchIndex, teamA, teamB, winner, titl
   return `
     <div class="bracket-match-card">
       <div class="bracket-match-title">${title}</div>
-      ${renderSlot(teamA, false)}
-      ${renderSlot(teamB, true)}
+      ${renderSlot(teamA, false, 0)}
+      ${renderSlot(teamB, true, 1)}
       ${probBarHtml}
     </div>
   `;
+}
+
+function changeR32Team(matchIndex, slotIndex, teamName) {
+  if (!state.tournament) {
+    initializeTournament();
+  }
+
+  // Initialize customR32 if it doesn't exist
+  if (!state.tournament.customR32 || state.tournament.customR32.length !== 16) {
+    const tree = getTournamentTree();
+    state.tournament.customR32 = [];
+    for (let i = 0; i < 16; i++) {
+      const tA = tree.r32[i][0] || 'In attesa...';
+      const tB = tree.r32[i][1] || 'In attesa...';
+      state.tournament.customR32.push([tA, tB]);
+    }
+  }
+
+  // Update specific team
+  state.tournament.customR32[matchIndex][slotIndex] = teamName;
+
+  // Validate knockout winners since a matchup team changed
+  validateKnockoutWinners();
+  autoSave();
+  renderAll();
+}
+
+// R32 Pairing Customizer functions
+function openR32Editor() {
+  const dialog = document.getElementById('r32-editor-dialog');
+  const grid = document.getElementById('r32-editor-grid');
+  if (!dialog || !grid) return;
+
+  // Gather all 48 teams
+  const allTeams = [];
+  const groups = (state.tournament && state.tournament.groups) ? state.tournament.groups : {};
+  for (const key in groups) {
+    if (Array.isArray(groups[key])) {
+      groups[key].forEach(team => {
+        if (team && !allTeams.includes(team)) {
+          allTeams.push(team);
+        }
+      });
+    }
+  }
+  allTeams.sort((a, b) => a.localeCompare(b));
+
+  // Clear grid
+  grid.innerHTML = '';
+
+  const tree = getTournamentTree();
+  const currentR32 = tree.r32 || [];
+
+  for (let i = 0; i < 16; i++) {
+    const pair = currentR32[i] || ['In attesa...', 'In attesa...'];
+    const teamA = pair[0] || 'In attesa...';
+    const teamB = pair[1] || 'In attesa...';
+
+    const matchCard = document.createElement('div');
+    matchCard.className = 'r32-match-card';
+    matchCard.style.cssText = 'background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-light); border-radius: 8px; padding: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem;';
+
+    const title = document.createElement('div');
+    title.style.cssText = 'font-size: 0.75rem; font-weight: 700; color: var(--color-accent, #c084fc);';
+    title.textContent = `Incontro ${i + 1}`;
+
+    const selectsDiv = document.createElement('div');
+    selectsDiv.style.cssText = 'display: flex; gap: 0.5rem; align-items: center;';
+
+    // Dropdown 1
+    const selectA = document.createElement('select');
+    selectA.style.cssText = 'flex: 1; min-width: 0; background: var(--bg-main); color: #fff; border: 1px solid var(--border-light); border-radius: 6px; padding: 0.35rem; font-size: 0.75rem;';
+    
+    // Dropdown 2
+    const selectB = document.createElement('select');
+    selectB.style.cssText = 'flex: 1; min-width: 0; background: var(--bg-main); color: #fff; border: 1px solid var(--border-light); border-radius: 6px; padding: 0.35rem; font-size: 0.75rem;';
+
+    // Populate options
+    const optionsHtml = ['In attesa...', ...allTeams].map(t => `<option value="${t}">${t}</option>`).join('');
+    selectA.innerHTML = optionsHtml;
+    selectB.innerHTML = optionsHtml;
+
+    selectA.value = allTeams.includes(teamA) ? teamA : 'In attesa...';
+    selectB.value = allTeams.includes(teamB) ? teamB : 'In attesa...';
+
+    selectsDiv.appendChild(selectA);
+    
+    const vsSpan = document.createElement('span');
+    vsSpan.style.cssText = 'font-size: 0.7rem; color: var(--color-text-muted); font-weight: bold;';
+    vsSpan.textContent = 'VS';
+    selectsDiv.appendChild(vsSpan);
+
+    selectsDiv.appendChild(selectB);
+
+    matchCard.appendChild(title);
+    matchCard.appendChild(selectsDiv);
+
+    grid.appendChild(matchCard);
+  }
+
+  // Open modal
+  if (typeof dialog.showModal === 'function') {
+    dialog.showModal();
+  } else {
+    dialog.setAttribute('open', 'true');
+  }
+}
+
+function saveR32CustomPairings() {
+  const grid = document.getElementById('r32-editor-grid');
+  if (!grid) return;
+
+  const matchCards = grid.querySelectorAll('.r32-match-card');
+  const customR32 = [];
+
+  matchCards.forEach(card => {
+    const selects = card.querySelectorAll('select');
+    if (selects.length === 2) {
+      const valA = selects[0].value;
+      const valB = selects[1].value;
+      customR32.push([valA, valB]);
+    }
+  });
+
+  if (customR32.length === 16) {
+    if (!state.tournament) {
+      initializeTournament();
+    }
+    state.tournament.customR32 = customR32;
+    validateKnockoutWinners();
+    autoSave();
+    
+    const dialog = document.getElementById('r32-editor-dialog');
+    if (dialog) dialog.close();
+    
+    renderAll();
+    showToast('Accoppiamenti Sedicesimi personalizzati salvati! 💾', 'success');
+  }
+}
+
+function resetR32CustomPairings() {
+  if (state.tournament) {
+    delete state.tournament.customR32;
+    validateKnockoutWinners();
+    autoSave();
+  }
+  
+  const dialog = document.getElementById('r32-editor-dialog');
+  if (dialog) dialog.close();
+
+  renderAll();
+  showToast('Accoppiamenti resettati al calcolo automatico 🔄', 'info');
 }
 
 // Window globals to make functions accessible inline
@@ -6030,4 +6268,8 @@ window.simulateEntireTournament = simulateEntireTournament;
 window.simulateAiPrediction = simulateAiPrediction;
 window.resetTournament = resetTournament;
 window.renderTournament = renderTournament;
+window.openR32Editor = openR32Editor;
+window.saveR32CustomPairings = saveR32CustomPairings;
+window.resetR32CustomPairings = resetR32CustomPairings;
+window.changeR32Team = changeR32Team;
 

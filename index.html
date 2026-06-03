@@ -319,11 +319,12 @@
                 <h2 class="panel-title">Tabellone & Simulatore Mondiale 🏆</h2>
                 <p class="panel-subtitle">Simula i risultati del mondiale e vedi il posizionamento dei tuoi calciatori.</p>
               </div>
-              <div class="btn-group-tournament">
-                <button id="btn-sim-groups" class="btn btn-secondary btn-sm">Simula Gironi 🎲</button>
-                <button id="btn-sim-all" class="btn btn-secondary btn-sm">Simula Tutto 🚀</button>
-                <button id="btn-sim-ai" class="btn btn-accent btn-sm">Previsione IA 🔮</button>
-                <button id="btn-reset-tournament" class="btn btn-danger btn-sm">Reset 🔄</button>
+              <div class="tournament-actions-buttons" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <button class="btn btn-secondary" style="background: rgba(168, 85, 247, 0.15); border-color: rgba(168, 85, 247, 0.4); color: #c084fc; display: flex; align-items: center; gap: 0.25rem;" onclick="openR32Editor()">Personalizza Sedicesimi ✏️</button>
+                <button class="btn btn-secondary" onclick="simulateGroupStage()">Simula Gironi 🎲</button>
+                <button class="btn btn-primary" onclick="simulateEntireTournament()">Simula Tutto 🚀</button>
+                <button class="btn btn-accent" onclick="runAiPrediction()">Previsione IA 🔮</button>
+                <button class="btn btn-danger" onclick="resetTournamentState()">Reset 🔄</button>
               </div>
             </div>
 
@@ -533,6 +534,26 @@
   <dialog id="ai-recalc-dialog" style="max-width: 450px; width: 95%;">
     <div id="ai-recalc-dialog-content">
       <!-- Will be populated dynamically in app.js -->
+    </div>
+  </dialog>
+
+  <!-- MODAL DIALOG FOR EDITING ROUND OF 32 KNOCKOUT PAIRINGS -->
+  <dialog id="r32-editor-dialog" closedby="any" style="max-width: 650px; width: 95%; background: var(--bg-card); color: #fff; border: 1px solid var(--border-light); border-radius: 12px; padding: 1.5rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border-light); padding-bottom: 0.5rem;">
+      <h3 style="margin: 0; font-size: 1.1rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 0.35rem;">
+        ✏️ Personalizza Accoppiamenti Sedicesimi
+      </h3>
+      <button class="pitch-popover-close" onclick="document.getElementById('r32-editor-dialog').close()" style="position: static; font-size: 1.1rem;">✕</button>
+    </div>
+    <p style="font-size: 0.72rem; color: var(--color-text-muted); line-height: 1.4; margin: 0 0 1rem 0;">
+      Seleziona manualmente le nazionali per ciascuno dei 16 incontri dei Sedicesimi di Finale. Lasciare "In attesa..." per i campi non ancora definiti. Clicca su "Salva" per applicare o su "Ripristina Calcolo" per tornare agli accoppiamenti calcolati in base alla classifica dei gironi.
+    </p>
+    <div id="r32-editor-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 0.75rem; max-height: 350px; overflow-y: auto; padding-right: 0.5rem; margin-bottom: 1.25rem;">
+      <!-- Populated via JS -->
+    </div>
+    <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+      <button id="btn-r32-reset-calc" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.75rem;">🔄 Ripristina Calcolo</button>
+      <button id="btn-r32-save-custom" class="btn btn-primary" style="padding: 0.5rem 1.25rem; font-size: 0.75rem;">💾 Salva Accoppiamenti</button>
     </div>
   </dialog>
 
