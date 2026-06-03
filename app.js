@@ -2351,56 +2351,82 @@ function renderPitch() {
 
     // 3. Render Bench listing programmatically with Drag events
     benchContainer.innerHTML = '';
-    if (benchList.length === 0) {
+    const actualBenchList = benchList.slice(0, 10);
+    const tribunaList = benchList.slice(10);
+
+    const renderPlayerNode = (p, container, isTribuna) => {
+      const el = document.createElement('div');
+      el.className = 'bench-player-node';
+      el.setAttribute('draggable', 'true');
+      el.setAttribute('data-player-id', p.id);
+      el.style.viewTransitionName = `player-${p.id}`;
+
+      const cachedAnalysisRaw = state.aiCache[p.id] || JSON.parse(sessionStorage.getItem(`fantamondiale_ai_${p.id}`) || 'null');
+      const cachedAnalysis = cachedAnalysisRaw ? normalizePlayerAnalysis(cachedAnalysisRaw) : null;
+      const strength = cachedAnalysis ? cachedAnalysis.matchStrength : undefined;
+      let strengthBadgeHtml = '';
+      if (strength !== undefined && strength !== null) {
+        const strVal = parseInt(strength);
+        let strColor = '#ef4444'; // Red
+        let strBg = 'rgba(239, 68, 68, 0.12)';
+        if (strVal >= 80) {
+          strColor = '#10b981'; // Green
+          strBg = 'rgba(16, 185, 129, 0.12)';
+        } else if (strVal >= 50) {
+          strColor = '#f59e0b'; // Amber
+          strBg = 'rgba(245, 158, 11, 0.12)';
+        }
+        strengthBadgeHtml = `<span style="display: inline-flex; align-items: center; justify-content: center; width: 17px; height: 17px; border-radius: 50%; background: ${strBg}; border: 1px solid rgba(255,255,255,0.05); color: ${strColor}; font-size: 0.6rem; font-weight: 800; margin-left: 0.35rem;" title="Forza del turno: ${strVal}/100">${strVal}</span>`;
+      }
+
+      let warningBadgeHtml = '';
+      if (isTribuna) {
+        warningBadgeHtml = ` <span style="color: var(--color-warning); font-size: 0.8rem; font-weight: bold; margin-left: 0.25rem;" title="Non entrerà in panchina (max 10 panchinari!)">⚠️</span>`;
+        el.style.background = 'rgba(245, 158, 11, 0.05)';
+        el.style.borderColor = 'rgba(245, 158, 11, 0.2)';
+      }
+
+      el.innerHTML = `
+        <span class="dot" style="background: var(--color-${p.role.toLowerCase()})"></span>
+        <span style="${state.eliminatedCountries.includes(p.country) ? 'text-decoration: line-through; color: var(--color-text-muted);' : ''}">${p.name} (${p.country})</span>
+        ${strengthBadgeHtml}
+        ${warningBadgeHtml}
+        ${state.eliminatedCountries.includes(p.country) ? ' <span style="font-size: 0.55rem; color: var(--color-danger); font-weight: 700; border: 1px solid var(--color-danger); padding: 0.05rem 0.2rem; border-radius: 4px; line-height: 1;">ELIMINATO</span>' : ''}
+      `;
+
+      el.addEventListener('dragstart', handleDragStart);
+      el.addEventListener('dragend', handleDragEnd);
+      el.addEventListener('dragover', handleDragOver);
+      el.addEventListener('dragleave', handleDragLeave);
+      el.addEventListener('drop', handleDrop);
+
+      // Wire rich popover events
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isMobile = window.innerWidth <= 768;
+        showPitchPlayerTooltip(p.id, el, isMobile);
+      });
+
+      container.appendChild(el);
+    };
+
+    if (actualBenchList.length === 0) {
       benchContainer.innerHTML = `<span style="color: var(--color-text-muted); font-size: 0.75rem; font-style: italic;">Panchina vuota... Tutti i giocatori rientrano nei titolari.</span>`;
     } else {
-      benchList.forEach(p => {
-        const el = document.createElement('div');
-        el.className = 'bench-player-node';
-        el.setAttribute('draggable', 'true');
-        el.setAttribute('data-player-id', p.id);
-        el.style.viewTransitionName = `player-${p.id}`;
+      actualBenchList.forEach(p => renderPlayerNode(p, benchContainer, false));
+    }
 
-        const cachedAnalysisRaw = state.aiCache[p.id] || JSON.parse(sessionStorage.getItem(`fantamondiale_ai_${p.id}`) || 'null');
-        const cachedAnalysis = cachedAnalysisRaw ? normalizePlayerAnalysis(cachedAnalysisRaw) : null;
-        const strength = cachedAnalysis ? cachedAnalysis.matchStrength : undefined;
-        let strengthBadgeHtml = '';
-        if (strength !== undefined && strength !== null) {
-          const strVal = parseInt(strength);
-          let strColor = '#ef4444'; // Red
-          let strBg = 'rgba(239, 68, 68, 0.12)';
-          if (strVal >= 80) {
-            strColor = '#10b981'; // Green
-            strBg = 'rgba(16, 185, 129, 0.12)';
-          } else if (strVal >= 50) {
-            strColor = '#f59e0b'; // Amber
-            strBg = 'rgba(245, 158, 11, 0.12)';
-          }
-          strengthBadgeHtml = `<span style="display: inline-flex; align-items: center; justify-content: center; width: 17px; height: 17px; border-radius: 50%; background: ${strBg}; border: 1px solid rgba(255,255,255,0.05); color: ${strColor}; font-size: 0.6rem; font-weight: 800; margin-left: 0.35rem;" title="Forza del turno: ${strVal}/100">${strVal}</span>`;
-        }
-
-        el.innerHTML = `
-          <span class="dot" style="background: var(--color-${p.role.toLowerCase()})"></span>
-          <span style="${state.eliminatedCountries.includes(p.country) ? 'text-decoration: line-through; color: var(--color-text-muted);' : ''}">${p.name} (${p.country})</span>
-          ${strengthBadgeHtml}
-          ${state.eliminatedCountries.includes(p.country) ? ' <span style="font-size: 0.55rem; color: var(--color-danger); font-weight: 700; border: 1px solid var(--color-danger); padding: 0.05rem 0.2rem; border-radius: 4px; line-height: 1;">ELIMINATO</span>' : ''}
-        `;
-
-        el.addEventListener('dragstart', handleDragStart);
-        el.addEventListener('dragend', handleDragEnd);
-        el.addEventListener('dragover', handleDragOver);
-        el.addEventListener('dragleave', handleDragLeave);
-        el.addEventListener('drop', handleDrop);
-
-        // Wire rich popover events
-        el.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const isMobile = window.innerWidth <= 768;
-          showPitchPlayerTooltip(p.id, el, isMobile);
-        });
-
-        benchContainer.appendChild(el);
-      });
+    // Render Tribuna List
+    const tribunaSection = document.getElementById('pitch-tribuna-section');
+    const tribunaContainer = document.getElementById('pitch-tribuna-container');
+    if (tribunaSection && tribunaContainer) {
+      tribunaContainer.innerHTML = '';
+      if (tribunaList.length > 0) {
+        tribunaSection.style.display = 'block';
+        tribunaList.forEach(p => renderPlayerNode(p, tribunaContainer, true));
+      } else {
+        tribunaSection.style.display = 'none';
+      }
     }
 
     // Show or hide the AI tactical card
@@ -2662,7 +2688,8 @@ async function submitFormationWebhook(team, showIdeal, round) {
   try {
     const { starters, bench } = compileLineupData(team, showIdeal);
     
-    const formationList = [...starters, ...bench].slice(0, 21);
+    const actualBench = bench.slice(0, 10);
+    const formationList = [...starters, ...actualBench];
     const formationObjects = formationList.map(p => {
       return {
         name: p.name,
