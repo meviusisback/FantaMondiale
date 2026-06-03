@@ -71,7 +71,7 @@ let state = {
       CEN: 8,
       ATT: 6
     },
-    aiProvider: 'openrouter',
+    aiProvider: 'google',
     openRouterModel: 'openai/gpt-oss-120b:free'
   },
   teams: [
@@ -302,11 +302,11 @@ function initDOM() {
   dom.teamListInput.value = state.teams.map(t => t.name).join('\n');
 
   // Fill AI settings from state
-  if (dom.configAIProvider) dom.configAIProvider.value = state.settings.aiProvider || 'openrouter';
+  if (dom.configAIProvider) dom.configAIProvider.value = state.settings.aiProvider || 'google';
   if (dom.configOpenRouterModel) dom.configOpenRouterModel.value = state.settings.openRouterModel || 'openai/gpt-oss-120b:free';
   
   // Apply dynamic show/hide style
-  const isOR = (state.settings.aiProvider || 'openrouter') === 'openrouter';
+  const isOR = (state.settings.aiProvider || 'google') === 'openrouter';
   const divORModel = document.getElementById('div-openrouter-model');
   if (divORModel) divORModel.style.display = isOR ? 'block' : 'none';
 }
@@ -578,7 +578,7 @@ function saveConfig() {
   const newSlotDIF = dom.configSlotDIF ? (parseInt(dom.configSlotDIF.value) || 8) : 8;
   const newSlotCEN = dom.configSlotCEN ? (parseInt(dom.configSlotCEN.value) || 8) : 8;
   const newSlotATT = dom.configSlotATT ? (parseInt(dom.configSlotATT.value) || 6) : 6;
-  const newAIProvider = dom.configAIProvider ? dom.configAIProvider.value : 'openrouter';
+  const newAIProvider = dom.configAIProvider ? dom.configAIProvider.value : 'google';
   const newOpenRouterModel = dom.configOpenRouterModel ? dom.configOpenRouterModel.value.trim() : 'openai/gpt-oss-120b:free';
 
   const rawTeamNames = dom.teamListInput.value.split('\n').map(name => name.trim()).filter(Boolean);
@@ -766,9 +766,9 @@ function handleSessionImport(e) {
       dom.teamListInput.value = state.teams.map(t => t.name).join('\n');
 
       // Restore AI settings
-      if (dom.configAIProvider) dom.configAIProvider.value = state.settings.aiProvider || 'openrouter';
+      if (dom.configAIProvider) dom.configAIProvider.value = state.settings.aiProvider || 'google';
       if (dom.configOpenRouterModel) dom.configOpenRouterModel.value = state.settings.openRouterModel || 'openai/gpt-oss-120b:free';
-      const isOR = (state.settings.aiProvider || 'openrouter') === 'openrouter';
+      const isOR = (state.settings.aiProvider || 'google') === 'openrouter';
       const divORModel = document.getElementById('div-openrouter-model');
       if (divORModel) divORModel.style.display = isOR ? 'block' : 'none';
 
@@ -946,9 +946,9 @@ async function autoLoadCloudSession(id) {
     dom.teamListInput.value = state.teams.map(t => t.name).join('\n');
 
     // Restore AI settings
-    if (dom.configAIProvider) dom.configAIProvider.value = state.settings.aiProvider || 'openrouter';
+    if (dom.configAIProvider) dom.configAIProvider.value = state.settings.aiProvider || 'google';
     if (dom.configOpenRouterModel) dom.configOpenRouterModel.value = state.settings.openRouterModel || 'openai/gpt-oss-120b:free';
-    const isOR = (state.settings.aiProvider || 'openrouter') === 'openrouter';
+    const isOR = (state.settings.aiProvider || 'google') === 'openrouter';
     const divORModel = document.getElementById('div-openrouter-model');
     if (divORModel) divORModel.style.display = isOR ? 'block' : 'none';
 
@@ -1036,7 +1036,7 @@ function resetSessionClean() {
       CEN: 8,
       ATT: 6
     },
-    aiProvider: 'openrouter',
+    aiProvider: 'google',
     openRouterModel: 'openai/gpt-oss-120b:free'
   };
 
@@ -2952,9 +2952,9 @@ async function loadSpecificCloudSession(id, skipConfirm = false) {
     dom.teamListInput.value = state.teams.map(t => t.name).join('\n');
 
     // Restore AI settings
-    if (dom.configAIProvider) dom.configAIProvider.value = state.settings.aiProvider || 'openrouter';
+    if (dom.configAIProvider) dom.configAIProvider.value = state.settings.aiProvider || 'google';
     if (dom.configOpenRouterModel) dom.configOpenRouterModel.value = state.settings.openRouterModel || 'openai/gpt-oss-120b:free';
-    const isOR = (state.settings.aiProvider || 'openrouter') === 'openrouter';
+    const isOR = (state.settings.aiProvider || 'google') === 'openrouter';
     const divORModel = document.getElementById('div-openrouter-model');
     if (divORModel) divORModel.style.display = isOR ? 'block' : 'none';
 
@@ -3375,7 +3375,7 @@ async function showPitchPlayerTooltip(playerId, triggerEl, isMobile) {
           name: player.name,
           country: player.country,
           role: player.role,
-          provider: state.settings.aiProvider || 'openrouter',
+          provider: state.settings.aiProvider || 'google',
           openRouterModel: state.settings.openRouterModel || 'openai/gpt-oss-120b:free'
         })
       });
@@ -3521,7 +3521,7 @@ async function showPlayerAIAnalysis(playerId, name, country, role, buttonEl, for
         name, 
         country, 
         role,
-        provider: state.settings.aiProvider || 'openrouter',
+        provider: state.settings.aiProvider || 'google',
         openRouterModel: state.settings.openRouterModel || 'openai/gpt-oss-120b:free'
       })
     });
@@ -3944,7 +3944,7 @@ async function showTeamAIAnalysis(buttonEl, forceRefresh = false) {
         roster: rosterData,
         budget: team.budget,
         freePlayers: topFreePlayers,
-        provider: state.settings.aiProvider || 'openrouter',
+        provider: state.settings.aiProvider || 'google',
         openRouterModel: state.settings.openRouterModel || 'openai/gpt-oss-120b:free'
       })
     });
@@ -4291,7 +4291,7 @@ async function recalculatePlayerEvaluations(team) {
             },
             body: JSON.stringify({
               players: batchPlayers,
-              provider: state.settings.aiProvider || 'openrouter',
+              provider: state.settings.aiProvider || 'google',
               openRouterModel: state.settings.openRouterModel || 'openai/gpt-oss-120b:free'
             })
           });
@@ -4384,11 +4384,11 @@ async function recalculatePlayerEvaluations(team) {
 
           try {
             const retryResponse = await fetch('/api/player-batch-analysis', {
-              method: 'POST',
+              method: 'POST', 
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 players: retryBatchPlayers,
-                provider: state.settings.aiProvider || 'openrouter',
+                provider: state.settings.aiProvider || 'google',
                 openRouterModel: state.settings.openRouterModel || 'openai/gpt-oss-120b:free'
               })
             });
@@ -4547,7 +4547,7 @@ async function generateIdealLineup(team) {
       body: JSON.stringify({ 
         teamName: team.name,
         players: playersWithEvaluations,
-        provider: state.settings.aiProvider || 'openrouter',
+        provider: state.settings.aiProvider || 'google',
         openRouterModel: state.settings.openRouterModel || 'openai/gpt-oss-120b:free'
       })
     });
