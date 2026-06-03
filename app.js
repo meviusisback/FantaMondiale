@@ -2584,10 +2584,7 @@ async function submitRosterWebhook(team) {
     porList.forEach((p, idx) => {
       if (idx < 4) {
         players.push({
-          number: 4 + idx,
-          name: p.name,
-          nationality: countryToCode[p.country] || (p.country || '').substring(0, 3).toUpperCase(),
-          cost: parseInt(p.purchaseCost) || 0
+          name: p.name
         });
       }
     });
@@ -2595,10 +2592,7 @@ async function submitRosterWebhook(team) {
     difList.forEach((p, idx) => {
       if (idx < 14) {
         players.push({
-          number: 9 + idx,
-          name: p.name,
-          nationality: countryToCode[p.country] || (p.country || '').substring(0, 3).toUpperCase(),
-          cost: parseInt(p.purchaseCost) || 0
+          name: p.name
         });
       }
     });
@@ -2606,10 +2600,7 @@ async function submitRosterWebhook(team) {
     cenList.forEach((p, idx) => {
       if (idx < 14) {
         players.push({
-          number: 23 + idx,
-          name: p.name,
-          nationality: countryToCode[p.country] || (p.country || '').substring(0, 3).toUpperCase(),
-          cost: parseInt(p.purchaseCost) || 0
+          name: p.name
         });
       }
     });
@@ -2617,10 +2608,7 @@ async function submitRosterWebhook(team) {
     attList.forEach((p, idx) => {
       if (idx < 12) {
         players.push({
-          number: 38 + idx,
-          name: p.name,
-          nationality: countryToCode[p.country] || (p.country || '').substring(0, 3).toUpperCase(),
-          cost: parseInt(p.purchaseCost) || 0
+          name: p.name
         });
       }
     });
