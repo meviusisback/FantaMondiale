@@ -2663,15 +2663,17 @@ async function submitFormationWebhook(team, showIdeal, round) {
     const { starters, bench } = compileLineupData(team, showIdeal);
     
     const formationList = [...starters, ...bench].slice(0, 21);
-    const formationStrings = formationList.map(p => {
-      const code = countryToCode[p.country] || (p.country || '').substring(0, 3).toUpperCase();
-      return `${p.name} (${code})`;
+    const formationObjects = formationList.map(p => {
+      return {
+        name: p.name,
+        cost: parseInt(p.purchaseCost) || 0
+      };
     });
 
     const payload = {
       type: 'formazione',
       round: round,
-      formation: formationStrings
+      formation: formationObjects
     };
 
     showToast(`Invio formazione (${round}) in corso...`, 'info');
