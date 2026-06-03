@@ -71,7 +71,7 @@ let state = {
       CEN: 8,
       ATT: 6
     },
-    aiProvider: 'openrouter',
+    aiProvider: 'google',
     openRouterModel: 'openai/gpt-oss-120b:free'
   },
   teams: [
@@ -302,11 +302,11 @@ function initDOM() {
   dom.teamListInput.value = state.teams.map(t => t.name).join('\n');
 
   // Fill AI settings from state
-  if (dom.configAIProvider) dom.configAIProvider.value = state.settings.aiProvider || 'openrouter';
+  if (dom.configAIProvider) dom.configAIProvider.value = state.settings.aiProvider || 'google';
   if (dom.configOpenRouterModel) dom.configOpenRouterModel.value = state.settings.openRouterModel || 'openai/gpt-oss-120b:free';
   
   // Apply dynamic show/hide style
-  const isOR = (state.settings.aiProvider || 'openrouter') === 'openrouter';
+  const isOR = (state.settings.aiProvider || 'google') === 'openrouter';
   const divORModel = document.getElementById('div-openrouter-model');
   if (divORModel) divORModel.style.display = isOR ? 'block' : 'none';
 }
@@ -578,7 +578,7 @@ function saveConfig() {
   const newSlotDIF = dom.configSlotDIF ? (parseInt(dom.configSlotDIF.value) || 8) : 8;
   const newSlotCEN = dom.configSlotCEN ? (parseInt(dom.configSlotCEN.value) || 8) : 8;
   const newSlotATT = dom.configSlotATT ? (parseInt(dom.configSlotATT.value) || 6) : 6;
-  const newAIProvider = dom.configAIProvider ? dom.configAIProvider.value : 'openrouter';
+  const newAIProvider = dom.configAIProvider ? dom.configAIProvider.value : 'google';
   const newOpenRouterModel = dom.configOpenRouterModel ? dom.configOpenRouterModel.value.trim() : 'openai/gpt-oss-120b:free';
 
   const rawTeamNames = dom.teamListInput.value.split('\n').map(name => name.trim()).filter(Boolean);
@@ -766,9 +766,9 @@ function handleSessionImport(e) {
       dom.teamListInput.value = state.teams.map(t => t.name).join('\n');
 
       // Restore AI settings
-      if (dom.configAIProvider) dom.configAIProvider.value = state.settings.aiProvider || 'openrouter';
+      if (dom.configAIProvider) dom.configAIProvider.value = state.settings.aiProvider || 'google';
       if (dom.configOpenRouterModel) dom.configOpenRouterModel.value = state.settings.openRouterModel || 'openai/gpt-oss-120b:free';
-      const isOR = (state.settings.aiProvider || 'openrouter') === 'openrouter';
+      const isOR = (state.settings.aiProvider || 'google') === 'openrouter';
       const divORModel = document.getElementById('div-openrouter-model');
       if (divORModel) divORModel.style.display = isOR ? 'block' : 'none';
 
@@ -946,9 +946,9 @@ async function autoLoadCloudSession(id) {
     dom.teamListInput.value = state.teams.map(t => t.name).join('\n');
 
     // Restore AI settings
-    if (dom.configAIProvider) dom.configAIProvider.value = state.settings.aiProvider || 'openrouter';
+    if (dom.configAIProvider) dom.configAIProvider.value = state.settings.aiProvider || 'google';
     if (dom.configOpenRouterModel) dom.configOpenRouterModel.value = state.settings.openRouterModel || 'openai/gpt-oss-120b:free';
-    const isOR = (state.settings.aiProvider || 'openrouter') === 'openrouter';
+    const isOR = (state.settings.aiProvider || 'google') === 'openrouter';
     const divORModel = document.getElementById('div-openrouter-model');
     if (divORModel) divORModel.style.display = isOR ? 'block' : 'none';
 
@@ -1036,7 +1036,7 @@ function resetSessionClean() {
       CEN: 8,
       ATT: 6
     },
-    aiProvider: 'openrouter',
+    aiProvider: 'google',
     openRouterModel: 'openai/gpt-oss-120b:free'
   };
 
@@ -1176,45 +1176,56 @@ function assignPlayerDirect(playerId, targetTeamId = null) {
 
 function releasePlayer(playerId) {
   const player = state.players.find(p => p.id === playerId);
-  if (!player || !player.ownerId) return;
-
-  const team = state.teams.find(t => t.id === player.ownerId);
-  if (!team) return;
-
-  if (!confirm(`Vuoi davvero svincolare ${player.name} da ${team.name}? I crediti spesi (${player.purchaseCost}) verranno restituiti.`)) {
+  const team = state.teams.find(t => t.players.some(p => p.id === playerId));
+  
+  if (!team) {
+    showToast("Impossibile trovare la squadra proprietaria di questo calciatore.", "danger");
     return;
   }
 
-  team.budget += player.purchaseCost;
+  const teamPlayer = team.players.find(p => p.id === playerId);
+  const cost = teamPlayer ? teamPlayer.purchaseCost : (player ? player.purchaseCost : 0);
+  const name = teamPlayer ? teamPlayer.name : (player ? player.name : 'Calciatore');
+
+  if (!confirm(`Vuoi davvero svincolare ${name} da ${team.name}? I crediti spesi (${cost}) verranno restituiti.`)) {
+    return;
+  }
+
+  team.budget += cost;
   team.players = team.players.filter(p => p.id !== playerId);
 
-  player.ownerId = null;
-  player.purchaseCost = null;
+  if (player) {
+    player.ownerId = null;
+    player.purchaseCost = null;
+  }
 
   autoSave();
   renderAll();
-  showToast(`${player.name} svincolato da ${team.name}. Crediti rimborsati!`, 'warning');
+  showToast(`${name} svincolato da ${team.name}. Crediti rimborsati!`, 'warning');
 }
 
 function undoPurchase(playerId) {
   const player = state.players.find(p => p.id === playerId);
-  if (!player || !player.ownerId) return;
-
-  const team = state.teams.find(t => t.id === player.ownerId);
+  const team = state.teams.find(t => t.players.some(p => p.id === playerId));
   if (!team) return;
 
-  team.budget += player.purchaseCost;
+  const teamPlayer = team.players.find(p => p.id === playerId);
+  const cost = teamPlayer ? teamPlayer.purchaseCost : (player ? player.purchaseCost : 0);
+  const name = teamPlayer ? teamPlayer.name : (player ? player.name : 'Calciatore');
+
+  team.budget += cost;
   team.players = team.players.filter(p => p.id !== playerId);
 
-  const playerName = player.name;
-  const teamName = team.name;
+  if (player) {
+    player.ownerId = null;
+    player.purchaseCost = null;
+  }
 
-  player.ownerId = null;
-  player.purchaseCost = null;
+  const teamName = team.name;
 
   autoSave();
   renderAll();
-  showToast(`Acquisto di ${playerName} per ${teamName} annullato!`, 'warning');
+  showToast(`Acquisto annullato: ${name} rimosso da ${teamName}.`, 'warning');
 }
 
 // --- FORMULAS & MATHS (REAL-WORLD ROSTER RULES) ---
@@ -2340,56 +2351,82 @@ function renderPitch() {
 
     // 3. Render Bench listing programmatically with Drag events
     benchContainer.innerHTML = '';
-    if (benchList.length === 0) {
+    const actualBenchList = benchList.slice(0, 10);
+    const tribunaList = benchList.slice(10);
+
+    const renderPlayerNode = (p, container, isTribuna) => {
+      const el = document.createElement('div');
+      el.className = 'bench-player-node';
+      el.setAttribute('draggable', 'true');
+      el.setAttribute('data-player-id', p.id);
+      el.style.viewTransitionName = `player-${p.id}`;
+
+      const cachedAnalysisRaw = state.aiCache[p.id] || JSON.parse(sessionStorage.getItem(`fantamondiale_ai_${p.id}`) || 'null');
+      const cachedAnalysis = cachedAnalysisRaw ? normalizePlayerAnalysis(cachedAnalysisRaw) : null;
+      const strength = cachedAnalysis ? cachedAnalysis.matchStrength : undefined;
+      let strengthBadgeHtml = '';
+      if (strength !== undefined && strength !== null) {
+        const strVal = parseInt(strength);
+        let strColor = '#ef4444'; // Red
+        let strBg = 'rgba(239, 68, 68, 0.12)';
+        if (strVal >= 80) {
+          strColor = '#10b981'; // Green
+          strBg = 'rgba(16, 185, 129, 0.12)';
+        } else if (strVal >= 50) {
+          strColor = '#f59e0b'; // Amber
+          strBg = 'rgba(245, 158, 11, 0.12)';
+        }
+        strengthBadgeHtml = `<span style="display: inline-flex; align-items: center; justify-content: center; width: 17px; height: 17px; border-radius: 50%; background: ${strBg}; border: 1px solid rgba(255,255,255,0.05); color: ${strColor}; font-size: 0.6rem; font-weight: 800; margin-left: 0.35rem;" title="Forza del turno: ${strVal}/100">${strVal}</span>`;
+      }
+
+      let warningBadgeHtml = '';
+      if (isTribuna) {
+        warningBadgeHtml = ` <span style="color: var(--color-warning); font-size: 0.8rem; font-weight: bold; margin-left: 0.25rem;" title="Non entrerà in panchina (max 10 panchinari!)">⚠️</span>`;
+        el.style.background = 'rgba(245, 158, 11, 0.05)';
+        el.style.borderColor = 'rgba(245, 158, 11, 0.2)';
+      }
+
+      el.innerHTML = `
+        <span class="dot" style="background: var(--color-${p.role.toLowerCase()})"></span>
+        <span style="${state.eliminatedCountries.includes(p.country) ? 'text-decoration: line-through; color: var(--color-text-muted);' : ''}">${p.name} (${p.country})</span>
+        ${strengthBadgeHtml}
+        ${warningBadgeHtml}
+        ${state.eliminatedCountries.includes(p.country) ? ' <span style="font-size: 0.55rem; color: var(--color-danger); font-weight: 700; border: 1px solid var(--color-danger); padding: 0.05rem 0.2rem; border-radius: 4px; line-height: 1;">ELIMINATO</span>' : ''}
+      `;
+
+      el.addEventListener('dragstart', handleDragStart);
+      el.addEventListener('dragend', handleDragEnd);
+      el.addEventListener('dragover', handleDragOver);
+      el.addEventListener('dragleave', handleDragLeave);
+      el.addEventListener('drop', handleDrop);
+
+      // Wire rich popover events
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isMobile = window.innerWidth <= 768;
+        showPitchPlayerTooltip(p.id, el, isMobile);
+      });
+
+      container.appendChild(el);
+    };
+
+    if (actualBenchList.length === 0) {
       benchContainer.innerHTML = `<span style="color: var(--color-text-muted); font-size: 0.75rem; font-style: italic;">Panchina vuota... Tutti i giocatori rientrano nei titolari.</span>`;
     } else {
-      benchList.forEach(p => {
-        const el = document.createElement('div');
-        el.className = 'bench-player-node';
-        el.setAttribute('draggable', 'true');
-        el.setAttribute('data-player-id', p.id);
-        el.style.viewTransitionName = `player-${p.id}`;
+      actualBenchList.forEach(p => renderPlayerNode(p, benchContainer, false));
+    }
 
-        const cachedAnalysisRaw = state.aiCache[p.id] || JSON.parse(sessionStorage.getItem(`fantamondiale_ai_${p.id}`) || 'null');
-        const cachedAnalysis = cachedAnalysisRaw ? normalizePlayerAnalysis(cachedAnalysisRaw) : null;
-        const strength = cachedAnalysis ? cachedAnalysis.matchStrength : undefined;
-        let strengthBadgeHtml = '';
-        if (strength !== undefined && strength !== null) {
-          const strVal = parseInt(strength);
-          let strColor = '#ef4444'; // Red
-          let strBg = 'rgba(239, 68, 68, 0.12)';
-          if (strVal >= 80) {
-            strColor = '#10b981'; // Green
-            strBg = 'rgba(16, 185, 129, 0.12)';
-          } else if (strVal >= 50) {
-            strColor = '#f59e0b'; // Amber
-            strBg = 'rgba(245, 158, 11, 0.12)';
-          }
-          strengthBadgeHtml = `<span style="display: inline-flex; align-items: center; justify-content: center; width: 17px; height: 17px; border-radius: 50%; background: ${strBg}; border: 1px solid rgba(255,255,255,0.05); color: ${strColor}; font-size: 0.6rem; font-weight: 800; margin-left: 0.35rem;" title="Forza del turno: ${strVal}/100">${strVal}</span>`;
-        }
-
-        el.innerHTML = `
-          <span class="dot" style="background: var(--color-${p.role.toLowerCase()})"></span>
-          <span style="${state.eliminatedCountries.includes(p.country) ? 'text-decoration: line-through; color: var(--color-text-muted);' : ''}">${p.name} (${p.country})</span>
-          ${strengthBadgeHtml}
-          ${state.eliminatedCountries.includes(p.country) ? ' <span style="font-size: 0.55rem; color: var(--color-danger); font-weight: 700; border: 1px solid var(--color-danger); padding: 0.05rem 0.2rem; border-radius: 4px; line-height: 1;">ELIMINATO</span>' : ''}
-        `;
-
-        el.addEventListener('dragstart', handleDragStart);
-        el.addEventListener('dragend', handleDragEnd);
-        el.addEventListener('dragover', handleDragOver);
-        el.addEventListener('dragleave', handleDragLeave);
-        el.addEventListener('drop', handleDrop);
-
-        // Wire rich popover events
-        el.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const isMobile = window.innerWidth <= 768;
-          showPitchPlayerTooltip(p.id, el, isMobile);
-        });
-
-        benchContainer.appendChild(el);
-      });
+    // Render Tribuna List
+    const tribunaSection = document.getElementById('pitch-tribuna-section');
+    const tribunaContainer = document.getElementById('pitch-tribuna-container');
+    if (tribunaSection && tribunaContainer) {
+      tribunaContainer.innerHTML = '';
+      if (tribunaList.length > 0) {
+        tribunaSection.style.display = 'block';
+        tribunaList.forEach(p => renderPlayerNode(p, tribunaContainer, true));
+      } else {
+        tribunaSection.style.display = 'none';
+      }
     }
 
     // Show or hide the AI tactical card
@@ -2412,6 +2449,285 @@ function renderPitch() {
   }
 }
 
+// Country mapping helper for webhooks
+const countryToCode = {
+  'Argentina': 'ARG',
+  'Algeria': 'ALG',
+  'Australia': 'AUS',
+  'Austria': 'AUT',
+  'Arabia Saudita': 'KSA',
+  'Belgio': 'BEL',
+  'Bosnia ed Erzegovina': 'BIH',
+  'Brasile': 'BRA',
+  'Canada': 'CAN',
+  'Capo Verde': 'CPV',
+  'Colombia': 'COL',
+  'Corea del Sud': 'KOR',
+  'Costa d\'Avorio': 'CIV',
+  'Croazia': 'CRO',
+  'Curaçao': 'CUW',
+  'Ecuador': 'ECU',
+  'Egitto': 'EGY',
+  'Francia': 'FRA',
+  'Germania': 'GER',
+  'Ghana': 'GHA',
+  'Giappone': 'JPN',
+  'Giordania': 'JOR',
+  'Haiti': 'HAI',
+  'Inghilterra': 'ENG',
+  'Iran': 'IRN',
+  'Iraq': 'IRQ',
+  'Italia': 'ITA',
+  'Marocco': 'MAR',
+  'Messico': 'MEX',
+  'Norvegia': 'NOR',
+  'Nuova Zelanda': 'NZL',
+  'Paesi Bassi': 'NED',
+  'Panama': 'PAN',
+  'Paraguay': 'PAR',
+  'Portogallo': 'POR',
+  'Qatar': 'QAT',
+  'Rep. Ceca': 'CZE',
+  'Repubblica Democratica del Congo': 'COD',
+  'Scozia': 'SCO',
+  'Senegal': 'SEN',
+  'Spagna': 'ESP',
+  'Stati Uniti': 'USA',
+  'Sudafrica': 'RSA',
+  'Svezia': 'SWE',
+  'Svizzera': 'SUI',
+  'Tunisia': 'TUN',
+  'Turchia': 'TUR',
+  'Uruguay': 'URU',
+  'Uzbekistan': 'UZB'
+};
+
+async function calculateHmacSha256(secret, message) {
+  const encoder = new TextEncoder();
+  const keyData = encoder.encode(secret);
+  const messageData = encoder.encode(message);
+  
+  const cryptoKey = await window.crypto.subtle.importKey(
+    'raw',
+    keyData,
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  
+  const signature = await window.crypto.subtle.sign(
+    'HMAC',
+    cryptoKey,
+    messageData
+  );
+  
+  const hashArray = Array.from(new Uint8Array(signature));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  return hashHex;
+}
+
+function compileLineupData(team, showIdeal) {
+  const module = team.module || '4-3-3';
+  const parts = module.split('-').map(x => parseInt(x));
+  
+  const defNeeded = parts[0] || 4;
+  const cenNeeded = parts[1] || 3;
+  const attNeeded = parts[2] || 3;
+  const porNeeded = 1;
+
+  const idealLineup = state.teamIdealLineups?.[team.id];
+  let porStarters, porBench, difStarters, difBench, cenStarters, cenBench, attStarters, attBench;
+
+  if (showIdeal && idealLineup) {
+    const startersList = team.players.filter(p => idealLineup.starters.includes(p.id));
+    const benchList = team.players.filter(p => idealLineup.bench.includes(p.id));
+
+    porStarters = startersList.filter(p => p.role === 'POR');
+    porBench = benchList.filter(p => p.role === 'POR');
+
+    difStarters = startersList.filter(p => p.role === 'DIF');
+    difBench = benchList.filter(p => p.role === 'DIF');
+
+    cenStarters = startersList.filter(p => p.role === 'CEN');
+    cenBench = benchList.filter(p => p.role === 'CEN');
+
+    attStarters = startersList.filter(p => p.role === 'ATT');
+    attBench = benchList.filter(p => p.role === 'ATT');
+  } else {
+    let porPlayers = team.players.filter(p => p.role === 'POR');
+    let difPlayers = team.players.filter(p => p.role === 'DIF');
+    let cenPlayers = team.players.filter(p => p.role === 'CEN');
+    let attPlayers = team.players.filter(p => p.role === 'ATT');
+
+    if (showIdeal) {
+      const getPlayerFormScore = (player) => {
+        const cachedRaw = state.aiCache[player.id] || JSON.parse(sessionStorage.getItem(`fantamondiale_ai_${player.id}`) || 'null');
+        if (!cachedRaw) return 50;
+        const cached = normalizePlayerAnalysis(cachedRaw);
+        let score = 50;
+        const cat = (cached.playerCategory || '').toLowerCase();
+        if (cat.includes('stella')) score += 40;
+        else if (cat.includes('ottimo')) score += 30;
+        else if (cat.includes('buono')) score += 20;
+        else if (cat.includes('accettabile')) score += 10;
+        else if (cat.includes('scarso')) score -= 20;
+        if (cached.starterProbability) {
+          const prob = parseInt(cached.starterProbability.replace(/[^0-9]/g, '')) || 50;
+          score += prob * 0.2;
+        }
+        score += (player.purchaseCost || 0) * 0.1;
+        return score;
+      };
+
+      porPlayers = [...porPlayers].sort((a, b) => getPlayerFormScore(b) - getPlayerFormScore(a));
+      difPlayers = [...difPlayers].sort((a, b) => getPlayerFormScore(b) - getPlayerFormScore(a));
+      cenPlayers = [...cenPlayers].sort((a, b) => getPlayerFormScore(b) - getPlayerFormScore(a));
+      attPlayers = [...attPlayers].sort((a, b) => getPlayerFormScore(b) - getPlayerFormScore(a));
+    }
+
+    porStarters = porPlayers.slice(0, porNeeded);
+    porBench = porPlayers.slice(porNeeded);
+
+    difStarters = difPlayers.slice(0, defNeeded);
+    difBench = difPlayers.slice(defNeeded);
+
+    cenStarters = cenPlayers.slice(0, cenNeeded);
+    cenBench = cenPlayers.slice(cenNeeded);
+
+    attStarters = attPlayers.slice(0, attNeeded);
+    attBench = attPlayers.slice(attNeeded);
+  }
+
+  let finalBench;
+  if (showIdeal && idealLineup) {
+    finalBench = idealLineup.bench.map(id => team.players.find(p => p.id === id)).filter(Boolean);
+  } else {
+    finalBench = [...porBench, ...difBench, ...cenBench, ...attBench];
+  }
+
+  const starters = [...porStarters, ...difStarters, ...cenStarters, ...attStarters];
+  return { starters, bench: finalBench };
+}
+
+async function submitRosterWebhook(team) {
+  try {
+    const porList = team.players.filter(p => p.role === 'POR');
+    const difList = team.players.filter(p => p.role === 'DIF');
+    const cenList = team.players.filter(p => p.role === 'CEN');
+    const attList = team.players.filter(p => p.role === 'ATT');
+    
+    const players = [];
+    
+    porList.forEach((p, idx) => {
+      if (idx < 4) {
+        players.push({
+          name: p.name,
+          cost: parseInt(p.purchaseCost) || 0
+        });
+      }
+    });
+    
+    difList.forEach((p, idx) => {
+      if (idx < 14) {
+        players.push({
+          name: p.name,
+          cost: parseInt(p.purchaseCost) || 0
+        });
+      }
+    });
+    
+    cenList.forEach((p, idx) => {
+      if (idx < 14) {
+        players.push({
+          name: p.name,
+          cost: parseInt(p.purchaseCost) || 0
+        });
+      }
+    });
+    
+    attList.forEach((p, idx) => {
+      if (idx < 12) {
+        players.push({
+          name: p.name,
+          cost: parseInt(p.purchaseCost) || 0
+        });
+      }
+    });
+
+    const payload = {
+      type: 'rosa',
+      players
+    };
+
+    showToast('Invio rosa in corso...', 'info');
+
+    const response = await fetch('/api/submit-webhook', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        eventType: 'rosa',
+        payload
+      })
+    });
+
+    if (response.ok) {
+      showToast('Rosa fissa inviata con successo! ✅', 'success');
+    } else {
+      const errText = await response.text();
+      showToast(`Errore invio rosa: ${response.status} - ${errText}`, 'danger');
+    }
+  } catch (error) {
+    console.error('Webhook error:', error);
+    showToast(`Errore: ${error.message || error}`, 'danger');
+  }
+}
+
+async function submitFormationWebhook(team, showIdeal, round) {
+  try {
+    const { starters, bench } = compileLineupData(team, showIdeal);
+    
+    const actualBench = bench.slice(0, 10);
+    const formationList = [...starters, ...actualBench];
+    const formationObjects = formationList.map(p => {
+      return {
+        name: p.name,
+        cost: parseInt(p.purchaseCost) || 0
+      };
+    });
+
+    const payload = {
+      type: 'formazione',
+      round: round,
+      formation: formationObjects
+    };
+
+    showToast(`Invio formazione (${round}) in corso...`, 'info');
+
+    const response = await fetch('/api/submit-webhook', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        eventType: 'formazione',
+        payload
+      })
+    });
+
+    if (response.ok) {
+      showToast('Formazione inviata con successo! ✅', 'success');
+    } else {
+      const errText = await response.text();
+      showToast(`Errore invio formazione: ${response.status} - ${errText}`, 'danger');
+    }
+  } catch (error) {
+    console.error('Webhook error:', error);
+    showToast(`Errore: ${error.message || error}`, 'danger');
+  }
+}
+
 function showTeamPitch(teamId, showIdeal = false) {
   const team = state.teams.find(t => t.id === teamId);
   if (!team) return;
@@ -2431,6 +2747,13 @@ function showTeamPitch(teamId, showIdeal = false) {
   if (buttonsWrapper) {
     buttonsWrapper.innerHTML = '';
     
+    // Create first row for normal pitch controls
+    const mainControlsRow = document.createElement('div');
+    mainControlsRow.style.display = 'flex';
+    mainControlsRow.style.gap = '0.5rem';
+    mainControlsRow.style.flexWrap = 'wrap';
+    mainControlsRow.style.width = '100%';
+    
     // Add Copy Lineup button
     const copyBtn = document.createElement('button');
     copyBtn.className = 'btn btn-secondary';
@@ -2441,7 +2764,7 @@ function showTeamPitch(teamId, showIdeal = false) {
     copyBtn.style.gap = '0.35rem';
     copyBtn.innerHTML = '📋 Copia Formazione';
     copyBtn.onclick = () => copyLineupToClipboard(team, showIdeal);
-    buttonsWrapper.appendChild(copyBtn);
+    mainControlsRow.appendChild(copyBtn);
 
     // If showing Ideal, add AI buttons inside the formation screen
     if (showIdeal) {
@@ -2458,7 +2781,7 @@ function showTeamPitch(teamId, showIdeal = false) {
       recalcPlayersBtn.style.color = '#fff';
       recalcPlayersBtn.innerHTML = 'Ricalcolo giocatori 🔄';
       recalcPlayersBtn.onclick = () => recalculatePlayerEvaluations(team);
-      buttonsWrapper.appendChild(recalcPlayersBtn);
+      mainControlsRow.appendChild(recalcPlayersBtn);
 
       // 2. Formazione AI button
       const aiLineupBtn = document.createElement('button');
@@ -2473,8 +2796,76 @@ function showTeamPitch(teamId, showIdeal = false) {
       aiLineupBtn.style.color = '#fff';
       aiLineupBtn.innerHTML = 'Formazione AI 🔮';
       aiLineupBtn.onclick = () => generateIdealLineup(team);
-      buttonsWrapper.appendChild(aiLineupBtn);
+      mainControlsRow.appendChild(aiLineupBtn);
     }
+    buttonsWrapper.appendChild(mainControlsRow);
+
+    // Create second row/container for webhooks
+    const webhookContainer = document.createElement('div');
+    webhookContainer.className = 'webhook-container';
+    webhookContainer.style.display = 'flex';
+    webhookContainer.style.alignItems = 'center';
+    webhookContainer.style.gap = '0.5rem';
+    webhookContainer.style.flexWrap = 'wrap';
+    webhookContainer.style.marginTop = '0.5rem';
+    webhookContainer.style.paddingTop = '0.5rem';
+    webhookContainer.style.borderTop = '1px dashed var(--border-light)';
+    webhookContainer.style.width = '100%';
+
+    // Round Selector
+    const roundLabel = document.createElement('label');
+    roundLabel.style.fontSize = '0.75rem';
+    roundLabel.style.fontWeight = '700';
+    roundLabel.style.color = 'var(--color-text-muted)';
+    roundLabel.innerText = 'TURNO:';
+    webhookContainer.appendChild(roundLabel);
+
+    const roundSelect = document.createElement('select');
+    roundSelect.className = 'input-control';
+    roundSelect.style.width = '100px';
+    roundSelect.style.padding = '0.25rem 0.5rem';
+    roundSelect.style.fontSize = '0.75rem';
+    roundSelect.style.borderRadius = '4px';
+    roundSelect.style.height = '30px';
+    
+    const rounds = ['G1', 'G2', 'G3', 'Sedicesimi', 'Ottavi', 'Quarti', 'Semifinale', 'Finale'];
+    rounds.forEach(r => {
+      const opt = document.createElement('option');
+      opt.value = r;
+      opt.innerText = r;
+      roundSelect.appendChild(opt);
+    });
+    webhookContainer.appendChild(roundSelect);
+
+    // Button Invio Rosa Fissa
+    const rosaBtn = document.createElement('button');
+    rosaBtn.className = 'btn btn-primary';
+    rosaBtn.style.padding = '0.4rem 0.8rem';
+    rosaBtn.style.fontSize = '0.75rem';
+    rosaBtn.style.height = '30px';
+    rosaBtn.style.display = 'flex';
+    rosaBtn.style.alignItems = 'center';
+    rosaBtn.style.gap = '0.35rem';
+    rosaBtn.innerHTML = '📤 Invio Rosa Fissa';
+    rosaBtn.onclick = () => submitRosterWebhook(team);
+    webhookContainer.appendChild(rosaBtn);
+
+    // Button Invio Formazione
+    const formationBtn = document.createElement('button');
+    formationBtn.className = 'btn btn-success';
+    formationBtn.style.padding = '0.4rem 0.8rem';
+    formationBtn.style.fontSize = '0.75rem';
+    formationBtn.style.height = '30px';
+    formationBtn.style.display = 'flex';
+    formationBtn.style.alignItems = 'center';
+    formationBtn.style.gap = '0.35rem';
+    formationBtn.style.background = 'var(--color-success)';
+    formationBtn.style.borderColor = 'var(--color-success)';
+    formationBtn.innerHTML = '📤 Invio Formazione';
+    formationBtn.onclick = () => submitFormationWebhook(team, showIdeal, roundSelect.value);
+    webhookContainer.appendChild(formationBtn);
+
+    buttonsWrapper.appendChild(webhookContainer);
   }
 
   renderPitch();
@@ -2952,9 +3343,9 @@ async function loadSpecificCloudSession(id, skipConfirm = false) {
     dom.teamListInput.value = state.teams.map(t => t.name).join('\n');
 
     // Restore AI settings
-    if (dom.configAIProvider) dom.configAIProvider.value = state.settings.aiProvider || 'openrouter';
+    if (dom.configAIProvider) dom.configAIProvider.value = state.settings.aiProvider || 'google';
     if (dom.configOpenRouterModel) dom.configOpenRouterModel.value = state.settings.openRouterModel || 'openai/gpt-oss-120b:free';
-    const isOR = (state.settings.aiProvider || 'openrouter') === 'openrouter';
+    const isOR = (state.settings.aiProvider || 'google') === 'openrouter';
     const divORModel = document.getElementById('div-openrouter-model');
     if (divORModel) divORModel.style.display = isOR ? 'block' : 'none';
 
@@ -3375,7 +3766,7 @@ async function showPitchPlayerTooltip(playerId, triggerEl, isMobile) {
           name: player.name,
           country: player.country,
           role: player.role,
-          provider: state.settings.aiProvider || 'openrouter',
+          provider: state.settings.aiProvider || 'google',
           openRouterModel: state.settings.openRouterModel || 'openai/gpt-oss-120b:free'
         })
       });
@@ -3521,7 +3912,7 @@ async function showPlayerAIAnalysis(playerId, name, country, role, buttonEl, for
         name, 
         country, 
         role,
-        provider: state.settings.aiProvider || 'openrouter',
+        provider: state.settings.aiProvider || 'google',
         openRouterModel: state.settings.openRouterModel || 'openai/gpt-oss-120b:free'
       })
     });
@@ -3944,7 +4335,7 @@ async function showTeamAIAnalysis(buttonEl, forceRefresh = false) {
         roster: rosterData,
         budget: team.budget,
         freePlayers: topFreePlayers,
-        provider: state.settings.aiProvider || 'openrouter',
+        provider: state.settings.aiProvider || 'google',
         openRouterModel: state.settings.openRouterModel || 'openai/gpt-oss-120b:free'
       })
     });
@@ -4291,7 +4682,7 @@ async function recalculatePlayerEvaluations(team) {
             },
             body: JSON.stringify({
               players: batchPlayers,
-              provider: state.settings.aiProvider || 'openrouter',
+              provider: state.settings.aiProvider || 'google',
               openRouterModel: state.settings.openRouterModel || 'openai/gpt-oss-120b:free'
             })
           });
@@ -4384,11 +4775,11 @@ async function recalculatePlayerEvaluations(team) {
 
           try {
             const retryResponse = await fetch('/api/player-batch-analysis', {
-              method: 'POST',
+              method: 'POST', 
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 players: retryBatchPlayers,
-                provider: state.settings.aiProvider || 'openrouter',
+                provider: state.settings.aiProvider || 'google',
                 openRouterModel: state.settings.openRouterModel || 'openai/gpt-oss-120b:free'
               })
             });
@@ -4547,7 +4938,7 @@ async function generateIdealLineup(team) {
       body: JSON.stringify({ 
         teamName: team.name,
         players: playersWithEvaluations,
-        provider: state.settings.aiProvider || 'openrouter',
+        provider: state.settings.aiProvider || 'google',
         openRouterModel: state.settings.openRouterModel || 'openai/gpt-oss-120b:free'
       })
     });
