@@ -100,7 +100,8 @@ let state = {
   activeCloudSessionMetadata: null,
   eliminatedCountries: ['Italia', 'Egitto', 'Nigeria'],
   tournament: null,
-  tournamentTab: 'gironi'
+  tournamentTab: 'gironi',
+  activeRound: 'G1'
 };
 
 // --- DOM ELEMENTS CACHE & SELECTORS ---
@@ -2864,8 +2865,14 @@ function showTeamPitch(teamId, showIdeal = false) {
       const opt = document.createElement('option');
       opt.value = r;
       opt.innerText = r;
+      if (r === (state.activeRound || 'G1')) {
+        opt.selected = true;
+      }
       roundSelect.appendChild(opt);
     });
+    roundSelect.onchange = (e) => {
+      state.activeRound = e.target.value;
+    };
     webhookContainer.appendChild(roundSelect);
 
     // Button Invio Rosa Fissa
@@ -4689,7 +4696,13 @@ async function recalculatePlayerEvaluations(team) {
   const progressBarEl = document.getElementById('ai-recalc-dialog-progress');
 
   try {
-    const allPlayers = [...team.players];
+    const allPlayers = team.players.map(p => ({
+      id: p.id,
+      name: p.name,
+      role: p.role,
+      country: p.country,
+      nextOpponent: getNextOpponentForCountry(p.country)
+    }));
     const batchSize = 3;
     const batches = [];
     
@@ -4811,8 +4824,15 @@ async function recalculatePlayerEvaluations(team) {
         }
         
         const retryBatches = [];
-        for (let i = 0; i < missingPlayers.length; i += 2) {
-          retryBatches.push(missingPlayers.slice(i, i + 2));
+        const mappedMissing = missingPlayers.map(p => ({
+          id: p.id,
+          name: p.name,
+          role: p.role,
+          country: p.country,
+          nextOpponent: getNextOpponentForCountry(p.country)
+        }));
+        for (let i = 0; i < mappedMissing.length; i += 2) {
+          retryBatches.push(mappedMissing.slice(i, i + 2));
         }
         
         for (let rIdx = 0; rIdx < retryBatches.length; rIdx++) {
@@ -5292,6 +5312,65 @@ function getTournamentTree() {
     thirdPlace: thirdPlaceMatch
   };
 }
+
+function getNextOpponentForCountry(countryName, round) {
+  if (!state.tournament || !state.tournament.groups) {
+    initializeTournament();
+  }
+  
+  const r = round || state.activeRound || 'G1';
+  
+  if (r === 'G1' || r === 'G2' || r === 'G3') {
+    // Find the group containing the countryName
+    const groups = state.tournament.groups || {};
+    let groupTeams = null;
+    for (const gk in groups) {
+      if (groups[gk] && groups[gk].includes(countryName)) {
+        groupTeams = groups[gk];
+        break;
+      }
+    }
+    if (!groupTeams || groupTeams.length < 4) return 'Da verificare';
+    
+    const idx = groupTeams.indexOf(countryName);
+    if (r === 'G1') {
+      if (idx === 0) return groupTeams[1];
+      if (idx === 1) return groupTeams[0];
+      if (idx === 2) return groupTeams[3];
+      if (idx === 3) return groupTeams[2];
+    } else if (r === 'G2') {
+      if (idx === 0) return groupTeams[2];
+      if (idx === 1) return groupTeams[3];
+      if (idx === 2) return groupTeams[0];
+      if (idx === 3) return groupTeams[1];
+    } else if (r === 'G3') {
+      if (idx === 0) return groupTeams[3];
+      if (idx === 1) return groupTeams[2];
+      if (idx === 2) return groupTeams[1];
+      if (idx === 3) return groupTeams[0];
+    }
+  } else {
+    // Knockout round
+    const tree = getTournamentTree();
+    let matches = [];
+    if (r === 'Sedicesimi') matches = tree.r32 || [];
+    else if (r === 'Ottavi') matches = tree.r16 || [];
+    else if (r === 'Quarti') matches = tree.qf || [];
+    else if (r === 'Semifinale') matches = tree.sf || [];
+    else if (r === 'Finale') {
+      matches = [tree.final, tree.thirdPlace].filter(Boolean);
+    }
+    
+    for (const match of matches) {
+      if (match && match.includes(countryName)) {
+        const opponent = match[0] === countryName ? match[1] : match[0];
+        return opponent || 'In attesa...';
+      }
+    }
+  }
+  return 'Da verificare';
+}
+window.getNextOpponentForCountry = getNextOpponentForCountry;
 
 function validateKnockoutWinners() {
   if (!state.tournament || !state.tournament.groups || !state.tournament.groups.A || !state.tournament.knockout) return false;
