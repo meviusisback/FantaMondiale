@@ -46,7 +46,7 @@ REGOLE DI ESATTEZZA NUMERICA DELLE PRESENZE (CRUCIALE):
 
 REGOLE DI VALUTAZIONE E CATEGORIA:
 - Scegli la 'playerCategory' rigorosamente tra: "scarso", "accettabile", "buono", "ottimo", "stella".
-- Sotto 'alternatives', includi sempre esattamente 1 o 2 concorrenti reali dello stesso ruolo in quella Nazionale (es. Casteels per Courtois; Openda per Lukaku; Strand Larsen per Haaland).
+- Sotto 'alternatives', includi sempre esattamente 1 o 2 concorrenti reali dello stesso ruolo in quella Nazionale, con le chiavi 'name', 'playProbability' e 'comment' (breve commento su chi sia e come insidia il posto).
   * **MATEMATICA AL 100% (CRUCIALE):** La somma tra 'starterProbability' del calciatore analizzato (es. 80%) e le 'playProbability' dei suoi concorrenti (es. 20%) deve essere tassativamente pari al 100%.
 
 VERIFICA CONVOCAZIONE ED ELIMINAZIONE MONDIALE:
@@ -96,7 +96,8 @@ Fornisci la risposta RIGOROSAMENTE in formato JSON con la seguente struttura esa
       "alternatives": [
         {
           "name": "Nome concorrente nello stesso ruolo in Nazionale",
-          "playProbability": "10%"
+          "playProbability": "10%",
+          "comment": "Descrizione di chi sia e come contende il posto."
         }
       ]
     }

@@ -3665,12 +3665,20 @@ function renderPitchPopoverData(popover, name, country, role, rawData, triggerEl
   `;
 
   if (data.alternatives && Array.isArray(data.alternatives) && data.alternatives.length > 0) {
-    const items = data.alternatives.map(alt => `
-      <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.68rem; margin-bottom: 0.2rem; background: rgba(255, 255, 255, 0.02); padding: 0.2rem 0.4rem; border-radius: 4px;">
-        <span style="color: #fff; font-weight: 500;">🔄 ${alt.name}</span>
-        <span style="color: #ef4444; font-weight: 700;">Impiego: ${alt.playProbability}</span>
-      </div>
-    `).join('');
+    const items = data.alternatives.map(alt => {
+      const commentHtml = alt.comment ? `
+        <div style="font-size: 0.62rem; color: var(--color-text-muted); font-style: italic; line-height: 1.35; padding: 0.2rem 0.4rem 0.35rem 0.4rem; border-bottom: 1px solid rgba(255, 255, 255, 0.03); margin-bottom: 0.25rem;">
+          ${alt.comment}
+        </div>
+      ` : '';
+      return `
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.68rem; margin-bottom: 0.2rem; background: rgba(255, 255, 255, 0.02); padding: 0.2rem 0.4rem; border-radius: 4px; border-bottom-left-radius: 0; border-bottom-right-radius: 0;">
+          <span style="color: #fff; font-weight: 500;">🔄 ${alt.name}</span>
+          <span style="color: #ef4444; font-weight: 700;">Impiego: ${alt.playProbability}</span>
+        </div>
+        ${commentHtml}
+      `;
+    }).join('');
     alternativesHtml = `
       <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.04); border-radius: 8px; padding: 0.4rem 0.5rem; margin-bottom: 0.5rem;">
         <span style="display: block; font-size: 0.6rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em; margin-bottom: 0.25rem;">Alternative in Nazionale 🔄</span>
@@ -3698,19 +3706,7 @@ function renderPitchPopoverData(popover, name, country, role, rawData, triggerEl
       </div>
     </div>
 
-    <!-- Group Analysis -->
-    <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.04); border-radius: 8px; padding: 0.4rem 0.5rem; margin-bottom: 0.5rem;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
-        <span style="font-size: 0.6rem; color: #10b981; text-transform: uppercase; font-weight: 800; letter-spacing: 0.04em;">Girone: ${data.groupAnalysis?.groupName || 'Girone'} 📊</span>
-        <span style="font-size: 0.68rem; font-weight: 800; color: #10b981;">Passaggio: ${data.groupAnalysis?.qualificationProbability || '50%'}</span>
-      </div>
-      <p style="margin: 0 0 0.35rem 0; font-size: 0.65rem; line-height: 1.35; color: #fff; font-weight: 500;">
-        ${data.groupAnalysis?.groupAnalysisText || 'Analisi del girone non disponibile.'}
-      </p>
-      <div style="background: rgba(0, 0, 0, 0.15); border-left: 2px solid #10b981; padding: 0.3rem 0.4rem; border-radius: 4px; font-size: 0.62rem; color: var(--color-text-muted); line-height: 1.3;">
-        <strong>Percorso post-gironi:</strong> ${data.groupAnalysis?.postGroupPath || 'Non disponibile.'}
-      </div>
-    </div>
+
 
     <!-- Next Match Analysis -->
     <div style="background: rgba(239, 68, 68, 0.03); border: 1px solid rgba(239, 68, 68, 0.15); border-radius: 8px; padding: 0.4rem 0.5rem; margin-bottom: 0.5rem;">
@@ -4150,12 +4146,20 @@ function renderPopoverData(popover, name, country, role, rawData, buttonEl) {
   // 3. Format Alternatives challenging starter status
   let alternativesHtml = '';
   if (data.alternatives && Array.isArray(data.alternatives) && data.alternatives.length > 0) {
-    const items = data.alternatives.map(alt => `
-      <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.68rem; margin-bottom: 0.2rem; background: rgba(255, 255, 255, 0.02); padding: 0.2rem 0.4rem; border-radius: 4px;">
-        <span style="color: #fff; font-weight: 500;">🔄 ${alt.name}</span>
-        <span style="color: #ef4444; font-weight: 700;">Chance impiego: ${alt.playProbability}</span>
-      </div>
-    `).join('');
+    const items = data.alternatives.map(alt => {
+      const commentHtml = alt.comment ? `
+        <div style="font-size: 0.62rem; color: var(--color-text-muted); font-style: italic; line-height: 1.35; padding: 0.2rem 0.4rem 0.35rem 0.4rem; border-bottom: 1px solid rgba(255, 255, 255, 0.03); margin-bottom: 0.25rem;">
+          ${alt.comment}
+        </div>
+      ` : '';
+      return `
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.68rem; margin-bottom: 0.2rem; background: rgba(255, 255, 255, 0.02); padding: 0.2rem 0.4rem; border-radius: 4px; border-bottom-left-radius: 0; border-bottom-right-radius: 0;">
+          <span style="color: #fff; font-weight: 500;">🔄 ${alt.name}</span>
+          <span style="color: #ef4444; font-weight: 700;">Chance impiego: ${alt.playProbability}</span>
+        </div>
+        ${commentHtml}
+      `;
+    }).join('');
     alternativesHtml = `
       <div class="ai-alternatives-section" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.04); border-radius: 8px; padding: 0.5rem 0.6rem; margin-bottom: 0.55rem;">
         <span style="display: block; font-size: 0.62rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em; margin-bottom: 0.35rem;">Insidie di Ruolo & Alternative 🔄</span>
@@ -4216,8 +4220,6 @@ function renderPopoverData(popover, name, country, role, rawData, buttonEl) {
     </div>
 
     ${bidRangeHtml}
-
-    ${groupAnalysisHtml}
 
     ${alternativesHtml}
 
