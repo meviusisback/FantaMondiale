@@ -3830,7 +3830,8 @@ async function showPitchPlayerTooltip(playerId, triggerEl, isMobile) {
           role: player.role,
           provider: state.settings.aiProvider || 'google',
           openRouterModel: state.settings.openRouterModel || 'openai/gpt-oss-120b:free',
-          geminiModel: state.settings.geminiModel || 'gemini-flash-lite-latest'
+          geminiModel: state.settings.geminiModel || 'gemini-flash-lite-latest',
+          nextOpponent: getNextOpponentForCountry(player.country)
         })
       });
       const result = await response.json();
@@ -3977,7 +3978,8 @@ async function showPlayerAIAnalysis(playerId, name, country, role, buttonEl, for
         role,
         provider: state.settings.aiProvider || 'google',
         openRouterModel: state.settings.openRouterModel || 'openai/gpt-oss-120b:free',
-        geminiModel: state.settings.geminiModel || 'gemini-flash-lite-latest'
+        geminiModel: state.settings.geminiModel || 'gemini-flash-lite-latest',
+        nextOpponent: getNextOpponentForCountry(country)
       })
     });
 

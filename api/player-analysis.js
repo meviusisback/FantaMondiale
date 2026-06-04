@@ -5,7 +5,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { name, country, role, provider, openRouterModel, geminiModel } = req.body || {};
+  const { name, country, role, provider, openRouterModel, geminiModel, nextOpponent } = req.body || {};
   const useOpenRouter = provider === 'openrouter';
   const apiKey = useOpenRouter ? process.env.OPENROUTER_API_KEY : process.env.GEMINI_API_KEY;
 
