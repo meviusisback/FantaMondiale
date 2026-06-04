@@ -2360,14 +2360,31 @@ function renderPitch() {
             strengthBadgeHtml = `<div class="pitch-player-strength-badge" title="Forza del turno: ${strVal}/100" style="position: absolute; top: -4px; right: -4px; width: 17px; height: 17px; border-radius: 50%; background: ${strBg}; color: ${strColor}; font-size: 0.58rem; font-weight: 800; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.25); box-shadow: 0 1px 3px rgba(0,0,0,0.4); z-index: 5;">${strVal}</div>`;
           }
 
+          const startProb = cachedAnalysis ? cachedAnalysis.starterProbability : undefined;
+          let probBadgeHtml = '';
+          if (startProb) {
+            const probVal = parseInt(startProb);
+            let probBg = '#ef4444'; // Red
+            if (probVal >= 70) {
+              probBg = '#10b981'; // Emerald
+            } else if (probVal >= 40) {
+              probBg = '#f59e0b'; // Amber
+            }
+            probBadgeHtml = `<div class="pitch-player-prob-badge" title="Percentuale titolarità: ${startProb}" style="position: absolute; bottom: -3px; right: -3px; min-width: 17px; height: 17px; padding: 0 2px; box-sizing: border-box; border-radius: 9px; background: ${probBg}; color: #fff; font-size: 0.48rem; font-weight: 800; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.25); box-shadow: 0 1px 3px rgba(0,0,0,0.4); z-index: 4;">${startProb}</div>`;
+          }
+
           const roleLetter = { POR: 'P', DIF: 'D', CEN: 'C', ATT: 'A' }[player.role] || player.role[0];
           node.innerHTML = `
             ${strengthBadgeHtml}
-            <div class="pitch-player-shirt" style="background: var(--color-${player.role.toLowerCase()}); ${state.eliminatedCountries.includes(player.country) ? 'opacity: 0.55; border: 2px dashed var(--color-danger);' : ''}">
-              ${roleLetter}
+            <div style="position: relative; display: inline-block;">
+              <div class="pitch-player-shirt" style="background: var(--color-${player.role.toLowerCase()}); ${state.eliminatedCountries.includes(player.country) ? 'opacity: 0.55; border: 2px dashed var(--color-danger);' : ''}">
+                ${roleLetter}
+              </div>
+              ${probBadgeHtml}
             </div>
             <div class="pitch-player-name" style="${state.eliminatedCountries.includes(player.country) ? 'color: var(--color-danger); text-decoration: line-through;' : ''}">${player.name} (${player.country})</div>
           `;
+
 
           // Wire drag and drop events
           node.addEventListener('dragstart', handleDragStart);
@@ -2413,10 +2430,11 @@ function renderPitch() {
 
     const renderHeader = (container) => {
       const header = document.createElement('div');
-      header.style.cssText = 'display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 0.5rem; width: 100%; box-sizing: border-box; padding: 0.35rem 0.65rem; font-size: 0.62rem; font-weight: 800; color: var(--color-text-muted); border-bottom: 1px solid var(--border-light); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem;';
+      header.style.cssText = 'display: grid; grid-template-columns: 1.6fr 1fr 0.7fr 0.7fr; gap: 0.5rem; width: 100%; box-sizing: border-box; padding: 0.35rem 0.65rem; font-size: 0.62rem; font-weight: 800; color: var(--color-text-muted); border-bottom: 1px solid var(--border-light); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem;';
       header.innerHTML = `
         <span>Calciatore</span>
         <span style="text-align: center;">Avversario</span>
+        <span style="text-align: right;">Forza F.</span>
         <span style="text-align: right;">Titolare %</span>
       `;
       container.appendChild(header);
@@ -2428,11 +2446,12 @@ function renderPitch() {
       el.setAttribute('draggable', 'true');
       el.setAttribute('data-player-id', p.id);
       el.style.viewTransitionName = `player-${p.id}`;
-      el.style.cssText = 'display: grid; grid-template-columns: 1.5fr 1fr 1fr; align-items: center; gap: 0.5rem; width: 100%; box-sizing: border-box; padding: 0.35rem 0.65rem; cursor: pointer;';
+      el.style.cssText = 'display: grid; grid-template-columns: 1.6fr 1fr 0.7fr 0.7fr; align-items: center; gap: 0.5rem; width: 100%; box-sizing: border-box; padding: 0.35rem 0.65rem; cursor: pointer;';
 
       const cachedAnalysisRaw = state.aiCache[p.id] || JSON.parse(sessionStorage.getItem(`fantamondiale_ai_${p.id}`) || 'null');
       const cachedAnalysis = cachedAnalysisRaw ? normalizePlayerAnalysis(cachedAnalysisRaw) : null;
       const startProb = cachedAnalysis ? cachedAnalysis.starterProbability : 'N/D';
+      const strength = cachedAnalysis ? cachedAnalysis.matchStrength : 'N/D';
       const opp = getNextOpponentForCountry(p.country);
 
       let probColor = 'var(--color-text-muted)';
@@ -2441,6 +2460,14 @@ function renderPitch() {
         if (val >= 70) probColor = '#10b981'; // Green
         else if (val >= 40) probColor = '#f59e0b'; // Amber
         else probColor = '#ef4444'; // Red
+      }
+
+      let strengthColor = 'var(--color-text-muted)';
+      if (strength !== 'N/D') {
+        const val = parseInt(strength);
+        if (val >= 80) strengthColor = '#10b981';
+        else if (val >= 50) strengthColor = '#f59e0b';
+        else strengthColor = '#ef4444';
       }
 
       let warningBadgeHtml = '';
@@ -2461,10 +2488,14 @@ function renderPitch() {
         <span style="font-size: 0.7rem; text-align: center; color: var(--color-text-muted); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${opp && opp !== 'Nessuno' && opp !== 'Da verificare' ? `vs ${opp}` : opp}">
           ${opp && opp !== 'Nessuno' && opp !== 'Da verificare' ? `vs ${opp}` : opp}
         </span>
+        <span style="font-size: 0.7rem; text-align: right; color: ${strengthColor}; font-weight: 700;">
+          ${strength}
+        </span>
         <span style="font-size: 0.7rem; text-align: right; color: ${probColor}; font-weight: 700;">
           ${startProb}
         </span>
       `;
+
 
       el.addEventListener('dragstart', handleDragStart);
       el.addEventListener('dragend', handleDragEnd);
@@ -3626,26 +3657,16 @@ function positionPitchPopover(popover, triggerEl) {
   const dialogEl = document.getElementById('pitch-dialog');
   if (!dialogEl) return;
   const dialogRect = dialogEl.getBoundingClientRect();
-  const rect = triggerEl.getBoundingClientRect();
-  const popoverWidth = 300;
-
-  // Center popover relative to the player card (which is ~75px wide)
-  let left = rect.left - dialogRect.left - 110 + 37.5;
-  let top = rect.bottom - dialogRect.top + 8;
 
   const dialogWidth = dialogRect.width;
   const dialogHeight = dialogRect.height;
-  const popoverHeightEst = 280;
+  
+  // Center popover inside the dialog window on desktop
+  const popoverWidth = 320; 
+  const popoverHeight = popover.offsetHeight || 380; 
 
-  // Position above player card if there is no space at the bottom of the dialog
-  if (rect.bottom - dialogRect.top + popoverHeightEst > dialogHeight && (rect.top - dialogRect.top) > popoverHeightEst) {
-    top = rect.top - dialogRect.top - popoverHeightEst - 8;
-  }
-
-  if (left < 10) left = 10;
-  if (left + popoverWidth > dialogWidth - 10) {
-    left = dialogWidth - popoverWidth - 10;
-  }
+  const left = (dialogWidth - popoverWidth) / 2;
+  const top = (dialogHeight - popoverHeight) / 2;
 
   popover.style.left = `${left}px`;
   popover.style.top = `${top}px`;
