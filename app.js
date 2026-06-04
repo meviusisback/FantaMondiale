@@ -1257,8 +1257,218 @@ function undoPurchase(playerId) {
 
 // --- FORMULAS & MATHS (REAL-WORLD ROSTER RULES) ---
 
+const TOP_150_PLAYERS = [
+  { name: "Kylian Mbappe", country: "france" },
+  { name: "Erling Haaland", country: "norway" },
+  { name: "Vinicius Junior", country: "brazil" },
+  { name: "Jude Bellingham", country: "england" },
+  { name: "Harry Kane", country: "england" },
+  { name: "Lionel Messi", country: "argentina" },
+  { name: "Lautaro Martinez", country: "argentina" },
+  { name: "Kevin De Bruyne", country: "belgium" },
+  { name: "Jamal Musiala", country: "germany" },
+  { name: "Florian Wirtz", country: "germany" },
+  { name: "Bukayo Saka", country: "england" },
+  { name: "Phil Foden", country: "england" },
+  { name: "Mohamed Salah", country: "egypt" },
+  { name: "Rodrygo Silva", country: "brazil" },
+  { name: "Antoine Griezmann", country: "france" },
+  { name: "Rafael Leao", country: "portugal" },
+  { name: "Cole Palmer", country: "england" },
+  { name: "Lamine Yamal", country: "spain" },
+  { name: "Victor Osimhen", country: "nigeria" },
+  { name: "Emiliano Martinez", country: "argentina" },
+  { name: "Alisson Becker", country: "brazil" },
+  { name: "Mike Maignan", country: "france" },
+  { name: "Thibaut Courtois", country: "belgium" },
+  { name: "Virgil van Dijk", country: "netherlands" },
+  { name: "Achraf Hakimi", country: "morocco" },
+  { name: "Theo Hernandez", country: "france" },
+  { name: "Rodri Hernandez", country: "spain" },
+  { name: "Federico Valverde", country: "uruguay" },
+  { name: "Bruno Fernandes", country: "portugal" },
+  { name: "Trent Alexander-Arnold", country: "england" },
+  { name: "William Saliba", country: "france" },
+  { name: "Antonio Rudiger", country: "germany" },
+  { name: "Ruben Dias", country: "portugal" },
+  { name: "Nico Williams", country: "spain" },
+  { name: "Julian Alvarez", country: "argentina" },
+  { name: "Bernardo Silva", country: "portugal" },
+  { name: "Alessandro Bastoni", country: "italy" },
+  { name: "Josko Gvardiol", country: "croatia" },
+  { name: "Gianluigi Donnarumma", country: "italy" },
+  { name: "Federico Dimarco", country: "italy" },
+  { name: "Pedri Gonzalez", country: "spain" },
+  { name: "Nicolo Barella", country: "italy" },
+  { name: "Declan Rice", country: "england" },
+  { name: "Alexis Mac Allister", country: "argentina" },
+  { name: "Ronald Araujo", country: "uruguay" },
+  { name: "Marquinhos", country: "brazil" },
+  { name: "Gabriel Martinelli", country: "brazil" },
+  { name: "Luis Diaz", country: "colombia" },
+  { name: "Darwin Nunez", country: "uruguay" },
+  { name: "Romelu Lukaku", country: "belgium" },
+  { name: "Cristiano Ronaldo", country: "portugal" },
+  { name: "Robert Lewandowski", country: "poland" },
+  { name: "Heung-min Son", country: "south korea" },
+  { name: "Jeremie Frimpong", country: "netherlands" },
+  { name: "Jules Kounde", country: "france" },
+  { name: "John Stones", country: "england" },
+  { name: "Hakan Calhanoglu", country: "turkey" },
+  { name: "Dani Carvajal", country: "spain" },
+  { name: "Diogo Costa", country: "portugal" },
+  { name: "Marc-Andre ter Stegen", country: "spain" },
+  { name: "Ederson Moraes", country: "brazil" },
+  { name: "Unai Simon", country: "spain" },
+  { name: "Jordan Pickford", country: "england" },
+  { name: "Bremer Gleison", country: "brazil" },
+  { name: "Gabriel Magalhaes", country: "brazil" },
+  { name: "Ibrahima Konate", country: "france" },
+  { name: "Dayot Upamecano", country: "france" },
+  { name: "Benjamin Pavard", country: "france" },
+  { name: "Kyle Walker", country: "england" },
+  { name: "Kieran Trippier", country: "england" },
+  { name: "Luke Shaw", country: "england" },
+  { name: "Jack Grealish", country: "england" },
+  { name: "Marcus Rashford", country: "england" },
+  { name: "James Maddison", country: "england" },
+  { name: "Jarrod Bowen", country: "england" },
+  { name: "Anthony Gordon", country: "england" },
+  { name: "Kobbie Mainoo", country: "england" },
+  { name: "Bruno Guimaraes", country: "brazil" },
+  { name: "Lucas Paqueta", country: "brazil" },
+  { name: "Douglas Luiz", country: "brazil" },
+  { name: "Joao Neves", country: "portugal" },
+  { name: "Joao Palhinha", country: "portugal" },
+  { name: "Vitinha", country: "portugal" },
+  { name: "Otavio", country: "portugal" },
+  { name: "Diogo Jota", country: "portugal" },
+  { name: "Goncalo Ramos", country: "portugal" },
+  { name: "Joao Felix", country: "portugal" },
+  { name: "Gavi", country: "spain" },
+  { name: "Dani Olmo", country: "spain" },
+  { name: "Mikel Merino", country: "spain" },
+  { name: "Martin Zubimendi", country: "spain" },
+  { name: "Fabian Ruiz", country: "spain" },
+  { name: "Alvaro Morata", country: "spain" },
+  { name: "Mikel Oyarzabal", country: "spain" },
+  { name: "Ferran Torres", country: "spain" },
+  { name: "Memphis Depay", country: "netherlands" },
+  { name: "Cody Gakpo", country: "netherlands" },
+  { name: "Xavi Simons", country: "netherlands" },
+  { name: "Donyell Malen", country: "netherlands" },
+  { name: "Tijjani Reijnders", country: "netherlands" },
+  { name: "Frenkie de Jong", country: "netherlands" },
+  { name: "Matthijs de Ligt", country: "netherlands" },
+  { name: "Nathan Ake", country: "netherlands" },
+  { name: "Denzel Dumfries", country: "netherlands" },
+  { name: "Lutsharel Geertruida", country: "netherlands" },
+  { name: "Bart Verbruggen", country: "netherlands" },
+  { name: "Mark Flekken", country: "netherlands" },
+  { name: "Jan Oblak", country: "slovenia" },
+  { name: "Giorgi Mamardashvili", country: "georgia" },
+  { name: "Khvicha Kvaratskhelia", country: "georgia" },
+  { name: "Dominik Szoboszlai", country: "hungary" },
+  { name: "Patrik Schick", country: "czech republic" },
+  { name: "Tomas Soucek", country: "czech republic" },
+  { name: "Dusan Vlahovic", country: "serbia" },
+  { name: "Aleksandar Mitrovic", country: "serbia" },
+  { name: "Sergej Milinkovic-Savic", country: "serbia" },
+  { name: "Filip Kostic", country: "serbia" },
+  { name: "Luka Modric", country: "croatia" },
+  { name: "Mateo Kovacic", country: "croatia" },
+  { name: "Marcelo Brozovic", country: "croatia" },
+  { name: "Ivan Perisic", country: "croatia" },
+  { name: "Mario Pasalic", country: "croatia" },
+  { name: "Lovro Majer", country: "croatia" },
+  { name: "Andrej Kramaric", country: "croatia" },
+  { name: "Josip Stanisic", country: "croatia" },
+  { name: "Josip Sutalo", country: "croatia" },
+  { name: "Dominik Livakovic", country: "croatia" },
+  { name: "Yann Sommer", country: "switzerland" },
+  { name: "Gregor Kobel", country: "switzerland" },
+  { name: "Manuel Akanji", country: "switzerland" },
+  { name: "Fabian Schar", country: "switzerland" },
+  { name: "Ricardo Rodriguez", country: "switzerland" },
+  { name: "Granit Xhaka", country: "switzerland" },
+  { name: "Remo Freuler", country: "switzerland" },
+  { name: "Denis Zakaria", country: "switzerland" },
+  { name: "Dan Ndoye", country: "switzerland" },
+  { name: "Breel Embolo", country: "switzerland" },
+  { name: "Zeki Amdouni", country: "switzerland" },
+  { name: "Federico Chiesa", country: "italy" },
+  { name: "Gianluca Scamacca", country: "italy" },
+  { name: "Mateo Retegui", country: "italy" },
+  { name: "Lorenzo Pellegrini", country: "italy" },
+  { name: "Davide Frattesi", country: "italy" },
+  { name: "Manuel Locatelli", country: "italy" },
+  { name: "Bryan Cristante", country: "italy" },
+  { name: "Gianluca Mancini", country: "italy" },
+  { name: "Giorgio Scalvini", country: "italy" },
+  { name: "Alessandro Buongiorno", country: "italy" },
+  { name: "Guglielmo Vicario", country: "italy" }
+];
+
+function findTopPlayerRank(player) {
+  if (!player || !player.name) return 999;
+  
+  const name = player.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const country = (player.country || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  
+  const cleanName = name.replace(/[^a-z0-9\s]/g, '');
+  const cleanCountry = country.replace(/[^a-z0-9\s]/g, '');
+  
+  const words = cleanName.split(/\s+/).filter(w => w.length > 2);
+  
+  for (let i = 0; i < TOP_150_PLAYERS.length; i++) {
+    const topP = TOP_150_PLAYERS[i];
+    const topName = topP.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9\s]/g, '');
+    const topCountry = topP.country.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9\s]/g, '');
+    
+    const countryMatch = cleanCountry.includes(topCountry) || topCountry.includes(cleanCountry) ||
+                         (cleanCountry === 'brasile' && topCountry === 'brazil') ||
+                         (cleanCountry === 'francia' && topCountry === 'france') ||
+                         (cleanCountry === 'spagna' && topCountry === 'spain') ||
+                         (cleanCountry === 'inghilterra' && topCountry === 'england') ||
+                         (cleanCountry === 'germania' && topCountry === 'germany') ||
+                         (cleanCountry === 'belgio' && topCountry === 'belgium') ||
+                         (cleanCountry === 'paesi bassi' && topCountry === 'netherlands') ||
+                         (cleanCountry === 'marocco' && topCountry === 'morocco') ||
+                         (cleanCountry === 'turchia' && topCountry === 'turkey') ||
+                         (cleanCountry === 'polonia' && topCountry === 'poland') ||
+                         (cleanCountry === 'croazia' && topCountry === 'croatia') ||
+                         (cleanCountry === 'svizzera' && topCountry === 'switzerland') ||
+                         (cleanCountry === 'corea del sud' && topCountry === 'south korea') ||
+                         (cleanCountry === 'argentina' && topCountry === 'argentina') ||
+                         (cleanCountry === 'egitto' && topCountry === 'egypt') ||
+                         (cleanCountry === 'repubblica ceca' && topCountry === 'czech republic') ||
+                         (cleanCountry === 'rep ceca' && topCountry === 'czech republic') ||
+                         (cleanCountry === 'colombia' && topCountry === 'colombia') ||
+                         (cleanCountry === 'nigeria' && topCountry === 'nigeria') ||
+                         (cleanCountry === 'uruguay' && topCountry === 'uruguay') ||
+                         (cleanCountry === 'marocco' && topCountry === 'morocco') ||
+                         (cleanCountry === 'maroc' && topCountry === 'morocco') ||
+                         (cleanCountry === 'canada' && topCountry === 'canada') ||
+                         (cleanCountry === 'austria' && topCountry === 'austria') ||
+                         (cleanCountry === 'ungheria' && topCountry === 'hungary') ||
+                         (cleanCountry === 'serbia' && topCountry === 'serbia');
+                         
+    if (countryMatch) {
+      if (cleanName.includes(topName) || topName.includes(cleanName)) {
+        return i + 1;
+      }
+      
+      const topWords = topName.split(/\s+/).filter(w => w.length > 2);
+      const matchesWord = words.some(w => topWords.includes(w));
+      if (matchesWord) {
+        return i + 1;
+      }
+    }
+  }
+  return 999;
+}
+
 function getPlayerPerformanceRating(player) {
-  // Deterministic performance rating based on role-normalized starting value
   const base = player.initialValue || 1;
   let maxForRole = 30; // default/fallback
   
@@ -1267,21 +1477,15 @@ function getPlayerPerformanceRating(player) {
   else if (player.role === 'DIF') maxForRole = 20;
   else if (player.role === 'POR') maxForRole = 18;
 
-  // Calculate ratio bounded between 0.05 and 1.0
   const ratio = Math.max(0.05, Math.min(1.0, base / maxForRole));
-  
-  // Scale between 6.0 and 9.5
   return 6.0 + ratio * 3.5;
 }
 
-
 function calculateIdealBidRange(player, targetTeam = null) {
   const performance = getPlayerPerformanceRating(player);
-  const base = player.initialValue;
+  const base = Math.max(1, player.initialValue || 1);
   
-  // Performance multiplier: 6.0 is 0.8x, 7.5 is 1.0x, 8.8 is 1.3x
-  const perfMult = 0.8 + ((performance - 6.0) / 2.8) * 0.5; // ranges from 0.8 to 1.3
-  
+  const perfMult = 0.8 + ((performance - 6.0) / 2.8) * 0.5;
   let minPrice = Math.round(base * perfMult * 0.9);
   let maxPrice = Math.round(base * perfMult * 1.25);
   
@@ -1291,51 +1495,51 @@ function calculateIdealBidRange(player, targetTeam = null) {
   const qualProb = cache.groupAnalysis?.qualificationProbability || "50%";
   
   let justificationParts = [];
-  
-  // 1. Force & Performance rating
   justificationParts.push(`forza giocatore (${playerCat}, valutazione ${performance.toFixed(1)})`);
   
-  // 2. National team weight
   if (cache.groupAnalysis?.qualificationProbability) {
     justificationParts.push(`chance passaggio girone ${player.country} al ${qualProb}`);
   } else {
     justificationParts.push(`nazionale ${player.country}`);
   }
   
-  // 3. Form & Starter chance
   if (cache.starterProbability) {
     justificationParts.push(`titolare stimato al ${starterProb}`);
   }
   
-  // Now adjust based on the target team (or user's team if none provided) situation!
-  const team = targetTeam || state.teams.find(t => t.isUserTeam);
+  // Use active team fallback
+  const team = targetTeam || state.teams.find(t => t.isUserTeam) || state.teams.find(t => t.id === state.activeTeamId) || state.teams[0];
   if (team) {
     const remainingCredits = team.budget;
-    const playersCount = team.players.length;
+    const playersCount = team.players ? team.players.length : 0;
     
-    // Core target size is 25 players (standard rotation size); once reached, we budget up to the max of 35.
     const targetRosterSize = playersCount < 25 ? 25 : 35;
     const playersNeeded = Math.max(1, targetRosterSize - playersCount);
     const avgCreditsPerPlayer = remainingCredits / playersNeeded;
     
-    // Standard average credits per player is ~15 cr
-    const budgetRatio = avgCreditsPerPlayer / 15;
+    // Check FantaMondiale rank weight
+    const rank = findTopPlayerRank(player);
+    let budgetWeight = 0.05;
     
-    // Non-linear scaling:
-    // If budgetRatio is > 1.0, scale up linearily to spend the surplus.
-    // If budgetRatio is <= 1.0, scale down gently (using a baseline of 0.5) so top players aren't undervalued.
-    let teamFactor = 1.0;
-    if (budgetRatio > 1.0) {
-      teamFactor = budgetRatio;
-    } else {
-      teamFactor = 0.5 + 0.5 * budgetRatio;
+    if (rank <= 10) budgetWeight = 0.55;
+    else if (rank <= 30) budgetWeight = 0.45;
+    else if (rank <= 60) budgetWeight = 0.35;
+    else if (rank <= 100) budgetWeight = 0.25;
+    else if (rank <= 150) budgetWeight = 0.18;
+    else {
+      if (player.role === 'ATT') budgetWeight = 0.12;
+      else if (player.role === 'CEN') budgetWeight = 0.08;
+      else if (player.role === 'DIF') budgetWeight = 0.06;
+      else budgetWeight = 0.05;
     }
     
-    // Limit factor to prevent astronomical multipliers if playersNeeded is 1
-    teamFactor = Math.min(6.0, teamFactor);
+    let scaleFactor = 1.0;
+    if (playersNeeded > 5) {
+      scaleFactor = Math.max(0.4, 5 / playersNeeded);
+    }
+    const adjustedWeight = budgetWeight * scaleFactor;
     
-    // Also check role saturation and target rotation (POR:3, DIF:8, CEN:8, ATT:6)
-    const roleCount = team.players.filter(p => p.role === player.role).length;
+    const roleCount = team.players ? team.players.filter(p => p.role === player.role).length : 0;
     let roleSaturationFactor = 1.0;
     let roleExplanation = "";
     
@@ -1350,7 +1554,7 @@ function calculateIdealBidRange(player, targetTeam = null) {
         roleSaturationFactor = 1.0;
         roleExplanation = "hai 2 portieri (manca 1 per rotazione completa)";
       } else {
-        roleSaturationFactor = 0.5;
+        roleSaturationFactor = 0.4;
         roleExplanation = `portieri saturi (${roleCount}/3)`;
       }
     } else if (player.role === 'DIF') {
@@ -1367,7 +1571,7 @@ function calculateIdealBidRange(player, targetTeam = null) {
         roleSaturationFactor = 0.9;
         roleExplanation = "hai 7 difensori (manca 1 slot)";
       } else {
-        roleSaturationFactor = 0.6;
+        roleSaturationFactor = 0.5;
         roleExplanation = `difensori saturi (${roleCount}/8)`;
       }
     } else if (player.role === 'CEN') {
@@ -1384,7 +1588,7 @@ function calculateIdealBidRange(player, targetTeam = null) {
         roleSaturationFactor = 0.9;
         roleExplanation = "hai 7 centrocampisti (manca 1 slot)";
       } else {
-        roleSaturationFactor = 0.6;
+        roleSaturationFactor = 0.5;
         roleExplanation = `centrocampisti saturi (${roleCount}/8)`;
       }
     } else if (player.role === 'ATT') {
@@ -1401,16 +1605,17 @@ function calculateIdealBidRange(player, targetTeam = null) {
         roleSaturationFactor = 0.85;
         roleExplanation = "hai 5 attaccanti (manca 1 slot)";
       } else {
-        roleSaturationFactor = 0.5;
+        roleSaturationFactor = 0.4;
         roleExplanation = `attaccanti saturi (${roleCount}/6)`;
       }
     }
     
-    minPrice = Math.round(minPrice * teamFactor * roleSaturationFactor);
-    maxPrice = Math.round(maxPrice * teamFactor * roleSaturationFactor);
+    const targetMin = Math.round(avgCreditsPerPlayer * adjustedWeight * 0.75 * roleSaturationFactor);
+    const targetMax = Math.round(avgCreditsPerPlayer * adjustedWeight * 1.25 * roleSaturationFactor);
     
-    // Absolute budget bounds:
-    // Can never recommend a bid higher than the maximum affordable bid.
+    minPrice = Math.max(minPrice, targetMin);
+    maxPrice = Math.max(maxPrice, targetMax);
+    
     const maxAffordable = Math.max(1, remainingCredits - playersNeeded + 1);
     minPrice = Math.min(minPrice, maxAffordable);
     maxPrice = Math.min(maxPrice, maxAffordable);
@@ -1419,13 +1624,13 @@ function calculateIdealBidRange(player, targetTeam = null) {
     justificationParts.push(roleExplanation);
   }
   
-  minPrice = Math.max(1, minPrice);
+  minPrice = Math.max(base, minPrice);
   maxPrice = Math.max(minPrice, maxPrice);
   
   const justification = "Calcolato in base a: " + justificationParts.join(", ") + ".";
-  
   return { min: minPrice, max: maxPrice, justification };
 }
+
 
 function calculateMaxBid(team) {
   const emptySlots = countEmptySlots(team);
@@ -4444,6 +4649,11 @@ async function showTeamAIAnalysis(buttonEl, forceRefresh = false) {
   // 7. Compile free prospects
   const freePlayers = state.players.filter(p => !p.ownerId && !state.eliminatedCountries.includes(p.country));
   const sortedFreePlayers = [...freePlayers].sort((a, b) => {
+    const rankA = findTopPlayerRank(a);
+    const rankB = findTopPlayerRank(b);
+    if (rankA !== rankB) {
+      return rankA - rankB;
+    }
     const ratingA = getPlayerPerformanceRating(a);
     const ratingB = getPlayerPerformanceRating(b);
     return ratingB - ratingA || b.initialValue - a.initialValue;
@@ -4510,41 +4720,61 @@ async function showTeamAIAnalysis(buttonEl, forceRefresh = false) {
 function renderTeamAnalysisPopoverData(popover, team, analysisText, recommendedPlayerIds, buttonEl) {
   const parsedHtml = parseMarkdown(analysisText);
 
-  let recommendedHtml = '';
-  if (recommendedPlayerIds && recommendedPlayerIds.length > 0) {
-    let itemsHtml = '';
-    recommendedPlayerIds.forEach(id => {
-      const p = state.players.find(x => x.id === id);
-      if (p) {
-        const range = calculateIdealBidRange(p, team);
-        const escapedName = p.name.replace(/'/g, "\\'");
-        const escapedCountry = p.country.replace(/'/g, "\\'");
-        
-        itemsHtml += `
-          <div class="mini-player-item" style="display: flex; justify-content: space-between; align-items: center; padding: 0.35rem 0.5rem; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.04); border-radius: 6px; margin-bottom: 0.35rem;">
-            <div style="display: flex; align-items: center; gap: 0.35rem; min-width: 0; flex: 1;">
-              <span class="badge badge-${p.role.toLowerCase()}" style="font-size: 0.58rem; padding: 0.1rem 0.25rem; border-radius: 4px; line-height: 1; flex-shrink: 0;">${p.role}</span>
-              <span style="font-size: 0.72rem; font-weight: 600; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${p.name} <span style="color: var(--color-text-muted); font-size: 0.65rem;">(${p.country})</span></span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0;">
-              <span style="font-size: 0.72rem; font-weight: 800; color: #f59e0b; font-family: monospace;">${range.min}-${range.max} cr</span>
-              <button class="btn-ai-sparkle" style="width: 22px; height: 22px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; font-size: 0.65rem; padding: 0;" onclick="showPlayerAIAnalysis('${p.id}', '${escapedName}', '${escapedCountry}', '${p.role}', this); event.stopPropagation();" title="Analisi IA giocatore ✨">✨</button>
-            </div>
-          </div>
-        `;
-      }
-    });
+  // Compile recommended prospects programmatically: top 20 free players in order of FantaMondiale priority
+  const freePlayers = state.players.filter(p => !p.ownerId && !state.eliminatedCountries.includes(p.country));
+  
+  const sortedFree = [...freePlayers].sort((a, b) => {
+    const rankA = findTopPlayerRank(a);
+    const rankB = findTopPlayerRank(b);
+    if (rankA !== rankB) {
+      return rankA - rankB;
+    }
+    const ratingA = getPlayerPerformanceRating(a);
+    const ratingB = getPlayerPerformanceRating(b);
+    return ratingB - ratingA || b.initialValue - a.initialValue;
+  });
 
-    if (itemsHtml) {
-      recommendedHtml = `
-        <div class="ai-recommendations-section" style="margin-top: 0.75rem; border-top: 1px dashed rgba(255, 255, 255, 0.1); padding-top: 0.75rem;">
-          <span style="display: block; font-size: 0.62rem; color: #a855f7; text-transform: uppercase; font-weight: 800; letter-spacing: 0.05em; margin-bottom: 0.45rem;">Prospetti Consigliati Rimasti 🔮</span>
-          <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-            ${itemsHtml}
+  const prospectsToShow = sortedFree.slice(0, 20); // Show top 20 players!
+
+  let recommendedHtml = '';
+  if (prospectsToShow.length > 0) {
+    let itemsHtml = '';
+    prospectsToShow.forEach(p => {
+      const range = calculateIdealBidRange(p, team);
+      const escapedName = p.name.replace(/'/g, "\\'");
+      const escapedCountry = p.country.replace(/'/g, "\\'");
+      
+      const isAiChoice = recommendedPlayerIds && recommendedPlayerIds.includes(p.id);
+      const itemBg = isAiChoice ? 'rgba(168, 85, 247, 0.06)' : 'rgba(255, 255, 255, 0.02)';
+      const itemBorder = isAiChoice ? '1px solid rgba(168, 85, 247, 0.25)' : '1px solid rgba(255, 255, 255, 0.04)';
+      const aiBadge = isAiChoice ? `<span style="font-size: 0.58rem; padding: 0.08rem 0.25rem; border-radius: 4px; background: rgba(168, 85, 247, 0.25); color: #d8b4fe; font-weight: 700; border: 1px solid rgba(168, 85, 247, 0.4); line-height: 1; flex-shrink: 0; display: inline-flex; align-items: center; gap: 0.15rem;">🧠 Scelta IA</span>` : '';
+      
+      itemsHtml += `
+        <div class="mini-player-item" style="display: flex; justify-content: space-between; align-items: center; padding: 0.35rem 0.5rem; background: ${itemBg}; border: ${itemBorder}; border-radius: 6px; margin-bottom: 0.35rem;">
+          <div style="display: flex; align-items: center; gap: 0.35rem; min-width: 0; flex: 1;">
+            <span class="badge badge-${p.role.toLowerCase()}" style="font-size: 0.58rem; padding: 0.1rem 0.25rem; border-radius: 4px; line-height: 1; flex-shrink: 0;">${p.role}</span>
+            <span style="font-size: 0.72rem; font-weight: 600; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; gap: 0.35rem;">
+              ${p.name} 
+              <span style="color: var(--color-text-muted); font-size: 0.65rem;">(${p.country})</span>
+              ${aiBadge}
+            </span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0;">
+            <span style="font-size: 0.72rem; font-weight: 800; color: #f59e0b; font-family: monospace;">${range.min}-${range.max} cr</span>
+            <button class="btn-ai-sparkle" style="width: 22px; height: 22px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; font-size: 0.65rem; padding: 0;" onclick="showPlayerAIAnalysis('${p.id}', '${escapedName}', '${escapedCountry}', '${p.role}', this); event.stopPropagation();" title="Analisi IA giocatore ✨">✨</button>
           </div>
         </div>
       `;
-    }
+    });
+
+    recommendedHtml = `
+      <div class="ai-recommendations-section" style="margin-top: 0.75rem; border-top: 1px dashed rgba(255, 255, 255, 0.1); padding-top: 0.75rem; max-height: 250px; overflow-y: auto; padding-right: 0.2rem;">
+        <span style="display: block; font-size: 0.62rem; color: #a855f7; text-transform: uppercase; font-weight: 800; letter-spacing: 0.05em; margin-bottom: 0.45rem; position: sticky; top: 0; background: #13141f; z-index: 10; padding: 0.1rem 0;">Prospetti Consigliati Rimasti 🔮</span>
+        <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+          ${itemsHtml}
+        </div>
+      </div>
+    `;
   }
 
   popover.innerHTML = `
