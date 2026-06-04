@@ -1535,7 +1535,7 @@ function normalizePlayerAnalysis(data) {
   }
   normalized.alternatives = alts.map(alt => {
     if (typeof alt === 'string') {
-      return { name: alt, playProbability: "20%" };
+      return { name: alt, playProbability: "20%", comment: "" };
     }
     if (alt && typeof alt === 'object') {
       const name = alt.name || alt.playerName || alt.calciatore || 'Alternativa';
@@ -1546,7 +1546,12 @@ function normalizePlayerAnalysis(data) {
         const num = parseInt(altProb.replace(/[^0-9]/g, ''));
         altProb = !isNaN(num) ? `${num}%` : "20%";
       }
-      return { name: typeof name === 'string' ? name.trim() : 'Alternativa', playProbability: altProb };
+      const comment = alt.comment || alt.note || alt.description || alt.descrizione || '';
+      return { 
+        name: typeof name === 'string' ? name.trim() : 'Alternativa', 
+        playProbability: altProb,
+        comment: typeof comment === 'string' ? comment.trim() : ''
+      };
     }
     return null;
   }).filter(Boolean);
@@ -3721,7 +3726,7 @@ function renderPitchPopoverData(popover, name, country, role, rawData, triggerEl
     <div style="font-size: 0.8rem; font-weight: 800; color: #fff; margin-bottom: 0.5rem; display: flex; align-items: center; justify-content: space-between; padding-right: 1.5rem; flex-wrap: wrap; gap: 0.25rem;">
       <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 130px;">${name}</span>
       <div style="display: flex; align-items: center; gap: 0.35rem; flex-shrink: 0;">
-        <button onclick="refreshPitchPlayerTooltip('${triggerEl.getAttribute('data-player-id') || ''}')" style="background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.4); color: #c084fc; cursor: pointer; padding: 0.1rem 0.35rem; font-size: 0.58rem; font-weight: 800; border-radius: 4px; display: flex; align-items: center; gap: 0.15rem; transition: all 0.2s;" onmouseover="this.style.background='rgba(168, 85, 247, 0.25)'" onmouseout="this.style.background='rgba(168, 85, 247, 0.15)'" title="Forza ricalcolo dati freschi IA">🔄 Aggiorna</button>
+        <button class="pitch-popover-refresh" style="background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.4); color: #c084fc; cursor: pointer; padding: 0.1rem 0.35rem; font-size: 0.58rem; font-weight: 800; border-radius: 4px; display: flex; align-items: center; gap: 0.15rem; transition: all 0.2s;" onmouseover="this.style.background='rgba(168, 85, 247, 0.25)'" onmouseout="this.style.background='rgba(168, 85, 247, 0.15)'" title="Forza ricalcolo dati freschi IA">🔄 Aggiorna</button>
         <span style="font-size: 0.65rem; color: var(--color-text-muted); font-weight: 600;">${role} | ${country}</span>
       </div>
     </div>
@@ -3756,7 +3761,18 @@ function renderPitchPopoverData(popover, name, country, role, rawData, triggerEl
     <!-- Alternatives -->
     ${alternativesHtml}
   `;
+
+  // Bind refresh click programmatically to prevent click bubbling and popover closing
+  const refreshBtn = popover.querySelector('.pitch-popover-refresh');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const pId = popover.dataset.playerId || triggerEl.getAttribute('data-player-id') || '';
+      refreshPitchPlayerTooltip(pId);
+    });
+  }
 }
+
 
 async function showPitchPlayerTooltip(playerId, triggerEl, isMobile, forceRefresh = false) {
   let popover;
