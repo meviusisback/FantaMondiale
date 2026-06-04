@@ -2393,29 +2393,38 @@ function renderPitch() {
 
     // 3. Render Bench listing programmatically with Drag events
     benchContainer.innerHTML = '';
-    const renderPlayerNode = (p, container, isTribuna) => {
+    benchContainer.style.cssText = 'display: flex; flex-direction: column; gap: 0.25rem; width: 100%;';
+
+    const renderHeader = (container) => {
+      const header = document.createElement('div');
+      header.style.cssText = 'display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 0.5rem; width: 100%; box-sizing: border-box; padding: 0.35rem 0.65rem; font-size: 0.62rem; font-weight: 800; color: var(--color-text-muted); border-bottom: 1px solid var(--border-light); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem;';
+      header.innerHTML = `
+        <span>Calciatore</span>
+        <span style="text-align: center;">Avversario</span>
+        <span style="text-align: right;">Titolare %</span>
+      `;
+      container.appendChild(header);
+    };
+
+    const renderPlayerNode = (p, container, isTribuna, index) => {
       const el = document.createElement('div');
       el.className = 'bench-player-node';
       el.setAttribute('draggable', 'true');
       el.setAttribute('data-player-id', p.id);
       el.style.viewTransitionName = `player-${p.id}`;
+      el.style.cssText = 'display: grid; grid-template-columns: 1.5fr 1fr 1fr; align-items: center; gap: 0.5rem; width: 100%; box-sizing: border-box; padding: 0.35rem 0.65rem; cursor: pointer;';
 
       const cachedAnalysisRaw = state.aiCache[p.id] || JSON.parse(sessionStorage.getItem(`fantamondiale_ai_${p.id}`) || 'null');
       const cachedAnalysis = cachedAnalysisRaw ? normalizePlayerAnalysis(cachedAnalysisRaw) : null;
-      const strength = cachedAnalysis ? cachedAnalysis.matchStrength : undefined;
-      let strengthBadgeHtml = '';
-      if (strength !== undefined && strength !== null) {
-        const strVal = parseInt(strength);
-        let strColor = '#ef4444'; // Red
-        let strBg = 'rgba(239, 68, 68, 0.12)';
-        if (strVal >= 80) {
-          strColor = '#10b981'; // Green
-          strBg = 'rgba(16, 185, 129, 0.12)';
-        } else if (strVal >= 50) {
-          strColor = '#f59e0b'; // Amber
-          strBg = 'rgba(245, 158, 11, 0.12)';
-        }
-        strengthBadgeHtml = `<span style="display: inline-flex; align-items: center; justify-content: center; width: 17px; height: 17px; border-radius: 50%; background: ${strBg}; border: 1px solid rgba(255,255,255,0.05); color: ${strColor}; font-size: 0.6rem; font-weight: 800; margin-left: 0.35rem;" title="Forza del turno: ${strVal}/100">${strVal}</span>`;
+      const startProb = cachedAnalysis ? cachedAnalysis.starterProbability : 'N/D';
+      const opp = getNextOpponentForCountry(p.country);
+
+      let probColor = 'var(--color-text-muted)';
+      if (startProb && startProb.endsWith('%')) {
+        const val = parseInt(startProb);
+        if (val >= 70) probColor = '#10b981'; // Green
+        else if (val >= 40) probColor = '#f59e0b'; // Amber
+        else probColor = '#ef4444'; // Red
       }
 
       let warningBadgeHtml = '';
@@ -2426,11 +2435,19 @@ function renderPitch() {
       }
 
       el.innerHTML = `
-        <span class="dot" style="background: var(--color-${p.role.toLowerCase()})"></span>
-        <span style="${state.eliminatedCountries.includes(p.country) ? 'text-decoration: line-through; color: var(--color-text-muted);' : ''}">${p.name} (${p.country})</span>
-        ${strengthBadgeHtml}
-        ${warningBadgeHtml}
-        ${state.eliminatedCountries.includes(p.country) ? ' <span style="font-size: 0.55rem; color: var(--color-danger); font-weight: 700; border: 1px solid var(--color-danger); padding: 0.05rem 0.2rem; border-radius: 4px; line-height: 1;">ELIMINATO</span>' : ''}
+        <div style="display: flex; align-items: center; gap: 0.35rem; min-width: 0; overflow: hidden;">
+          <span style="font-size: 0.7rem; color: var(--color-text-muted); font-weight: bold; min-width: 14px;">${index + 1}.</span>
+          <span class="dot" style="background: var(--color-${p.role.toLowerCase()}); flex-shrink: 0;"></span>
+          <span style="font-size: 0.72rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; ${state.eliminatedCountries.includes(p.country) ? 'text-decoration: line-through; color: var(--color-text-muted);' : ''}" title="${p.name} (${p.country})">${p.name} (${p.country})</span>
+          ${warningBadgeHtml}
+          ${state.eliminatedCountries.includes(p.country) ? ' <span style="font-size: 0.52rem; color: var(--color-danger); font-weight: 700; border: 1px solid var(--color-danger); padding: 0.05rem 0.15rem; border-radius: 4px; line-height: 1; flex-shrink: 0;">ELIMINATO</span>' : ''}
+        </div>
+        <span style="font-size: 0.7rem; text-align: center; color: var(--color-text-muted); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${opp && opp !== 'Nessuno' && opp !== 'Da verificare' ? `vs ${opp}` : opp}">
+          ${opp && opp !== 'Nessuno' && opp !== 'Da verificare' ? `vs ${opp}` : opp}
+        </span>
+        <span style="font-size: 0.7rem; text-align: right; color: ${probColor}; font-weight: 700;">
+          ${startProb}
+        </span>
       `;
 
       el.addEventListener('dragstart', handleDragStart);
@@ -2452,7 +2469,8 @@ function renderPitch() {
     if (actualBenchList.length === 0) {
       benchContainer.innerHTML = `<span style="color: var(--color-text-muted); font-size: 0.75rem; font-style: italic;">Panchina vuota... Tutti i giocatori rientrano nei titolari.</span>`;
     } else {
-      actualBenchList.forEach(p => renderPlayerNode(p, benchContainer, false));
+      renderHeader(benchContainer);
+      actualBenchList.forEach((p, idx) => renderPlayerNode(p, benchContainer, false, idx));
     }
 
     // Render Tribuna List
@@ -2460,9 +2478,11 @@ function renderPitch() {
     const tribunaContainer = document.getElementById('pitch-tribuna-container');
     if (tribunaSection && tribunaContainer) {
       tribunaContainer.innerHTML = '';
+      tribunaContainer.style.cssText = 'display: flex; flex-direction: column; gap: 0.25rem; width: 100%;';
       if (tribunaList.length > 0) {
         tribunaSection.style.display = 'block';
-        tribunaList.forEach(p => renderPlayerNode(p, tribunaContainer, true));
+        renderHeader(tribunaContainer);
+        tribunaList.forEach((p, idx) => renderPlayerNode(p, tribunaContainer, true, idx));
       } else {
         tribunaSection.style.display = 'none';
       }
@@ -3738,27 +3758,32 @@ function renderPitchPopoverData(popover, name, country, role, rawData, triggerEl
   `;
 }
 
-async function showPitchPlayerTooltip(playerId, triggerEl, isMobile) {
-  if (activePitchPopover && activePitchPopover.dataset.playerId === playerId) {
-    return;
-  }
-  
-  closePitchPopover();
-
-  const popover = document.createElement('div');
-  popover.className = `pitch-player-popover ${isMobile ? 'modal-view' : ''}`;
-  popover.dataset.playerId = playerId;
-  activePitchPopover = popover;
-  
-  const dialogEl = document.getElementById('pitch-dialog');
-  if (dialogEl) {
-    dialogEl.appendChild(popover);
+async function showPitchPlayerTooltip(playerId, triggerEl, isMobile, forceRefresh = false) {
+  let popover;
+  if (forceRefresh && activePitchPopover && activePitchPopover.dataset.playerId === playerId) {
+    popover = activePitchPopover;
   } else {
-    document.body.appendChild(popover);
-  }
+    if (activePitchPopover && activePitchPopover.dataset.playerId === playerId && !forceRefresh) {
+      return;
+    }
+    
+    closePitchPopover();
 
-  if (isMobile) {
-    document.body.classList.add('ai-modal-open');
+    popover = document.createElement('div');
+    popover.className = `pitch-player-popover ${isMobile ? 'modal-view' : ''}`;
+    popover.dataset.playerId = playerId;
+    activePitchPopover = popover;
+    
+    const dialogEl = document.getElementById('pitch-dialog');
+    if (dialogEl) {
+      dialogEl.appendChild(popover);
+    } else {
+      document.body.appendChild(popover);
+    }
+
+    if (isMobile) {
+      document.body.classList.add('ai-modal-open');
+    }
   }
 
   const player = state.players.find(p => p.id === playerId) ||
@@ -3872,14 +3897,8 @@ async function refreshPitchPlayerTooltip(playerId) {
 
   const isMobile = window.innerWidth <= 768;
 
-  // Remove and reset the current popover
-  if (activePitchPopover) {
-    activePitchPopover.remove();
-    activePitchPopover = null;
-  }
-
-  // Trigger loading and Vercel API fetch fresh
-  showPitchPlayerTooltip(playerId, triggerEl, isMobile);
+  // Trigger loading and Vercel API fetch fresh with forceRefresh=true (reusing activePitchPopover)
+  showPitchPlayerTooltip(playerId, triggerEl, isMobile, true);
 }
 window.refreshPitchPlayerTooltip = refreshPitchPlayerTooltip;
 
@@ -3887,26 +3906,34 @@ window.refreshPitchPlayerTooltip = refreshPitchPlayerTooltip;
 let activeAIPopover = null;
 
 async function showPlayerAIAnalysis(playerId, name, country, role, buttonEl, forceRefresh = false) {
-  // 1. If popover already open for this player, close it and return
-  if (activeAIPopover && activeAIPopover.dataset.playerId === playerId && !forceRefresh) {
+  let popover;
+  if (forceRefresh && activeAIPopover && activeAIPopover.dataset.playerId === playerId) {
+    popover = activeAIPopover;
+    // Clear cache
+    delete state.aiCache[playerId];
+    sessionStorage.removeItem(`fantamondiale_ai_${playerId}`);
+  } else {
+    // 1. If popover already open for this player, close it and return
+    if (activeAIPopover && activeAIPopover.dataset.playerId === playerId && !forceRefresh) {
+      closeAIPopover();
+      return;
+    }
+
+    // 2. Close any other open popovers first
     closeAIPopover();
-    return;
+
+    // 3. Create Popover Div
+    popover = document.createElement('div');
+    popover.className = 'ai-bubble-popover';
+    popover.dataset.playerId = playerId;
+    activeAIPopover = popover;
+
+    // Append to body immediately to calculate dimensions, but keep invisible or positioned offscreen
+    document.body.appendChild(popover);
+
+    // Add modal-open class to lock background scrolling
+    document.body.classList.add('ai-modal-open');
   }
-
-  // 2. Close any other open popovers first
-  closeAIPopover();
-
-  // 3. Create Popover Div
-  const popover = document.createElement('div');
-  popover.className = 'ai-bubble-popover';
-  popover.dataset.playerId = playerId;
-  activeAIPopover = popover;
-
-  // Append to body immediately to calculate dimensions, but keep invisible or positioned offscreen
-  document.body.appendChild(popover);
-
-  // Add modal-open class to lock background scrolling
-  document.body.classList.add('ai-modal-open');
 
   // 5. Render Loading State (Skeleton Loader)
   renderPopoverLoading(popover, name);
