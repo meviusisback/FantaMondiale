@@ -4311,6 +4311,16 @@ function closeAIPopover() {
   }
 }
 
+function focusPlayerInList(playerName) {
+  closeAIPopover();
+  state.filters.search = playerName.toLowerCase();
+  if (dom.searchInput) {
+    dom.searchInput.value = playerName;
+  }
+  switchTab('giocatori');
+  renderPlayerList();
+}
+
 // Position speech bubble dynamically with pointer arrow direction
 function positionPopover(popover, buttonEl) {
   const rect = buttonEl.getBoundingClientRect();
@@ -4751,40 +4761,69 @@ function renderTeamAnalysisPopoverData(popover, team, analysisText, recommendedP
 
   let recommendedHtml = '';
   if (prospectsToShow.length > 0) {
-    let itemsHtml = '';
+    const groupedByRole = { POR: [], DIF: [], CEN: [], ATT: [] };
     prospectsToShow.forEach(p => {
-      const range = calculateIdealBidRange(p, team);
-      const escapedName = p.name.replace(/'/g, "\\'");
-      const escapedCountry = p.country.replace(/'/g, "\\'");
-      
-      const isAiChoice = recommendedPlayerIds && recommendedPlayerIds.includes(p.id);
-      const itemBg = isAiChoice ? 'rgba(168, 85, 247, 0.06)' : 'rgba(255, 255, 255, 0.02)';
-      const itemBorder = isAiChoice ? '1px solid rgba(168, 85, 247, 0.25)' : '1px solid rgba(255, 255, 255, 0.04)';
-      const aiBadge = isAiChoice ? `<span style="font-size: 0.58rem; padding: 0.08rem 0.25rem; border-radius: 4px; background: rgba(168, 85, 247, 0.25); color: #d8b4fe; font-weight: 700; border: 1px solid rgba(168, 85, 247, 0.4); line-height: 1; flex-shrink: 0; display: inline-flex; align-items: center; gap: 0.15rem;">🧠 Scelta IA</span>` : '';
-      
-      itemsHtml += `
-        <div class="mini-player-item" style="display: flex; justify-content: space-between; align-items: center; padding: 0.35rem 0.5rem; background: ${itemBg}; border: ${itemBorder}; border-radius: 6px; margin-bottom: 0.35rem;">
-          <div style="display: flex; align-items: center; gap: 0.35rem; min-width: 0; flex: 1;">
-            <span class="badge badge-${p.role.toLowerCase()}" style="font-size: 0.58rem; padding: 0.1rem 0.25rem; border-radius: 4px; line-height: 1; flex-shrink: 0;">${p.role}</span>
-            <span style="font-size: 0.72rem; font-weight: 600; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; gap: 0.35rem;">
-              ${p.name} 
-              <span style="color: var(--color-text-muted); font-size: 0.65rem;">(${p.country})</span>
-              ${aiBadge}
-            </span>
+      groupedByRole[p.role].push(p);
+    });
+
+    const roleNames = {
+      POR: 'Portieri 🧤',
+      DIF: 'Difensori 🛡️',
+      CEN: 'Centrocampisti ⚡',
+      ATT: 'Attaccanti ⚽'
+    };
+
+    let sectionsHtml = '';
+    ['POR', 'DIF', 'CEN', 'ATT'].forEach(role => {
+      const players = groupedByRole[role];
+      if (players && players.length > 0) {
+        let itemsHtml = '';
+        players.forEach(p => {
+          const range = calculateIdealBidRange(p, team);
+          const escapedName = p.name.replace(/'/g, "\\'");
+          const escapedCountry = p.country.replace(/'/g, "\\'");
+          
+          const isAiChoice = recommendedPlayerIds && recommendedPlayerIds.includes(p.id);
+          const itemBg = isAiChoice ? 'rgba(168, 85, 247, 0.06)' : 'rgba(255, 255, 255, 0.02)';
+          const itemBorder = isAiChoice ? '1px solid rgba(168, 85, 247, 0.25)' : '1px solid rgba(255, 255, 255, 0.04)';
+          const aiBadge = isAiChoice ? `<span style="font-size: 0.58rem; padding: 0.08rem 0.25rem; border-radius: 4px; background: rgba(168, 85, 247, 0.25); color: #d8b4fe; font-weight: 700; border: 1px solid rgba(168, 85, 247, 0.4); line-height: 1; flex-shrink: 0; display: inline-flex; align-items: center; gap: 0.15rem;">🧠 Scelta IA</span>` : '';
+          
+          itemsHtml += `
+            <div class="mini-player-item" style="display: flex; justify-content: space-between; align-items: center; padding: 0.35rem 0.5rem; background: ${itemBg}; border: ${itemBorder}; border-radius: 6px; margin-bottom: 0.35rem; cursor: pointer;" onclick="focusPlayerInList('${escapedName}')" title="Filtra questo giocatore nella lista 🔍">
+              <div style="display: flex; align-items: center; gap: 0.35rem; min-width: 0; flex: 1;">
+                <span class="badge badge-${p.role.toLowerCase()}" style="font-size: 0.58rem; padding: 0.1rem 0.25rem; border-radius: 4px; line-height: 1; flex-shrink: 0;">${p.role}</span>
+                <span style="font-size: 0.72rem; font-weight: 600; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; gap: 0.35rem;">
+                  ${p.name} 
+                  <span style="color: var(--color-text-muted); font-size: 0.65rem;">(${p.country})</span>
+                  ${aiBadge}
+                </span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0;">
+                <span style="font-size: 0.72rem; font-weight: 800; color: #f59e0b; font-family: monospace;">${range.min}-${range.max} cr</span>
+                <button class="btn-ai-sparkle" style="width: 22px; height: 22px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; font-size: 0.65rem; padding: 0;" onclick="showPlayerAIAnalysis('${p.id}', '${escapedName}', '${escapedCountry}', '${p.role}', this); event.stopPropagation();" title="Analisi IA giocatore ✨">✨</button>
+              </div>
+            </div>
+          `;
+        });
+
+        sectionsHtml += `
+          <div class="role-prospects-group" style="margin-bottom: 0.75rem;">
+            <div style="font-size: 0.62rem; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-bottom: 0.35rem; border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 0.15rem; letter-spacing: 0.03em;">
+              ${roleNames[role]}
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 0.15rem;">
+              ${itemsHtml}
+            </div>
           </div>
-          <div style="display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0;">
-            <span style="font-size: 0.72rem; font-weight: 800; color: #f59e0b; font-family: monospace;">${range.min}-${range.max} cr</span>
-            <button class="btn-ai-sparkle" style="width: 22px; height: 22px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; font-size: 0.65rem; padding: 0;" onclick="showPlayerAIAnalysis('${p.id}', '${escapedName}', '${escapedCountry}', '${p.role}', this); event.stopPropagation();" title="Analisi IA giocatore ✨">✨</button>
-          </div>
-        </div>
-      `;
+        `;
+      }
     });
 
     recommendedHtml = `
       <div class="ai-recommendations-section" style="margin-top: 0.75rem; border-top: 1px dashed rgba(255, 255, 255, 0.1); padding-top: 0.75rem;">
-        <span style="display: block; font-size: 0.62rem; color: #a855f7; text-transform: uppercase; font-weight: 800; letter-spacing: 0.05em; margin-bottom: 0.45rem;">Prospetti Consigliati Rimasti 🔮</span>
-        <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-          ${itemsHtml}
+        <span style="display: block; font-size: 0.62rem; color: #a855f7; text-transform: uppercase; font-weight: 800; letter-spacing: 0.05em; margin-bottom: 0.55rem;">Prospetti Consigliati Rimasti 🔮</span>
+        <div>
+          ${sectionsHtml}
         </div>
       </div>
     `;
@@ -5403,6 +5442,7 @@ window.deleteSpecificCloudSession = deleteSpecificCloudSession;
 window.showPlayerAIAnalysis = showPlayerAIAnalysis;
 window.showTeamAIAnalysis = showTeamAIAnalysis;
 window.closeAIPopover = closeAIPopover;
+window.focusPlayerInList = focusPlayerInList;
 window.copyLineupToClipboard = copyLineupToClipboard;
 window.recalculateIdealLineup = recalculateIdealLineup;
 window.recalculatePlayerEvaluations = recalculatePlayerEvaluations;
