@@ -46,8 +46,10 @@ REGOLE DI ESATTEZZA NUMERICA DELLE PRESENZE (CRUCIALE):
 
 REGOLE DI VALUTAZIONE E CATEGORIA:
 - Scegli la 'playerCategory' rigorosamente tra: "scarso", "accettabile", "buono", "ottimo", "stella".
-- Sotto 'alternatives', includi sempre esattamente 1 o 2 concorrenti reali dello stesso ruolo in quella Nazionale, con le chiavi 'name', 'playProbability' e 'comment' (breve commento su chi sia e come insidia il posto).
+- Sotto 'alternatives', includi sempre esattamente 1 o 2 concorrenti reali dello stesso ruolo in quella Nazionale, con le sole chiavi 'name' e 'playProbability'.
+- **roleCompetitionComment**: una descrizione testuale unica e discorsiva in lingua italiana (2-3 frasi chiare) che parli in dettaglio della situazione della titolarità del calciatore analizzato, focalizzandosi su di lui e analizzando lo scenario per il prossimo turno. Deve discutere in dettaglio le potenziali insidie e le dinamiche legate alle sue alternative/concorrenti in Nazionale in base al prossimo avversario (nextOpponent), al suo stato di forma recente, a indiscrezioni reali sugli allenamenti o al modulo tattico previsto.
   * **MATEMATICA AL 100% (CRUCIALE):** La somma tra 'starterProbability' del calciatore analizzato (es. 80%) e le 'playProbability' dei suoi concorrenti (es. 20%) deve essere tassativamente pari al 100%.
+
 
 VERIFICA CONVOCAZIONE ED ELIMINAZIONE MONDIALE:
 Nazioni attualmente eliminate o assenti dal Mondiale ad oggi: ${ELIMINATED_COUNTRIES.join(', ')}.
@@ -96,11 +98,12 @@ Fornisci la risposta RIGOROSAMENTE in formato JSON con la seguente struttura esa
       "alternatives": [
         {
           "name": "Nome concorrente nello stesso ruolo in Nazionale",
-          "playProbability": "10%",
-          "comment": "Descrizione di chi sia e come contende il posto."
+          "playProbability": "10%"
         }
-      ]
+      ],
+      "roleCompetitionComment": "Descrizione discorsiva unica in italiano della situazione di titolarità del giocatore analizzato rispetto ai suoi concorrenti di ruolo per il prossimo turno..."
     }
+
   }
 }
 
@@ -247,9 +250,11 @@ Rispondi esclusivamente con il codice JSON, senza alcun blocco di codice markdow
             groupAnalysisText: "La nazionale di appartenenza è stata eliminata o non partecipa al Mondiale.",
             postGroupPath: "Nessun percorso disponibile."
           },
-          alternatives: []
+          alternatives: [],
+          roleCompetitionComment: "La nazionale di appartenenza è stata eliminata o non partecipa al Mondiale."
         };
       }
+
       
       // Ensure every player in the batch has an entry - create fallback if model omitted them
       if (!parsedData.playersAnalysis[p.id]) {
@@ -271,9 +276,11 @@ Rispondi esclusivamente con il codice JSON, senza alcun blocco di codice markdow
             groupAnalysisText: "Analisi del girone non disponibile.",
             postGroupPath: "Percorso post-gironi da definire."
           },
-          alternatives: []
+          alternatives: [],
+          roleCompetitionComment: ""
         };
       }
+
     });
 
     return res.status(200).json(parsedData);

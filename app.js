@@ -1535,7 +1535,7 @@ function normalizePlayerAnalysis(data) {
   }
   normalized.alternatives = alts.map(alt => {
     if (typeof alt === 'string') {
-      return { name: alt, playProbability: "20%", comment: "" };
+      return { name: alt, playProbability: "20%" };
     }
     if (alt && typeof alt === 'object') {
       const name = alt.name || alt.playerName || alt.calciatore || 'Alternativa';
@@ -1546,15 +1546,26 @@ function normalizePlayerAnalysis(data) {
         const num = parseInt(altProb.replace(/[^0-9]/g, ''));
         altProb = !isNaN(num) ? `${num}%` : "20%";
       }
-      const comment = alt.comment || alt.note || alt.description || alt.descrizione || '';
       return { 
         name: typeof name === 'string' ? name.trim() : 'Alternativa', 
-        playProbability: altProb,
-        comment: typeof comment === 'string' ? comment.trim() : ''
+        playProbability: altProb
       };
     }
     return null;
   }).filter(Boolean);
+
+  // 11. roleCompetitionComment
+  let compComment = data.roleCompetitionComment || data.alternativesComment || '';
+  if (!compComment && alts.length > 0) {
+    // Fallback: if we only have old data format with comments per alternative, merge them
+    const commentsList = alts
+      .map(alt => alt.comment || alt.note || alt.description || alt.descrizione)
+      .filter(Boolean);
+    if (commentsList.length > 0) {
+      compComment = commentsList.join(' ');
+    }
+  }
+  normalized.roleCompetitionComment = typeof compComment === 'string' ? compComment.trim() : '';
 
   return normalized;
 }
@@ -3689,36 +3700,31 @@ function renderPitchPopoverData(popover, name, country, role, rawData, triggerEl
     </div>
   `;
 
+  let itemsHtml = '';
   if (data.alternatives && Array.isArray(data.alternatives) && data.alternatives.length > 0) {
-    const items = data.alternatives.map(alt => {
-      const commentHtml = alt.comment ? `
-        <div style="font-size: 0.62rem; color: var(--color-text-muted); font-style: italic; line-height: 1.35; padding: 0.2rem 0.4rem 0.35rem 0.4rem; border-bottom: 1px solid rgba(255, 255, 255, 0.03); margin-bottom: 0.25rem;">
-          ${alt.comment}
-        </div>
-      ` : '';
-      return `
-        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.68rem; margin-bottom: 0.2rem; background: rgba(255, 255, 255, 0.02); padding: 0.2rem 0.4rem; border-radius: 4px; border-bottom-left-radius: 0; border-bottom-right-radius: 0;">
-          <span style="color: #fff; font-weight: 500;">🔄 ${alt.name}</span>
-          <span style="color: #ef4444; font-weight: 700;">Impiego: ${alt.playProbability}</span>
-        </div>
-        ${commentHtml}
-      `;
-    }).join('');
-    alternativesHtml = `
-      <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.04); border-radius: 8px; padding: 0.4rem 0.5rem; margin-bottom: 0.5rem;">
-        <span style="display: block; font-size: 0.6rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em; margin-bottom: 0.25rem;">Alternative in Nazionale 🔄</span>
-        ${selfRowHtml}
-        ${items}
+    itemsHtml = data.alternatives.map(alt => `
+      <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.68rem; margin-bottom: 0.2rem; background: rgba(255, 255, 255, 0.02); padding: 0.2rem 0.4rem; border-radius: 4px;">
+        <span style="color: #fff; font-weight: 500;">🔄 ${alt.name}</span>
+        <span style="color: #ef4444; font-weight: 700;">Impiego: ${alt.playProbability}</span>
       </div>
-    `;
-  } else {
-    alternativesHtml = `
-      <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.04); border-radius: 8px; padding: 0.4rem 0.5rem; margin-bottom: 0.5rem;">
-        <span style="display: block; font-size: 0.6rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em; margin-bottom: 0.25rem;">Alternative in Nazionale 🔄</span>
-        ${selfRowHtml}
-      </div>
-    `;
+    `).join('');
   }
+
+  const commentHtml = data.roleCompetitionComment ? `
+    <div style="font-size: 0.65rem; color: #fff; font-weight: 500; line-height: 1.4; padding: 0.45rem 0.55rem; background: rgba(255, 255, 255, 0.02); border-left: 3px solid var(--color-primary); margin-top: 0.4rem; border-radius: 4px; border-top-left-radius: 0; border-bottom-left-radius: 0;">
+      ${data.roleCompetitionComment}
+    </div>
+  ` : '';
+
+  alternativesHtml = `
+    <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.04); border-radius: 8px; padding: 0.4rem 0.5rem; margin-bottom: 0.5rem;">
+      <span style="display: block; font-size: 0.6rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em; margin-bottom: 0.25rem;">Ballottaggi & Competizione di Ruolo 🔄</span>
+      ${selfRowHtml}
+      ${itemsHtml}
+      ${commentHtml}
+    </div>
+  `;
+
 
   popover.innerHTML = `
     ${closeBtnHtml}
@@ -4188,35 +4194,30 @@ function renderPopoverData(popover, name, country, role, rawData, buttonEl) {
 
   // 3. Format Alternatives challenging starter status
   let alternativesHtml = '';
+  let itemsHtml = '';
   if (data.alternatives && Array.isArray(data.alternatives) && data.alternatives.length > 0) {
-    const items = data.alternatives.map(alt => {
-      const commentHtml = alt.comment ? `
-        <div style="font-size: 0.62rem; color: var(--color-text-muted); font-style: italic; line-height: 1.35; padding: 0.2rem 0.4rem 0.35rem 0.4rem; border-bottom: 1px solid rgba(255, 255, 255, 0.03); margin-bottom: 0.25rem;">
-          ${alt.comment}
-        </div>
-      ` : '';
-      return `
-        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.68rem; margin-bottom: 0.2rem; background: rgba(255, 255, 255, 0.02); padding: 0.2rem 0.4rem; border-radius: 4px; border-bottom-left-radius: 0; border-bottom-right-radius: 0;">
-          <span style="color: #fff; font-weight: 500;">🔄 ${alt.name}</span>
-          <span style="color: #ef4444; font-weight: 700;">Chance impiego: ${alt.playProbability}</span>
-        </div>
-        ${commentHtml}
-      `;
-    }).join('');
-    alternativesHtml = `
-      <div class="ai-alternatives-section" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.04); border-radius: 8px; padding: 0.5rem 0.6rem; margin-bottom: 0.55rem;">
-        <span style="display: block; font-size: 0.62rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em; margin-bottom: 0.35rem;">Insidie di Ruolo & Alternative 🔄</span>
-        ${items}
+    itemsHtml = data.alternatives.map(alt => `
+      <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.68rem; margin-bottom: 0.2rem; background: rgba(255, 255, 255, 0.02); padding: 0.2rem 0.4rem; border-radius: 4px;">
+        <span style="color: #fff; font-weight: 500;">🔄 ${alt.name}</span>
+        <span style="color: #ef4444; font-weight: 700;">Chance impiego: ${alt.playProbability}</span>
       </div>
-    `;
-  } else {
-    alternativesHtml = `
-      <div class="ai-alternatives-section" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.04); border-radius: 8px; padding: 0.5rem 0.6rem; margin-bottom: 0.55rem;">
-        <span style="display: block; font-size: 0.62rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em; margin-bottom: 0.15rem;">Insidie di Ruolo & Alternative 🔄</span>
-        <span style="font-size: 0.68rem; color: var(--color-text-muted); font-style: italic;">Nessun ballottaggio significativo rilevato.</span>
-      </div>
-    `;
+    `).join('');
   }
+
+  const commentHtml = data.roleCompetitionComment ? `
+    <div style="font-size: 0.65rem; color: #fff; font-weight: 500; line-height: 1.4; padding: 0.45rem 0.55rem; background: rgba(255, 255, 255, 0.02); border-left: 3px solid var(--color-primary); margin-top: 0.4rem; border-radius: 4px; border-top-left-radius: 0; border-bottom-left-radius: 0;">
+      ${data.roleCompetitionComment}
+    </div>
+  ` : '';
+
+  alternativesHtml = `
+    <div class="ai-alternatives-section" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.04); border-radius: 8px; padding: 0.5rem 0.6rem; margin-bottom: 0.55rem;">
+      <span style="display: block; font-size: 0.62rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em; margin-bottom: 0.35rem;">Ballottaggi & Competizione di Ruolo 🔄</span>
+      ${itemsHtml}
+      ${commentHtml}
+    </div>
+  `;
+
 
   popover.innerHTML = `
     <div class="ai-popover-header">
