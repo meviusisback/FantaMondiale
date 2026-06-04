@@ -1258,13 +1258,22 @@ function undoPurchase(playerId) {
 // --- FORMULAS & MATHS (REAL-WORLD ROSTER RULES) ---
 
 function getPlayerPerformanceRating(player) {
-  // Deterministic rating between 6.0 and 8.8 based on player name hash
-  let hash = 0;
-  for (let i = 0; i < player.name.length; i++) {
-    hash = player.name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return 6.0 + (Math.abs(hash) % 29) / 10; // 6.0 to 8.8
+  // Deterministic performance rating based on role-normalized starting value
+  const base = player.initialValue || 1;
+  let maxForRole = 30; // default/fallback
+  
+  if (player.role === 'ATT') maxForRole = 45;
+  else if (player.role === 'CEN') maxForRole = 30;
+  else if (player.role === 'DIF') maxForRole = 20;
+  else if (player.role === 'POR') maxForRole = 18;
+
+  // Calculate ratio bounded between 0.05 and 1.0
+  const ratio = Math.max(0.05, Math.min(1.0, base / maxForRole));
+  
+  // Scale between 6.0 and 9.5
+  return 6.0 + ratio * 3.5;
 }
+
 
 function calculateIdealBidRange(player, targetTeam = null) {
   const performance = getPlayerPerformanceRating(player);
@@ -4414,7 +4423,7 @@ async function showTeamAIAnalysis(buttonEl, forceRefresh = false) {
 
   // 6. Roster Hash & Cache Key
   const rosterHash = team.players.map(p => p.id).sort().join(',');
-  const cacheKey = `fantamondiale_team_ai_${team.id}_${rosterHash}`;
+  const cacheKey = `fantamondiale_team_ai_v3_${team.id}_${rosterHash}`;
 
   // Check Cache (only if not force refreshing)
   if (!forceRefresh) {
@@ -4439,7 +4448,7 @@ async function showTeamAIAnalysis(buttonEl, forceRefresh = false) {
     const ratingB = getPlayerPerformanceRating(b);
     return ratingB - ratingA || b.initialValue - a.initialValue;
   });
-  const topFreePlayers = sortedFreePlayers.slice(0, 25).map(p => ({
+  const topFreePlayers = sortedFreePlayers.slice(0, 150).map(p => ({
     id: p.id,
     name: p.name,
     role: p.role,

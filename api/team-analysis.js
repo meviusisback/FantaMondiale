@@ -55,7 +55,15 @@ Regole cruciali per massimizzare il punteggio all'asta:
 3. **Modificatori di Difesa e Centrocampo (MANDATORIO):** Valuta l'utilità strategica dei modificatori per strutturare la rosa:
    - Modificatore Difesa: basato sulla media voto pura (senza bonus/malus) dei difensori. Con 3 difensori: bonus di +1 con media >= 6.5, sale di +1 ogni 0.25 in più. Con 4 difensori: bonus scatta a >= 6.25 (+1), a 6.5 è +2. Con 5 difensori: bonus scatta a >= 6.25 (+2), a 6.5 è +3.
    - Modificatore Centrocampo: basato sulla media voto pura dei centrocampisti. Con 3 centrocampisti: bonus di +1 con media >= 6.75. Con 4 centrocampisti: bonus di +1 con media >= 6.5. Con 5 o 6 centrocampisti: bonus di +1 con media >= 6.25.
-4. **Uso Completo dei Crediti e Scelta dei Migliori Prospetti (CRUCIALE):** Seleziona esattamente da 3 a 5 calciatori tra quelli forniti nella lista dei prospetti liberi. Mostra come impiegare **tutti i crediti rimanenti** per l'acquisto di questi giocatori, suggerendo di incrementare i range di offerta (biddare in modo molto aggressivo) per assicurarsi i profili migliori e più competitivi per massimizzare i punti, anziché lasciare budget inutilizzato. Nella scelta, valuta con attenzione la probabilità di titolarità e le chance di avanzamento della loro Nazionale.
+4. **Calcolo Budget Strategico e Scelta dei Prospetti (MANDATORIO E CRUCIALE):**
+   - Calcola quanti calciatori l'utente ha in rosa in totale basandoti sui dati in input (somma il numero di giocatori nei 4 ruoli). Per raggiungere il target minimo regolamentare di **25 calciatori in totale**, determina gli slot vuoti mancanti: `slotMancanti = 25 - N`.
+   - Calcola il **budget medio per ogni slot vuoto** dividendo i crediti rimasti (${budget || 0} cr) per `slotMancanti`.
+   - Nella scelta dei 3-5 giocatori da consigliare (che devono essere presi rigorosamente tra i migliori disponibili nella lista dei prospetti liberi):
+     * **Puntare sempre sui Top Player**: L'IA deve privilegiare costantemente i migliori giocatori in assoluto (quelli con 'Valutazione Forza' elevata, ad esempio > 8.5/9.0) che risultano ancora liberi sul mercato. NON escludere i top player anche se il budget dell'utente è ristretto o il budget medio per slot è basso!
+     * **Adeguamento Dinamico del Range di Offerta**: Invece di ripiegare su giocatori mediocri o di basso livello, consiglia sempre i migliori profili ma adegua il range di offerta (min - max) consigliato per ciascuno in base alla disponibilità di crediti. Se il budget medio per slot è limitato, proponi offerte più conservative (es: vicino al valore iniziale del giocatore) per tutelare la possibilità di completare la rosa. Se il budget medio è generoso, suggerisci offerte molto aggressive per sbaragliare la concorrenza.
+   - Consiglia esattamente da 3 a 5 calciatori scelti tra i migliori prospetti liberi e indica per ciascuno un range di offerta consigliato (min - max) coerente con questo principio.
+
+
 
 Rispondi RIGOROSAMENTE con un oggetto JSON con le seguenti chiavi:
 - analysisText: stringa contenente l'analisi strutturata in 2 punti elenco (usa il grassetto per le parole chiave, massimo 150-180 parole totali):
