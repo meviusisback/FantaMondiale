@@ -1507,18 +1507,25 @@ function calculateIdealBidRange(player, targetTeam = null) {
     justificationParts.push(`titolare stimato al ${starterProb}`);
   }
   
-  // Use active team fallback
   const team = targetTeam || state.teams.find(t => t.isUserTeam) || state.teams.find(t => t.id === state.activeTeamId) || state.teams[0];
   if (team) {
     const remainingCredits = team.budget;
     const playersCount = team.players ? team.players.length : 0;
     
-    const targetRosterSize = playersCount < 25 ? 25 : 35;
-    const playersNeeded = Math.max(1, targetRosterSize - playersCount);
+    const playersNeeded = playersCount < 25 ? (25 - playersCount) : 1;
     const avgCreditsPerPlayer = remainingCredits / playersNeeded;
     
-    // Check FantaMondiale rank weight
     const rank = findTopPlayerRank(player);
+    console.log('[DEBUG-RANGE]', player.name, {
+      role: player.role,
+      initialValue: player.initialValue,
+      teamName: team.name,
+      budget: team.budget,
+      playersCount: playersCount,
+      playersNeeded: playersNeeded,
+      avgCreditsPerPlayer: avgCreditsPerPlayer,
+      rank: rank
+    });
     let budgetWeight = 0.05;
     
     if (rank <= 10) budgetWeight = 0.55;
@@ -1608,6 +1615,12 @@ function calculateIdealBidRange(player, targetTeam = null) {
         roleSaturationFactor = 0.4;
         roleExplanation = `attaccanti saturi (${roleCount}/6)`;
       }
+    }
+    
+    // Exempt top-100 players from role saturation penalty (as they are premium upgrades)
+    if (rank <= 100) {
+      roleSaturationFactor = 1.0;
+      roleExplanation = `${roleExplanation} (top player esente da penalità ballottaggio)`;
     }
     
     const targetMin = Math.round(avgCreditsPerPlayer * adjustedWeight * 0.75 * roleSaturationFactor);
@@ -4768,8 +4781,8 @@ function renderTeamAnalysisPopoverData(popover, team, analysisText, recommendedP
     });
 
     recommendedHtml = `
-      <div class="ai-recommendations-section" style="margin-top: 0.75rem; border-top: 1px dashed rgba(255, 255, 255, 0.1); padding-top: 0.75rem; max-height: 250px; overflow-y: auto; padding-right: 0.2rem;">
-        <span style="display: block; font-size: 0.62rem; color: #a855f7; text-transform: uppercase; font-weight: 800; letter-spacing: 0.05em; margin-bottom: 0.45rem; position: sticky; top: 0; background: #13141f; z-index: 10; padding: 0.1rem 0;">Prospetti Consigliati Rimasti 🔮</span>
+      <div class="ai-recommendations-section" style="margin-top: 0.75rem; border-top: 1px dashed rgba(255, 255, 255, 0.1); padding-top: 0.75rem;">
+        <span style="display: block; font-size: 0.62rem; color: #a855f7; text-transform: uppercase; font-weight: 800; letter-spacing: 0.05em; margin-bottom: 0.45rem;">Prospetti Consigliati Rimasti 🔮</span>
         <div style="display: flex; flex-direction: column; gap: 0.25rem;">
           ${itemsHtml}
         </div>

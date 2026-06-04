@@ -1664,14 +1664,21 @@ body.ai-modal-open::before {
 
 /* Arrows are disabled as the popover functions as a true centered modal dialog */
 
-/* Popover Content Structure */
 .ai-popover-header {
+  position: sticky;
+  top: -1.25rem;
+  margin-top: -1.25rem;
+  padding-top: 1.25rem;
+  padding-bottom: 0.5rem;
+  background: rgba(15, 23, 42, 0.98);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  z-index: 100;
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 0.75rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  padding-bottom: 0.4rem;
 }
 
 .ai-popover-title {
