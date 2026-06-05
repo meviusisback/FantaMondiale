@@ -3660,9 +3660,9 @@ async function loadSpecificCloudSession(id, skipConfirm = false) {
     return;
   }
 
-  // Enforce 4 attempt limit
+  // Enforce 4 attempt limit (bypass for administrator)
   const attempts = cloudPasswordFailedAttempts[id] || 0;
-  if (attempts >= 4) {
+  if (attempts >= 4 && !state.isAdmin) {
     showToast('Hai superato il limite di 4 tentativi per questa sessione. Accesso bloccato! 🔒', 'danger');
     if (!state.activeCloudSessionId) {
       openStartupDialog();
@@ -3670,7 +3670,11 @@ async function loadSpecificCloudSession(id, skipConfirm = false) {
     return;
   }
 
-  const password = await promptCloudPassword(id, true);
+  // If currently logged in as admin, automatically use the admin credentials to bypass the session password prompt
+  let password = state.cloudSessionPassword;
+  if (!state.isAdmin) {
+    password = await promptCloudPassword(id, true);
+  }
   if (password === null) {
     if (!state.activeCloudSessionId) {
       openStartupDialog();
@@ -3683,32 +3687,36 @@ async function loadSpecificCloudSession(id, skipConfirm = false) {
     const result = await response.json();
 
     if (!response.ok) {
-      cloudPasswordFailedAttempts[id] = (cloudPasswordFailedAttempts[id] || 0) + 1;
-      const remaining = 4 - cloudPasswordFailedAttempts[id];
-      
-      if (cloudPasswordFailedAttempts[id] >= 4) {
-        showToast('Hai inserito una password errata per 4 volte. Accesso bloccato! 🔒', 'danger');
-        localStorage.removeItem('fantamondiale_last_cloud_session_password');
-        if (state.activeCloudSessionId === id) {
-          state.cloudSessionPassword = null;
+      if (!state.isAdmin) {
+        cloudPasswordFailedAttempts[id] = (cloudPasswordFailedAttempts[id] || 0) + 1;
+        const remaining = 4 - cloudPasswordFailedAttempts[id];
+        
+        if (cloudPasswordFailedAttempts[id] >= 4) {
+          showToast('Hai inserito una password errata per 4 volte. Accesso bloccato! 🔒', 'danger');
+          localStorage.removeItem('fantamondiale_last_cloud_session_password');
+          if (state.activeCloudSessionId === id) {
+            state.cloudSessionPassword = null;
+          }
+          if (!state.activeCloudSessionId) {
+            openStartupDialog();
+          }
+          return;
         }
-        if (!state.activeCloudSessionId) {
-          openStartupDialog();
-        }
-        return;
+        
+        showToast(`${result.error || 'Errore durante il caricamento.'} Rimangono ${remaining} tentativi.`, 'danger');
+        
+        // Re-prompt on invalid password so they can try again
+        setTimeout(() => {
+          // Clear memory cache so they actually get prompted again
+          if (state.activeCloudSessionId === id) {
+            state.cloudSessionPassword = null;
+          }
+          localStorage.removeItem('fantamondiale_last_cloud_session_password');
+          loadSpecificCloudSession(id, skipConfirm);
+        }, 500);
+      } else {
+        showToast(`Errore caricamento admin: ${result.error || 'Errore durante il caricamento.'}`, 'danger');
       }
-      
-      showToast(`${result.error || 'Errore durante il caricamento.'} Rimangono ${remaining} tentativi.`, 'danger');
-      
-      // Re-prompt on invalid password so they can try again
-      setTimeout(() => {
-        // Clear memory cache so they actually get prompted again
-        if (state.activeCloudSessionId === id) {
-          state.cloudSessionPassword = null;
-        }
-        localStorage.removeItem('fantamondiale_last_cloud_session_password');
-        loadSpecificCloudSession(id, skipConfirm);
-      }, 500);
       return;
     }
 
@@ -3794,14 +3802,18 @@ async function deleteSpecificCloudSession(id) {
     return;
   }
 
-  // Enforce attempts check for deletion as well
+  // Enforce attempts check for deletion as well (bypass for administrator)
   const attempts = cloudPasswordFailedAttempts[id] || 0;
-  if (attempts >= 4) {
+  if (attempts >= 4 && !state.isAdmin) {
     showToast('Hai superato il limite di 4 tentativi per questa sessione. Operazione bloccata! 🔒', 'danger');
     return;
   }
 
-  const password = await promptCloudPassword(id, true);
+  // If currently logged in as admin, automatically use the admin credentials to bypass the session password prompt
+  let password = state.cloudSessionPassword;
+  if (!state.isAdmin) {
+    password = await promptCloudPassword(id, true);
+  }
   if (password === null) {
     return;
   }
@@ -3813,13 +3825,18 @@ async function deleteSpecificCloudSession(id) {
 
     const result = await response.json();
     if (!response.ok) {
-      cloudPasswordFailedAttempts[id] = (cloudPasswordFailedAttempts[id] || 0) + 1;
-      const remaining = 4 - cloudPasswordFailedAttempts[id];
-      if (cloudPasswordFailedAttempts[id] >= 4) {
-        showToast('Troppi tentativi falliti. Operazione bloccata! 🔒', 'danger');
+      if (!state.isAdmin) {
+        cloudPasswordFailedAttempts[id] = (cloudPasswordFailedAttempts[id] || 0) + 1;
+        const remaining = 4 - cloudPasswordFailedAttempts[id];
+        if (cloudPasswordFailedAttempts[id] >= 4) {
+          showToast('Troppi tentativi falliti. Operazione bloccata! 🔒', 'danger');
+          return;
+        }
+        throw new Error(`${result.error || 'Impossibile eliminare la sessione.'} Rimangono ${remaining} tentativi.`);
+      } else {
+        showToast(`Errore rimozione admin: ${result.error || 'Errore durante la rimozione.'}`, 'danger');
         return;
       }
-      throw new Error(`${result.error || 'Impossibile eliminare la sessione.'} Rimangono ${remaining} tentativi.`);
     }
 
     // Success! Reset counter
