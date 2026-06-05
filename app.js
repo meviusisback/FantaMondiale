@@ -2941,6 +2941,58 @@ function compileLineupData(team, showIdeal) {
   return { starters, bench: finalBench };
 }
 
+function getFriendlyErrorMessage(status, text) {
+  if (!text) return `Stato ${status}`;
+  
+  let trimmed = text.trim();
+  let errorContent = trimmed;
+
+  // Try parsing JSON
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (parsed.error) {
+      errorContent = parsed.error;
+    } else if (parsed.message) {
+      errorContent = parsed.message;
+    }
+  } catch (e) {
+    // Not JSON
+  }
+
+  if (typeof errorContent !== 'string') {
+    errorContent = String(errorContent);
+  }
+
+  errorContent = errorContent.trim();
+
+  // Check if errorContent is HTML
+  if (
+    errorContent.startsWith('<') ||
+    errorContent.includes('<!DOCTYPE') ||
+    errorContent.includes('<html') ||
+    errorContent.includes('<body') ||
+    errorContent.includes('<style') ||
+    errorContent.includes('<div')
+  ) {
+    const titleMatch = errorContent.match(/<title>(.*?)<\/title>/i);
+    if (titleMatch && titleMatch[1]) {
+      return `${titleMatch[1].trim()} (Codice ${status})`;
+    }
+    const h1Match = errorContent.match(/<h1>(.*?)<\/h1>/i);
+    if (h1Match && h1Match[1]) {
+      return `${h1Match[1].trim()} (Codice ${status})`;
+    }
+    return `Risposta HTML dal server (Codice ${status})`;
+  }
+
+  // Truncate plain text if too long
+  if (errorContent.length > 100) {
+    return `${errorContent.substring(0, 100)}... (Codice ${status})`;
+  }
+
+  return `${errorContent} (Codice ${status})`;
+}
+
 async function submitRosterWebhook(team) {
   try {
     const porList = team.players.filter(p => p.role === 'POR');
@@ -3012,11 +3064,11 @@ async function submitRosterWebhook(team) {
       showToast('Rosa fissa inviata con successo! ✅', 'success');
     } else {
       const errText = await response.text();
-      showToast(`Errore invio rosa: ${response.status} - ${errText}`, 'danger');
+      showToast(`Errore invio rosa: ${getFriendlyErrorMessage(response.status, errText)}`, 'danger');
     }
   } catch (error) {
     console.error('Webhook error:', error);
-    showToast(`Errore: ${error.message || error}`, 'danger');
+    showToast(`Errore: ${getFriendlyErrorMessage(500, error.message || error)}`, 'danger');
   }
 }
 
@@ -3056,11 +3108,11 @@ async function submitFormationWebhook(team, showIdeal, round) {
       showToast('Formazione inviata con successo! ✅', 'success');
     } else {
       const errText = await response.text();
-      showToast(`Errore invio formazione: ${response.status} - ${errText}`, 'danger');
+      showToast(`Errore invio formazione: ${getFriendlyErrorMessage(response.status, errText)}`, 'danger');
     }
   } catch (error) {
     console.error('Webhook error:', error);
-    showToast(`Errore: ${error.message || error}`, 'danger');
+    showToast(`Errore: ${getFriendlyErrorMessage(500, error.message || error)}`, 'danger');
   }
 }
 
@@ -3248,9 +3300,18 @@ function showToast(message, type = 'success') {
     iconHtml = '<svg style="width: 20px; height: 20px; stroke: var(--color-primary)" fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>';
   }
 
+  // Sanitize message to strip style, script, and link elements to prevent style bleeding/injection
+  let safeMessage = message;
+  if (typeof safeMessage === 'string') {
+    safeMessage = safeMessage
+      .replace(/<script[^>]*>([\s\S]*?)<\/script>/gi, '')
+      .replace(/<style[^>]*>([\s\S]*?)<\/style>/gi, '')
+      .replace(/<link[^>]*>/gi, '');
+  }
+
   dom.toast.innerHTML = `
     ${iconHtml}
-    <span>${message}</span>
+    <span>${safeMessage}</span>
   `;
 
   setTimeout(() => {
@@ -4649,9 +4710,8 @@ async function showTeamAIAnalysis(buttonEl, forceRefresh = false) {
     <div class="ai-skeleton-pulse ai-skeleton-line" style="width: 100%; height: 50px; border-radius: 8px; margin-top: 0.5rem;"></div>
   `;
 
-  // 6. Roster Hash & Cache Key
   const rosterHash = team.players.map(p => p.id).sort().join(',');
-  const cacheKey = `fantamondiale_team_ai_v3_${team.id}_${rosterHash}`;
+  const cacheKey = `fantamondiale_team_ai_v4_${team.id}_${rosterHash}`;
 
   // Check Cache (only if not force refreshing)
   if (!forceRefresh) {

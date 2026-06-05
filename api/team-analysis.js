@@ -22,8 +22,17 @@ export default async function handler(req, res) {
     if (!roster) {
       return res.status(400).json({ error: 'Dati incompleti: roster è obbligatorio.' });
     }
-
     const ELIMINATED_COUNTRIES = await getEliminatedCountries(apiKey, provider, openRouterModel, geminiModel);
+
+    const POR_free = (freePlayers || []).filter(p => p.role === 'POR').slice(0, 15);
+    const DIF_free = (freePlayers || []).filter(p => p.role === 'DIF').slice(0, 30);
+    const CEN_free = (freePlayers || []).filter(p => p.role === 'CEN').slice(0, 30);
+    const ATT_free = (freePlayers || []).filter(p => p.role === 'ATT').slice(0, 30);
+
+    const formattedFreePOR = POR_free.map(p => `  * ID: ${p.id} | Nome: ${p.name} | Nazionale: ${p.country} | Valore Iniziale: ${p.initialValue} cr | Valutazione Forza: ${p.rating.toFixed(1)}`).join('\n') || '  Nessuno';
+    const formattedFreeDIF = DIF_free.map(p => `  * ID: ${p.id} | Nome: ${p.name} | Nazionale: ${p.country} | Valore Iniziale: ${p.initialValue} cr | Valutazione Forza: ${p.rating.toFixed(1)}`).join('\n') || '  Nessuno';
+    const formattedFreeCEN = CEN_free.map(p => `  * ID: ${p.id} | Nome: ${p.name} | Nazionale: ${p.country} | Valore Iniziale: ${p.initialValue} cr | Valutazione Forza: ${p.rating.toFixed(1)}`).join('\n') || '  Nessuno';
+    const formattedFreeATT = ATT_free.map(p => `  * ID: ${p.id} | Nome: ${p.name} | Nazionale: ${p.country} | Valore Iniziale: ${p.initialValue} cr | Valutazione Forza: ${p.rating.toFixed(1)}`).join('\n') || '  Nessuno';
 
     const systemPrompt = `Tu sei un esperto analista di Fantacalcio specializzato nel Fantamondiale. Il tuo compito è analizzare il roster attuale dell'utente e generare un'analisi strategica ultra-concisa, adatta a essere letta in un piccolo box/fumetto UI (massimo 150-180 parole totali). Usa un tono diretto, esperto e fortemente focalizzato sul gioco FantaMondiale.
 L'analisi DEVE essere interamente centrata sulle dinamiche del FantaMondiale, con lo scopo primario di indicare le soluzioni migliori per ottenere BONUS (gol, assist, reti inviolate) e MASSIMIZZARE I PUNTEGGI, evitando commenti generici sul calcio reale.
@@ -46,8 +55,18 @@ Input ricevuti:
   - Centrocampisti (CEN): ${roster.CEN?.map(p => `${p.name} (${p.country})`).join(', ') || 'Nessuno'}
   - Attaccanti (ATT): ${roster.ATT?.map(p => `${p.name} (${p.country})`).join(', ') || 'Nessuno'}
 
-- Lista dei migliori prospetti rimasti liberi all'asta (seleziona tra questi per consigliare 3-5 giocatori da acquistare):
-${freePlayers?.map(p => `  * ID: ${p.id} | Ruolo: ${p.role} | Nome: ${p.name} | Nazionale: ${p.country} | Valore Iniziale: ${p.initialValue} cr | Valutazione Forza: ${p.rating.toFixed(1)}`).join('\n') || 'Nessuno'}
+- Lista dei migliori prospetti rimasti liberi all'asta (divisi per ruolo, ordinati per forza):
+  * Portieri (POR) Liberi:
+${formattedFreePOR}
+
+  * Difensori (DIF) Liberi:
+${formattedFreeDIF}
+
+  * Centrocampisti (CEN) Liberi:
+${formattedFreeCEN}
+
+  * Attaccanti (ATT) Liberi:
+${formattedFreeATT}
 
 Regole cruciali per massimizzare il punteggio all'asta:
 1. Analisi del Tabellone e degli Accoppiamenti: Esegui una ricerca web sul tabellone/bracket reale dei Mondiali ad oggi. Valuta con chi finiranno a giocare le nazionali dei vari giocatori nei primi turni e nella fase a eliminazione diretta. Segnala se ci sono accoppiamenti proibitivi in arrivo che potrebbero causare eliminazioni premature di pedine chiave, o se ci sono cammini favorevoli nel tabellone da sfruttare!
@@ -61,7 +80,8 @@ Regole cruciali per massimizzare il punteggio all'asta:
    - Nella scelta dei 3-5 giocatori da consigliare (che devono essere presi rigorosamente tra i migliori disponibili nella lista dei prospetti liberi):
      * Puntare sempre sui Top Player: L'IA deve privilegiare costantemente i migliori giocatori in assoluto (quelli con 'Valutazione Forza' elevata, ad esempio > 8.5/9.0) che risultano ancora liberi sul mercato. NON escludere i top player anche se il budget dell'utente è ristretto o il budget medio per slot è basso!
      * Adeguamento Dinamico del Range di Offerta: Invece di ripiegare su giocatori mediocri o di basso livello, consiglia sempre i migliori profili ma adegua il range di offerta (min - max) consigliato per ciascuno in base alla disponibilità di crediti. Se il budget medio per slot è limitato, proponi offerte più conservative (es: vicino al valore iniziale del giocatore) per tutelare la possibilità di completare la rosa. Se il budget medio è generoso, suggerisci offerte molto aggressive per sbaragliare la concorrenza.
-     * Coerenza Ruoli e Strategia (MANDATORIO): I 3-5 giocatori inseriti in recommendedPlayerIds DEVONO essere perfettamente coerenti con le lacune strategiche identificate e discusse al punto 2 ("Strategia Asta & Lacune da Colmare"). Ad esempio, se scrivi che la priorità assoluta della rosa è acquistare dei difensori (es: per il Modificatore Difesa), allora l'array recommendedPlayerIds DEVE contenere difensori di alto livello scelti dalla lista dei prospetti, ed evitare di suggerire solo attaccanti. C'è assoluto bisogno di coerenza logica tra i suggerimenti testuali e i giocatori taggati come consigliati.
+     * Coerenza Ruoli e Strategia (MANDATORIO E CRUCIALE): I 3-5 giocatori inseriti in recommendedPlayerIds DEVONO essere perfettamente coerenti con le lacune strategiche identificate e discusse al punto 2 ("Strategia Asta & Lacune da Colmare"). Ad esempio, se scrivi che la priorità assoluta della rosa è acquistare dei difensori (es: per il Modificatore Difesa), allora l'array recommendedPlayerIds DEVE contenere difensori di alto livello scelti dalla lista dei prospetti, ed evitare di suggerire solo attaccanti. C'è assoluto bisogno di coerenza logica tra i suggerimenti testuali e i giocatori taggati come consigliati.
+     * Allineamento Nomi-ID (MANDATORIO): Nel testo strategico del punto 2, devi nominare ESPLICITAMENTE ciascuno dei 3-5 giocatori che hai consigliato e inserito in `recommendedPlayerIds`. I giocatori citati nel testo come raccomandati d'acquisto DEVONO corrispondere esattamente a quelli indicati in `recommendedPlayerIds` (stesso ID per lo stesso giocatore citato, nessun disallineamento!).
    - Consiglia esattamente da 3 a 5 calciatori scelti tra i migliori prospetti liberi e indica per ciascuno un range di offerta consigliato (min - max) coerente con questo principio.
 
 
