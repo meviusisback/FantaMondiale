@@ -4764,7 +4764,7 @@ async function showTeamAIAnalysis(buttonEl, forceRefresh = false) {
   `;
 
   const rosterHash = team.players.map(p => p.id).sort().join(',');
-  const cacheKey = `fantamondiale_team_ai_v4_${team.id}_${rosterHash}`;
+  const cacheKey = `fantamondiale_team_ai_v5_${team.id}_${rosterHash}`;
 
   // Check Cache (only if not force refreshing)
   if (!forceRefresh) {
