@@ -2946,14 +2946,17 @@ function getFriendlyErrorMessage(status, text) {
   
   let trimmed = text.trim();
   let errorContent = trimmed;
+  let parsedJson = false;
 
   // Try parsing JSON
   try {
     const parsed = JSON.parse(trimmed);
     if (parsed.error) {
       errorContent = parsed.error;
+      parsedJson = true;
     } else if (parsed.message) {
       errorContent = parsed.message;
+      parsedJson = true;
     }
   } catch (e) {
     // Not JSON
@@ -2983,6 +2986,11 @@ function getFriendlyErrorMessage(status, text) {
       return `${h1Match[1].trim()} (Codice ${status})`;
     }
     return `Risposta HTML dal server (Codice ${status})`;
+  }
+
+  // If it was valid JSON and not HTML, return the API error directly
+  if (parsedJson) {
+    return errorContent;
   }
 
   // Truncate plain text if too long
