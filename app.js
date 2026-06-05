@@ -128,6 +128,7 @@ const dom = {
   btnCloudSave: null,
   btnCloudLoad: null,
   btnCloudLogout: null,
+  btnCloudNewSession: null,
 
   // Cloud Persistence Dialog Elements
   cloudSaveDialog: null,
@@ -242,6 +243,7 @@ function initDOM() {
   dom.btnCloudSave = document.getElementById('btn-cloud-save');
   dom.btnCloudLoad = document.getElementById('btn-cloud-load');
   dom.btnCloudLogout = document.getElementById('btn-cloud-logout');
+  dom.btnCloudNewSession = document.getElementById('btn-cloud-new-session');
 
   // Cloud Persistence Dialog Cache
   dom.cloudSaveDialog = document.getElementById('cloud-save-dialog');
@@ -387,12 +389,14 @@ function setupEventListeners() {
   
   dom.btnResetAll.addEventListener('click', (e) => {
     e.preventDefault();
+    if (dom.cloudLoadDropdownWrapper) dom.cloudLoadDropdownWrapper.classList.remove('open');
     resetSession();
   });
 
   if (dom.btnAdminLoginToggle) {
     dom.btnAdminLoginToggle.addEventListener('click', (e) => {
       e.preventDefault();
+      if (dom.cloudLoadDropdownWrapper) dom.cloudLoadDropdownWrapper.classList.remove('open');
       if (state.isAdmin) {
         if (confirm('Sei sicuro di voler uscire dalla modalità amministratore? Le impostazioni AI torneranno in sola lettura.')) {
           state.isAdmin = false;
@@ -410,11 +414,23 @@ function setupEventListeners() {
   // Cloud Persistence Sync Event Listeners
   if (dom.btnCloudSave) dom.btnCloudSave.addEventListener('click', (e) => {
     e.preventDefault();
+    if (dom.cloudLoadDropdownWrapper) dom.cloudLoadDropdownWrapper.classList.remove('open');
     openCloudSaveModal();
   });
 
+  if (dom.btnCloudNewSession) {
+    dom.btnCloudNewSession.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (dom.cloudLoadDropdownWrapper) dom.cloudLoadDropdownWrapper.classList.remove('open');
+      if (confirm('Sei sicuro di voler creare una nuova sessione? Tutti i dati correnti non salvati andranno persi.')) {
+        openNewSessionFromStartup();
+      }
+    });
+  }
+
   if (dom.btnCloudLogout) dom.btnCloudLogout.addEventListener('click', (e) => {
     e.preventDefault();
+    if (dom.cloudLoadDropdownWrapper) dom.cloudLoadDropdownWrapper.classList.remove('open');
     logoutCloudSession();
   });
   
@@ -480,6 +496,7 @@ function setupEventListeners() {
   if (dom.btnManageCloudSessions) {
     dom.btnManageCloudSessions.addEventListener('click', (e) => {
       e.preventDefault();
+      if (dom.cloudLoadDropdownWrapper) dom.cloudLoadDropdownWrapper.classList.remove('open');
       openCloudLoadModal();
     });
   }
@@ -6946,7 +6963,10 @@ function initWizardEvents() {
       const wrapper = document.getElementById('actions-dropdown-wrapper');
       if (wrapper) wrapper.classList.remove('open');
       
-      openTutorial();
+      // Yield to the browser render queue before opening dialog to resolve Vercel INP latency
+      setTimeout(() => {
+        openTutorial();
+      }, 0);
     });
   }
 
