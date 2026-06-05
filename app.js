@@ -74,7 +74,7 @@ let state = {
     aiProvider: 'google',
     openRouterModel: 'openai/gpt-oss-120b:free',
     geminiModel: 'gemini-flash-lite-latest',
-    enableWebhooks: true
+    enableWebhooks: false
   },
   teams: [
     { id: 't-1', name: 'Dream Team', budget: 300, players: [], module: '4-3-3', isUserTeam: false },
@@ -1181,7 +1181,7 @@ function resetSessionClean() {
     aiProvider: 'google',
     openRouterModel: 'openai/gpt-oss-120b:free',
     geminiModel: 'gemini-flash-lite-latest',
-    enableWebhooks: true
+    enableWebhooks: false
   };
 
   // Reset teams to default
@@ -7078,6 +7078,25 @@ function openSetupWizard(mode = 'local') {
 
   const dlg = document.getElementById('setup-wizard-dialog');
   if (!dlg) return;
+
+  // Configure skip/cancel button behavior dynamically
+  const skipBtn = document.getElementById('btn-wizard-skip');
+  if (skipBtn) {
+    if (mode === 'cloud') {
+      skipBtn.innerText = 'Annulla ✕';
+      skipBtn.onclick = (e) => {
+        e.preventDefault();
+        dlg.close();
+        openStartupDialog();
+      };
+    } else {
+      skipBtn.innerText = 'Salta setup';
+      skipBtn.onclick = (e) => {
+        e.preventDefault();
+        dlg.close();
+      };
+    }
+  }
 
   // Initialize input values from current state
   const budgetInput = document.getElementById('wizard-budget');
