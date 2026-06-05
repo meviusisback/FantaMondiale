@@ -70,6 +70,13 @@
             </a>
 
             <div class="dropdown-divider"></div>
+            <div class="dropdown-header">Aiuto & Supporto</div>
+            
+            <a href="#" id="btn-start-tutorial" class="dropdown-item-action-link" style="text-align: left;" data-tooltip="Avvia il tutorial guidato dell'app">
+              Guida & Tutorial 📚
+            </a>
+
+            <div class="dropdown-divider"></div>
             <div class="dropdown-header">Amministrazione</div>
             
             <a href="#" id="btn-admin-login-toggle" class="dropdown-item-action-link" style="text-align: left;" data-tooltip="Accedi o disconnettiti come amministratore">
@@ -556,6 +563,204 @@
       <button id="btn-r32-save-custom" class="btn btn-primary" style="padding: 0.5rem 1.25rem; font-size: 0.75rem;">💾 Salva Accoppiamenti</button>
     </div>
   </dialog>
+
+  <!-- SETUP WIZARD DIALOG -->
+  <dialog id="setup-wizard-dialog" style="max-width: 550px; width: 95%; background: #0f172a; color: #fff; border: 1px solid var(--border-light); border-radius: 16px; padding: 1.5rem; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border-light); padding-bottom: 0.5rem;">
+      <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; display: flex; align-items: center; gap: 0.4rem; background: linear-gradient(135deg, #a855f7 0%, #38bdf8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+        ⚙️ Configurazione Iniziale
+      </h3>
+      <span style="font-size: 0.7rem; color: var(--color-text-muted); font-weight: 500;" id="setup-wizard-step-label">Passo 1 di 3</span>
+    </div>
+
+    <!-- Step Progress Bar -->
+    <div class="wizard-progress">
+      <div class="wizard-step-indicator active" id="wizard-ind-1">1</div>
+      <div class="wizard-step-indicator" id="wizard-ind-2">2</div>
+      <div class="wizard-step-indicator" id="wizard-ind-3">3</div>
+    </div>
+
+    <!-- STEP 1: CARICAMENTO CSV -->
+    <div class="wizard-pane active" id="wizard-pane-1">
+      <h4 style="font-size: 0.85rem; font-weight: 700; margin-bottom: 0.5rem; color: #fff;">Fase 1: Caricamento lista giocatori (CSV)</h4>
+      <p style="font-size: 0.73rem; color: var(--color-text-muted); line-height: 1.4; margin-bottom: 1rem;">
+        Carica l'elenco dei calciatori per l'asta da un file CSV. Se non carichi alcun file, il sistema inizializzerà l'asta con un set di <strong>stelle mondiali predefinite</strong> (Mbappé, Haaland, Messi, Kane, ecc.).
+      </p>
+      
+      <div style="border: 2px dashed rgba(255, 255, 255, 0.15); border-radius: 8px; padding: 1.5rem; text-align: center; background: rgba(0,0,0,0.25); transition: border var(--transition-fast);" id="wizard-csv-dropzone">
+        <svg style="width: 32px; height: 32px; fill: none; stroke: var(--color-text-muted); margin: 0 auto 0.5rem auto;" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+        <div style="font-size: 0.75rem; color: #fff; font-weight: 600; margin-bottom: 0.25rem;" id="wizard-csv-status">Trascina qui il file CSV o clicca sotto</div>
+        <div style="font-size: 0.65rem; color: var(--color-text-muted); margin-bottom: 0.75rem;">Supporta file .csv con colonne standard</div>
+        <button class="btn btn-secondary" style="position: relative; padding: 0.4rem 1rem; font-size: 0.7rem;">
+          Seleziona File CSV
+          <input type="file" id="wizard-import-players" accept=".csv" style="position: absolute; top:0; left:0; width:100%; height:100%; opacity:0; cursor:pointer;">
+        </button>
+      </div>
+    </div>
+
+    <!-- STEP 2: NOMI SQUADRE -->
+    <div class="wizard-pane" id="wizard-pane-2">
+      <h4 style="font-size: 0.85rem; font-weight: 700; margin-bottom: 0.5rem; color: #fff;">Fase 2: Squadre Partecipanti</h4>
+      <p style="font-size: 0.73rem; color: var(--color-text-muted); line-height: 1.4; margin-bottom: 0.75rem;">
+        Inserisci i nomi delle squadre dei fantallenatori che parteciperanno all'asta. Scrivi <strong>un nome di squadra per riga</strong> nel riquadro di testo sottostante.
+      </p>
+      
+      <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+        <label for="wizard-team-names" style="font-size: 0.65rem; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase;">Nomi Squadre (uno per riga):</label>
+        <textarea id="wizard-team-names" style="width: 100%; height: 110px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-light); border-radius: 6px; color: #fff; padding: 0.5rem; font-size: 0.75rem; font-family: inherit; resize: none; outline: none;"></textarea>
+      </div>
+    </div>
+
+    <!-- STEP 3: CREDITI INIZIALI -->
+    <div class="wizard-pane" id="wizard-pane-3">
+      <h4 style="font-size: 0.85rem; font-weight: 700; margin-bottom: 0.5rem; color: #fff;">Fase 3: Budget Iniziale</h4>
+      <p style="font-size: 0.73rem; color: var(--color-text-muted); line-height: 1.4; margin-bottom: 1rem;">
+        Definisci la quantità di crediti iniziali assegnati a ciascuna squadra per l'asta dei calciatori.
+      </p>
+      
+      <div style="display: flex; align-items: center; gap: 1rem; background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; border: 1px solid var(--border-light);">
+        <div style="flex: 1;">
+          <label for="wizard-budget" style="font-size: 0.65rem; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase; display: block; margin-bottom: 0.25rem;">Crediti Iniziali (per Squadra):</label>
+          <input type="number" id="wizard-budget" value="300" min="10" max="10000" style="width: 100%; padding: 0.45rem; background: rgba(0,0,0,0.3); border: 1px solid var(--border-light); border-radius: 6px; color: #fff; font-size: 0.8rem; font-weight: 700; outline: none;">
+        </div>
+        <div style="font-size: 1.8rem; opacity: 0.75;">💰</div>
+      </div>
+    </div>
+
+    <!-- Wizard Navigation buttons -->
+    <div style="display: flex; gap: 0.5rem; justify-content: space-between; margin-top: 1.5rem; border-top: 1px solid var(--border-light); padding-top: 1rem;">
+      <button class="btn btn-secondary" id="btn-wizard-prev" style="padding: 0.45rem 1rem; font-size: 0.72rem; visibility: hidden;">↩️ Indietro</button>
+      <div style="display: flex; gap: 0.5rem;">
+        <button class="btn btn-secondary" onclick="document.getElementById('setup-wizard-dialog').close()" style="padding: 0.45rem 1rem; font-size: 0.72rem;">Salta setup</button>
+        <button class="btn btn-primary" id="btn-wizard-next" style="padding: 0.45rem 1.25rem; font-size: 0.72rem; background: linear-gradient(135deg, #a855f7 0%, #6366f1 100%);">Avanti ➡️</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- TUTORIAL DIALOG -->
+  <dialog id="app-tutorial-dialog" style="max-width: 550px; width: 95%; background: #0f172a; color: #fff; border: 1px solid var(--border-light); border-radius: 16px; padding: 1.5rem; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; border-bottom: 1px solid var(--border-light); padding-bottom: 0.5rem;">
+      <h3 style="margin: 0; font-size: 1.05rem; font-weight: 800; display: flex; align-items: center; gap: 0.35rem; color: #a855f7;">
+        📚 Guida e Tutorial FantaMondiale
+      </h3>
+      <span style="font-size: 0.65rem; color: var(--color-text-muted);" id="tutorial-step-label">Slide 1 di 5</span>
+    </div>
+
+    <!-- SLIDE 1: INTRO / ASTA -->
+    <div class="tutorial-slide active" id="tut-slide-1">
+      <div class="tutorial-icon">🔨</div>
+      <h4 style="font-size: 0.85rem; font-weight: 700; margin-bottom: 0.5rem; color: #fff;">1. Gestione Asta & Calciatori</h4>
+      <p style="font-size: 0.73rem; color: var(--color-text-muted); line-height: 1.4; text-align: left; margin-bottom: 0.75rem;">
+        La scheda principale <strong>"Giocatori"</strong> elenca tutti i calciatori disponibili sul mercato. Qui puoi:
+      </p>
+      <ul style="font-size: 0.73rem; color: var(--color-text-muted); line-height: 1.4; text-align: left; margin: 0 0 1rem 1.25rem; padding: 0;">
+        <li>Cercare i calciatori per nome o filtrarli per ruolo (Portieri, Difensori, ecc.) e per stato (Svincolati o Acquistati).</li>
+        <li>Assegnare un calciatore a una delle squadre dell'asta impostando il relativo costo d'acquisto.</li>
+        <li>Cliccare sulla <strong>"Scheda IA"</strong> di un calciatore per analizzare le sue statistiche, ballottaggi e l'offerta massima consigliata.</li>
+      </ul>
+    </div>
+
+    <!-- SLIDE 2: DASHBOARD SQUADRE -->
+    <div class="tutorial-slide" id="tut-slide-2">
+      <div class="tutorial-icon">📊</div>
+      <h4 style="font-size: 0.85rem; font-weight: 700; margin-bottom: 0.5rem; color: #fff;">2. Dashboard & Rose delle Squadre</h4>
+      <p style="font-size: 0.73rem; color: var(--color-text-muted); line-height: 1.4; text-align: left; margin-bottom: 0.75rem;">
+        Nella scheda <strong>"Squadre"</strong> puoi visionare la situazione dei partecipanti all'asta:
+      </p>
+      <ul style="font-size: 0.73rem; color: var(--color-text-muted); line-height: 1.4; text-align: left; margin: 0 0 1rem 1.25rem; padding: 0;">
+        <li>Verificare i crediti residui, gli slot occupati e l'offerta massima consentita per non sforare.</li>
+        <li>Esaminare il registro degli acquisti di ciascun fantallenatore e svincolare i calciatori in tempo reale.</li>
+        <li>Impostare la propria squadra ed avviare l'<strong>"Analisi Tattica IA"</strong> per scoprire i 20 migliori svincolati divisi per ruolo e lacune della rosa da colmare.</li>
+      </ul>
+    </div>
+
+    <!-- SLIDE 3: FORMAZIONE E CAMPO -->
+    <div class="tutorial-slide" id="tut-slide-3">
+      <div class="tutorial-icon">⚽</div>
+      <h4 style="font-size: 0.85rem; font-weight: 700; margin-bottom: 0.5rem; color: #fff;">3. Formazione in Campo & AI Ideal</h4>
+      <p style="font-size: 0.73rem; color: var(--color-text-muted); line-height: 1.4; text-align: left; margin-bottom: 0.75rem;">
+        La scheda <strong>"Formazione & Campo"</strong> ti offre una visualizzazione grafica del campo da gioco:
+      </p>
+      <ul style="font-size: 0.73rem; color: var(--color-text-muted); line-height: 1.4; text-align: left; margin: 0 0 1rem 1.25rem; padding: 0;">
+        <li>Sposta i tuoi giocatori trascinandoli o scambiandoli tra titolari e panchina.</li>
+        <li>Visualizza all'istante la <strong>Match Strength</strong> di ogni giocatore e la percentuale di titolarità.</li>
+        <li>Clicca su <strong>"Formazione AI 🔮"</strong> per generare istantaneamente il miglior modulo e gli 11 titolari ottimali calcolati dal modello di intelligenza artificiale.</li>
+      </ul>
+    </div>
+
+    <!-- SLIDE 4: TABELLONE & SIMULATORE -->
+    <div class="tutorial-slide" id="tut-slide-4">
+      <div class="tutorial-icon">🏆</div>
+      <h4 style="font-size: 0.85rem; font-weight: 700; margin-bottom: 0.5rem; color: #fff;">4. Tabellone Mondiale & Simulazioni</h4>
+      <p style="font-size: 0.73rem; color: var(--color-text-muted); line-height: 1.4; text-align: left; margin-bottom: 0.75rem;">
+        Il tab <strong>"Tabellone & Gironi"</strong> gestisce la simulazione dei Mondiali 2026:
+      </p>
+      <ul style="font-size: 0.73rem; color: var(--color-text-muted); line-height: 1.4; text-align: left; margin: 0 0 1rem 1.25rem; padding: 0;">
+        <li>Riordina le nazionali nei gironi trascinando le righe. Il badge ti mostra quanti giocatori delle tue rose appartengono a quella nazione.</li>
+        <li>Clicca su <strong>"Previsione IA 🔮"</strong> per calcolare, tramite simulazioni Monte Carlo su 500 iterazioni Elo, le probabilità esatte di passaggio del turno.</li>
+        <li>Personalizza gli accoppiamenti dei Sedicesimi e seleziona i vincitori fino alla finale, con validazione automatica a cascata.</li>
+      </ul>
+    </div>
+
+    <!-- SLIDE 5: CONFIGURAZIONE & WEBHOOKS -->
+    <div class="tutorial-slide" id="tut-slide-5">
+      <div class="tutorial-icon">☁️</div>
+      <h4 style="font-size: 0.85rem; font-weight: 700; margin-bottom: 0.5rem; color: #fff;">5. Cloud, Webhooks & Admin</h4>
+      <p style="font-size: 0.73rem; color: var(--color-text-muted); line-height: 1.4; text-align: left; margin-bottom: 0.75rem;">
+        L'app supporta la persistenza cloud e le integrazioni esterne:
+      </p>
+      <ul style="font-size: 0.73rem; color: var(--color-text-muted); line-height: 1.4; text-align: left; margin: 0 0 1rem 1.25rem; padding: 0;">
+        <li>Salva le sessioni nel database Upstash Cloud Redis protette da password e caricale da qualsiasi dispositivo.</li>
+        <li>Invia la tua rosa o la formazione schierata a Google Sheets in tempo reale tramite i pulsanti di Webhook.</li>
+        <li>Configura il modello e il provider dell'intelligenza artificiale (Google Gemini o OpenRouter) per tutte le analisi tattiche.</li>
+      </ul>
+    </div>
+
+    <!-- Tutorial Navigation buttons -->
+    <div class="tutorial-nav">
+      <button class="btn btn-secondary" id="btn-tut-prev" style="padding: 0.4rem 1rem; font-size: 0.72rem; visibility: hidden;">↩️ Precedente</button>
+      <button class="btn btn-primary" id="btn-tut-next" style="padding: 0.4rem 1.25rem; font-size: 0.72rem; background: linear-gradient(135deg, #a855f7 0%, #6366f1 100%);">Avanti ➡️</button>
+    </div>
+  </dialog>
+
+  <!-- FLOATING CHATBOT AI -->
+  <div class="chatbot-bubble" id="fanta-chatbot-trigger" data-tooltip="Parla con FantaMondiale AI Copilot 🤖">
+    <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+    </svg>
+  </div>
+
+  <div class="chatbot-window" id="fanta-chatbot-window">
+    <div class="chatbot-header">
+      <div class="chatbot-title">
+        <span>🤖 AI Copilot</span>
+        <span style="font-size: 0.6rem; color: var(--color-success); font-weight: normal; background: rgba(34, 197, 94, 0.15); padding: 0.1rem 0.4rem; border-radius: 10px; margin-left: 0.25rem;">Online</span>
+      </div>
+      <button class="chatbot-close" id="fanta-chatbot-close">✕</button>
+    </div>
+    
+    <div class="chatbot-messages" id="fanta-chatbot-messages">
+      <div class="chat-msg assistant">
+        Ciao! Sono <strong>FantaMondiale AI Copilot</strong> 🤖. 
+        Ti aiuto a gestire l'asta, a configurare le formazioni, a capire i modificatori o a suggerirti i migliori prospetti del torneo! Chiedimi pure!
+      </div>
+    </div>
+
+    <!-- Suggested chip prompts -->
+    <div class="chatbot-chips">
+      <div class="chatbot-chip" onclick="sendChatbotPredefined('Come funziona il Modificatore Difesa? 🛡️')">Modificatore Difesa 🛡️</div>
+      <div class="chatbot-chip" onclick="sendChatbotPredefined('Spiegami il Modificatore Centrocampo ⚡')">Modificatore Centrocampo ⚡</div>
+      <div class="chatbot-chip" onclick="sendChatbotPredefined('Quali sono le regole sugli slot della rosa? 📋')">Slot della Rosa 📋</div>
+      <div class="chatbot-chip" onclick="sendChatbotPredefined('Come posso inviare la formazione al Webhook? 📤')">Invio Webhook 📤</div>
+    </div>
+
+    <div class="chatbot-input-area">
+      <input type="text" class="chatbot-input" id="fanta-chatbot-input" placeholder="Scrivi una domanda all'IA...">
+      <button class="chatbot-send" id="fanta-chatbot-send">
+        <svg style="width: 14px; height: 14px; fill: none; stroke: currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+      </button>
+    </div>
+  </div>
 
   <!-- FLOATING TOAST NOTIFIER -->
   <div id="toast-notification" class="toast">

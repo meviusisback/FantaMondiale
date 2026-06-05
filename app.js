@@ -567,6 +567,8 @@ function setupEventListeners() {
       el.classList.remove('open');
     });
   });
+
+  initWizardEvents();
 }
 
 // --- STATE ACTIONS ---
@@ -1069,10 +1071,10 @@ function resetSessionClean() {
 
   // Reset teams to default
   state.teams = [
-    { id: 't-1', name: 'Dream Team', budget: 300, players: [], module: '4-3-3' },
-    { id: 't-2', name: 'F.C. Fantasmi', budget: 300, players: [], module: '4-3-3' },
-    { id: 't-3', name: 'Galacticos', budget: 300, players: [], module: '4-3-3' },
-    { id: 't-4', name: 'Real Madrink', budget: 300, players: [], module: '4-3-3' }
+    { id: 't-1', name: 'Dream Team', budget: 300, players: [], module: '4-3-3', isUserTeam: true },
+    { id: 't-2', name: 'F.C. Fantasmi', budget: 300, players: [], module: '4-3-3', isUserTeam: false },
+    { id: 't-3', name: 'Galacticos', budget: 300, players: [], module: '4-3-3', isUserTeam: false },
+    { id: 't-4', name: 'Real Madrink', budget: 300, players: [], module: '4-3-3', isUserTeam: false }
   ];
 
   // Restore players to default cloned from SEED_PLAYERS
@@ -1082,6 +1084,7 @@ function resetSessionClean() {
   state.activeTab = 'giocatori';
   state.activeTeamId = 't-1';
   state.activeCloudSessionId = null;
+  state.cloudSessionPassword = null;
   state.activePitchTeamId = null;
   state.pitchShowIdeal = false;
   state.draggedPlayerId = null;
@@ -1093,10 +1096,17 @@ function resetSessionClean() {
   state.aiCache = {};
   state.teamIdealLineups = {};
   state.activeCloudSessionMetadata = null;
+  state.tournament = null;
+  state.tournamentTab = 'gironi';
+  state.activeRound = 'G1';
 
-  // Clear last used session from localStorage and sessionStorage
+  // Clear last used session and password from localStorage and sessionStorage
   localStorage.removeItem('fantamondiale_last_cloud_session_id');
+  localStorage.removeItem('fantamondiale_last_cloud_session_password');
   sessionStorage.clear();
+
+  // Re-initialize tournament to default
+  initializeTournament(true);
 
   // Trigger autosave to sync this clean state to the cloud if active
   autoSave();
@@ -1110,7 +1120,7 @@ function openNewSessionFromStartup() {
   resetSessionClean();
   renderAll();
 
-  openCloudSaveModal();
+  openSetupWizard('cloud');
 }
 
 function loadStartupCloudSession(id) {
@@ -3461,7 +3471,8 @@ async function confirmCloudSave() {
           settings: state.settings,
           teams: state.teams,
           players: state.players,
-          teamIdealLineups: state.teamIdealLineups || {}
+          teamIdealLineups: state.teamIdealLineups || {},
+          tournament: state.tournament || null
         }
       })
     });
@@ -6718,4 +6729,438 @@ window.openR32Editor = openR32Editor;
 window.saveR32CustomPairings = saveR32CustomPairings;
 window.resetR32CustomPairings = resetR32CustomPairings;
 window.changeR32Team = changeR32Team;
+
+// ==========================================================================
+// SETUP WIZARD, GUIDED TUTORIAL & AI CHATBOT LOGIC
+// ==========================================================================
+
+let wizardStep = 1;
+let wizardMode = 'local';
+let wizardUploadedPlayers = null;
+
+let tutorialSlide = 1;
+
+let chatbotHistory = [];
+
+function openSetupWizard(mode = 'local') {
+  wizardStep = 1;
+  wizardMode = mode;
+  wizardUploadedPlayers = null;
+
+  const dlg = document.getElementById('setup-wizard-dialog');
+  if (!dlg) return;
+
+  // Initialize input values from current state
+  const budgetInput = document.getElementById('wizard-budget');
+  if (budgetInput) budgetInput.value = state.settings.budget || 300;
+
+  const teamNamesTextarea = document.getElementById('wizard-team-names');
+  if (teamNamesTextarea) {
+    teamNamesTextarea.value = state.teams.map(t => t.name).join('\n');
+  }
+
+  // Reset CSV dropzone status
+  const statusText = document.getElementById('wizard-csv-status');
+  if (statusText) statusText.innerText = "Trascina qui il file CSV o clicca sotto";
+
+  showWizardStep(1);
+  dlg.showModal();
+}
+
+function showWizardStep(step) {
+  wizardStep = step;
+  
+  // Hide all step panes
+  document.querySelectorAll('.wizard-pane').forEach((p, idx) => {
+    p.classList.toggle('active', idx === (step - 1));
+  });
+
+  // Update step indicators
+  document.querySelectorAll('.wizard-step-indicator').forEach((ind, idx) => {
+    ind.classList.toggle('active', idx === (step - 1));
+    ind.classList.toggle('completed', idx < (step - 1));
+  });
+
+  // Update step title label
+  const stepLabel = document.getElementById('setup-wizard-step-label');
+  if (stepLabel) stepLabel.innerText = `Passo ${step} di 3`;
+
+  // Update buttons
+  const prevBtn = document.getElementById('btn-wizard-prev');
+  if (prevBtn) {
+    prevBtn.style.visibility = step === 1 ? 'hidden' : 'visible';
+  }
+
+  const nextBtn = document.getElementById('btn-wizard-next');
+  if (nextBtn) {
+    nextBtn.innerText = step === 3 ? 'Fine 🏁' : 'Avanti ➡️';
+  }
+}
+
+function handleWizardNext() {
+  if (wizardStep < 3) {
+    showWizardStep(wizardStep + 1);
+  } else {
+    // Save configuration
+    const budgetInput = document.getElementById('wizard-budget');
+    const newBudget = parseInt(budgetInput?.value) || 300;
+
+    // Apply budget settings
+    state.settings.budget = newBudget;
+
+    // Parse team names
+    const teamNamesTextarea = document.getElementById('wizard-team-names');
+    const lines = teamNamesTextarea?.value?.split(/\r?\n/).map(line => line.trim()).filter(Boolean) || [];
+    
+    if (lines.length > 0) {
+      state.teams = lines.map((name, idx) => {
+        return {
+          id: `t-${idx + 1}`,
+          name: name,
+          budget: newBudget,
+          players: [],
+          module: '4-3-3',
+          isUserTeam: idx === 0
+        };
+      });
+      state.activeTeamId = state.teams[0].id;
+    } else {
+      // Default fallback
+      state.teams = [
+        { id: 't-1', name: 'Dream Team', budget: newBudget, players: [], module: '4-3-3', isUserTeam: true },
+        { id: 't-2', name: 'F.C. Fantasmi', budget: newBudget, players: [], module: '4-3-3', isUserTeam: false },
+        { id: 't-3', name: 'Galacticos', budget: newBudget, players: [], module: '4-3-3', isUserTeam: false },
+        { id: 't-4', name: 'Real Madrink', budget: newBudget, players: [], module: '4-3-3', isUserTeam: false }
+      ];
+      state.activeTeamId = 't-1';
+    }
+
+    // Apply uploaded players if any, otherwise keep default seed players
+    if (wizardUploadedPlayers && wizardUploadedPlayers.length > 0) {
+      state.players = wizardUploadedPlayers;
+    } else {
+      state.players = JSON.parse(JSON.stringify(SEED_PLAYERS));
+    }
+
+    // Completely clear all player assignments and budget spendings
+    state.players.forEach(p => {
+      p.ownerId = null;
+      p.purchaseCost = null;
+    });
+
+    state.teamIdealLineups = {};
+    
+    // Synchronize DOM inputs in settings tab
+    if (dom.configBudget) dom.configBudget.value = newBudget;
+    if (dom.teamListInput) dom.teamListInput.value = state.teams.map(t => t.name).join('\n');
+
+    // Re-initialize tournament standings/pairing states
+    initializeTournament(true);
+
+    autoSave();
+    renderAll();
+
+    // Close wizard dialog
+    const dlg = document.getElementById('setup-wizard-dialog');
+    if (dlg) dlg.close();
+
+    showToast('Configurazione iniziale applicata con successo! 🎉', 'success');
+
+    // Launch guided tutorial tour!
+    setTimeout(() => {
+      openTutorial();
+    }, 600);
+
+    // If wizard was launched from cloud mode, prompt to save cloud immediately after the tutorial
+    if (wizardMode === 'cloud') {
+      state.wizardPendingCloudPrompt = true;
+    }
+  }
+}
+
+function handleWizardPrev() {
+  if (wizardStep > 1) {
+    showWizardStep(wizardStep - 1);
+  }
+}
+
+function initWizardEvents() {
+  const fileInput = document.getElementById('wizard-import-players');
+  const dropzone = document.getElementById('wizard-csv-dropzone');
+  const statusText = document.getElementById('wizard-csv-status');
+
+  if (fileInput) {
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) handleWizardCSVFile(file);
+    });
+  }
+
+  if (dropzone) {
+    dropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropzone.style.borderColor = 'var(--color-primary)';
+      dropzone.style.background = 'rgba(168, 85, 247, 0.05)';
+    });
+
+    dropzone.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      dropzone.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+      dropzone.style.background = 'rgba(0,0,0,0.25)';
+    });
+
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+      dropzone.style.background = 'rgba(0,0,0,0.25)';
+      
+      const file = e.dataTransfer.files[0];
+      if (file && file.name.endsWith('.csv')) {
+        handleWizardCSVFile(file);
+      } else {
+        showToast('Formato non supportato. Carica solo file CSV!', 'danger');
+      }
+    });
+  }
+
+  // Wizard Navigation
+  const prevBtn = document.getElementById('btn-wizard-prev');
+  if (prevBtn) prevBtn.addEventListener('click', handleWizardPrev);
+
+  const nextBtn = document.getElementById('btn-wizard-next');
+  if (nextBtn) nextBtn.addEventListener('click', handleWizardNext);
+
+  // Tutorial Navigation
+  const tutPrevBtn = document.getElementById('btn-tut-prev');
+  if (tutPrevBtn) tutPrevBtn.addEventListener('click', handleTutorialPrev);
+
+  const tutNextBtn = document.getElementById('btn-tut-next');
+  if (tutNextBtn) tutNextBtn.addEventListener('click', handleTutorialNext);
+
+  const recallTutorialBtn = document.getElementById('btn-start-tutorial');
+  if (recallTutorialBtn) {
+    recallTutorialBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      
+      // Close dropdown menu
+      const wrapper = document.getElementById('actions-dropdown-wrapper');
+      if (wrapper) wrapper.classList.remove('open');
+      
+      openTutorial();
+    });
+  }
+
+  // Chatbot Events
+  const chatbotTrigger = document.getElementById('fanta-chatbot-trigger');
+  const chatbotClose = document.getElementById('fanta-chatbot-close');
+  const chatbotSend = document.getElementById('fanta-chatbot-send');
+  const chatbotInput = document.getElementById('fanta-chatbot-input');
+
+  if (chatbotTrigger) {
+    chatbotTrigger.addEventListener('click', toggleChatbotWindow);
+  }
+
+  if (chatbotClose) {
+    chatbotClose.addEventListener('click', closeChatbotWindow);
+  }
+
+  if (chatbotSend) {
+    chatbotSend.addEventListener('click', sendChatbotMessage);
+  }
+
+  if (chatbotInput) {
+    chatbotInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') sendChatbotMessage();
+    });
+  }
+}
+
+function handleWizardCSVFile(file) {
+  const statusText = document.getElementById('wizard-csv-status');
+  const reader = new FileReader();
+  
+  reader.onload = function(evt) {
+    const content = evt.target.result;
+    try {
+      const parsedPlayers = parseCSV(content);
+      if (parsedPlayers.length === 0) {
+        showToast('Nessun giocatore valido trovato nel file CSV.', 'danger');
+        return;
+      }
+      wizardUploadedPlayers = parsedPlayers;
+      if (statusText) {
+        statusText.innerHTML = `✅ Caricato con successo: <strong>${file.name}</strong> (${parsedPlayers.length} calciatori)`;
+      }
+      showToast(`File CSV elaborato con successo! ${parsedPlayers.length} calciatori registrati.`, 'success');
+    } catch (err) {
+      console.error(err);
+      showToast('Errore durante la decodifica del CSV.', 'danger');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function openTutorial() {
+  tutorialSlide = 1;
+  const dlg = document.getElementById('app-tutorial-dialog');
+  if (!dlg) return;
+
+  showTutorialSlide(1);
+  dlg.showModal();
+}
+
+function showTutorialSlide(slide) {
+  tutorialSlide = slide;
+
+  // Toggle active slides
+  document.querySelectorAll('.tutorial-slide').forEach((s, idx) => {
+    s.classList.toggle('active', idx === (slide - 1));
+  });
+
+  // Update slide count label
+  const stepLabel = document.getElementById('tutorial-step-label');
+  if (stepLabel) stepLabel.innerText = `Slide ${slide} di 5`;
+
+  // Update navigation buttons
+  const prevBtn = document.getElementById('btn-tut-prev');
+  if (prevBtn) {
+    prevBtn.style.visibility = slide === 1 ? 'hidden' : 'visible';
+  }
+
+  const nextBtn = document.getElementById('btn-tut-next');
+  if (nextBtn) {
+    nextBtn.innerText = slide === 5 ? 'Chiudi 🏁' : 'Avanti ➡️';
+  }
+}
+
+function handleTutorialNext() {
+  if (tutorialSlide < 5) {
+    showTutorialSlide(tutorialSlide + 1);
+  } else {
+    // Close tutorial
+    const dlg = document.getElementById('app-tutorial-dialog');
+    if (dlg) dlg.close();
+
+    showToast('Guida completata! Se hai bisogno di aiuto, puoi riavviare la guida dal menu Azioni Asta 📚', 'success');
+
+    // If there was a pending cloud save prompt from the wizard, trigger it now!
+    if (state.wizardPendingCloudPrompt) {
+      state.wizardPendingCloudPrompt = false;
+      setTimeout(() => {
+        openCloudSaveModal();
+      }, 500);
+    }
+  }
+}
+
+// Global scope access helpers
+window.openSetupWizard = openSetupWizard;
+window.openTutorial = openTutorial;
+
+function handleTutorialPrev() {
+  if (tutorialSlide > 1) {
+    showTutorialSlide(tutorialSlide - 1);
+  }
+}
+
+function toggleChatbotWindow() {
+  const win = document.getElementById('fanta-chatbot-window');
+  if (win) {
+    win.classList.toggle('open');
+    if (win.classList.contains('open')) {
+      const input = document.getElementById('fanta-chatbot-input');
+      if (input) input.focus();
+    }
+  }
+}
+
+function closeChatbotWindow() {
+  const win = document.getElementById('fanta-chatbot-window');
+  if (win) win.classList.remove('open');
+}
+
+async function sendChatbotMessage() {
+  const input = document.getElementById('fanta-chatbot-input');
+  const messageText = input?.value?.trim();
+  if (!messageText) return;
+
+  if (input) input.value = '';
+
+  // Append user message
+  appendChatMsg(messageText, 'user');
+  chatbotHistory.push({ role: 'user', content: messageText });
+
+  // Add typing indicator
+  const messagesContainer = document.getElementById('fanta-chatbot-messages');
+  const typingBubble = document.createElement('div');
+  typingBubble.className = 'chat-msg assistant';
+  typingBubble.innerText = 'L\'assistente sta rispondendo... ⏳';
+  if (messagesContainer) {
+    messagesContainer.appendChild(typingBubble);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  }
+
+  try {
+    const response = await fetch('/api/chatbot', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        messages: chatbotHistory.slice(-10),
+        provider: state.settings.aiProvider || 'google',
+        openRouterModel: state.settings.openRouterModel || '',
+        geminiModel: state.settings.geminiModel || ''
+      })
+    });
+
+    const result = await response.json();
+    
+    // Remove typing indicator
+    typingBubble.remove();
+
+    if (!response.ok || result.error) {
+      appendChatMsg(`❌ Errore AI: ${result.error || 'Impossibile connettersi al modello.'}`, 'assistant');
+      return;
+    }
+
+    appendChatMsg(result.content, 'assistant');
+    chatbotHistory.push({ role: 'assistant', content: result.content });
+  } catch (err) {
+    console.error(err);
+    typingBubble.remove();
+    appendChatMsg(`❌ Errore di rete: ${err.message || err}`, 'assistant');
+  }
+}
+
+function sendChatbotPredefined(text) {
+  const input = document.getElementById('fanta-chatbot-input');
+  if (input) {
+    input.value = text;
+    sendChatbotMessage();
+  }
+}
+
+function appendChatMsg(text, sender) {
+  const messagesContainer = document.getElementById('fanta-chatbot-messages');
+  if (!messagesContainer) return;
+
+  const msgEl = document.createElement('div');
+  msgEl.className = `chat-msg ${sender}`;
+  
+  if (sender === 'assistant') {
+    let formattedText = text
+      .replace(/\n/g, '<br>')
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>');
+    msgEl.innerHTML = formattedText;
+  } else {
+    msgEl.innerText = text;
+  }
+
+  messagesContainer.appendChild(msgEl);
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+window.sendChatbotPredefined = sendChatbotPredefined;
 
