@@ -222,6 +222,95 @@ document.addEventListener('DOMContentLoaded', () => {
   openStartupDialog();
 });
 
+function isCountryEliminated(countryName) {
+  if (!countryName || !state.eliminatedCountries) return false;
+  
+  const clean = countryName.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9\s]/g, '');
+  
+  const normalizedEliminated = state.eliminatedCountries.map(c => 
+    c.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9\s]/g, '')
+  );
+  
+  if (normalizedEliminated.includes(clean)) return true;
+  
+  const translationMap = {
+    'egypt': 'egitto',
+    'italy': 'italia',
+    'nigeria': 'nigeria',
+    'sweden': 'svezia',
+    'norway': 'norvegia',
+    'belgium': 'belgio',
+    'france': 'francia',
+    'spain': 'spagna',
+    'england': 'inghilterra',
+    'germany': 'germania',
+    'netherlands': 'paesi bassi',
+    'morocco': 'marocco',
+    'turkey': 'turchia',
+    'poland': 'polonia',
+    'croatia': 'croazia',
+    'switzerland': 'svizzera',
+    'czech republic': 'repubblica ceca'
+  };
+  
+  const mapped = translationMap[clean];
+  if (mapped && normalizedEliminated.includes(mapped)) {
+    return true;
+  }
+  
+  for (const elim of normalizedEliminated) {
+    if (clean.includes(elim) || elim.includes(clean)) {
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+window.isCountryEliminated = isCountryEliminated;
+
+function getPlayerPriorityScore(player) {
+  if (!player) return 0;
+  
+  // 1. Rank Score: 151 - rank (if rank <= 150), else 0
+  const rank = findTopPlayerRank(player);
+  const rankScore = rank <= 150 ? (151 - rank) : 0;
+  
+  // 2. Individual player performance rating (6.0 to 9.5)
+  const playerRating = getPlayerPerformanceRating(player);
+  
+  // 3. National team rating (70 to ~100)
+  let countryItalian = player.country;
+  const translationMap = {
+    'egypt': 'Egitto', 'italy': 'Italia', 'nigeria': 'Nigeria', 'sweden': 'Svezia',
+    'norway': 'Norvegia', 'belgium': 'Belgio', 'france': 'Francia', 'spain': 'Spagna',
+    'england': 'Inghilterra', 'germany': 'Germania', 'netherlands': 'Paesi Bassi',
+    'morocco': 'Marocco', 'turkey': 'Turchia', 'poland': 'Polonia', 'croatia': 'Croazia',
+    'switzerland': 'Svizzera', 'czech republic': 'Rep. Ceca', 'colombia': 'Colombia',
+    'uruguay': 'Uruguay', 'canada': 'Canada', 'austria': 'Austria', 'hungary': 'Ungheria',
+    'brazil': 'Brasile', 'portugal': 'Portogallo', 'argentina': 'Argentina',
+    'south korea': 'Corea del Sud', 'saudi arabia': 'Arabia Saudita',
+    'usa': 'USA', 'united states': 'USA', 'czech': 'Rep. Ceca'
+  };
+  const cleanLower = (player.country || '').trim().toLowerCase();
+  if (translationMap[cleanLower]) {
+    countryItalian = translationMap[cleanLower];
+  }
+  const teamRating = getTeamRating(countryItalian);
+  
+  // Weighted formula:
+  // - Individual Player Performance is very important (6.0 to 9.5) -> scaled to 0-60
+  // - National Team Rating is important (70 to 100) -> scaled to 0-40
+  // - If the player is in the TOP 150 list, we give a boost: rankScore / 151 * 30 (up to +30 points)
+  const normPlayer = ((playerRating - 6.0) / 3.5) * 60; // Up to 60 points
+  const normTeam = ((teamRating - 70) / 30) * 40;     // Up to 40 points
+  const rankBoost = (rankScore / 151) * 30;           // Up to 30 points boost
+  
+  return normPlayer + normTeam + rankBoost;
+}
+
+window.getPlayerPriorityScore = getPlayerPriorityScore;
+
 function initDOM() {
   dom.configBudget = document.getElementById('config-budget');
   dom.configSlotPOR = document.getElementById('config-slot-por');
@@ -1986,11 +2075,11 @@ function renderActiveTeamConsole() {
           <div class="mini-player-name" style="font-size: 0.75rem; display: flex; align-items: center; gap: 0.35rem;">
             <span style="display:inline-block; width: 6px; height: 6px; border-radius:50%; background: var(--color-${p.role.toLowerCase()})"></span>
             <span style="color: #fff; font-weight: 500;">
-              ${state.eliminatedCountries.includes(p.country) 
+              ${isCountryEliminated(p.country) 
                 ? `<span style="text-decoration: line-through; text-decoration-color: var(--color-danger); text-decoration-thickness: 2px; color: var(--color-danger); opacity: 0.85;">${p.name}</span>`
                 : p.name
               } <span style="color: var(--color-text-muted); font-size: 0.65rem;">(${p.country})</span>
-              ${state.eliminatedCountries.includes(p.country) ? ' <span style="font-size: 0.6rem; color: var(--color-danger); font-weight: 700;">[ELIMINATO]</span>' : ''}
+              ${isCountryEliminated(p.country) ? ' <span style="font-size: 0.6rem; color: var(--color-danger); font-weight: 700;">[ELIMINATO]</span>' : ''}
             </span>
           </div>
           <div style="display: flex; align-items: center; gap: 0.4rem;">
@@ -2162,11 +2251,11 @@ function renderPlayerList() {
 
     tr.innerHTML = `
       <td style="font-weight: 700; white-space: nowrap;">
-        ${state.eliminatedCountries.includes(p.country) 
+        ${isCountryEliminated(p.country) 
           ? `<span class="eliminated-player-name" style="text-decoration: line-through; text-decoration-color: var(--color-danger); text-decoration-thickness: 2px; color: var(--color-danger); opacity: 0.85;">${p.name}</span>`
           : `<span>${p.name}</span>`
         }
-        ${state.eliminatedCountries.includes(p.country) ? ' <span class="badge badge-danger" style="font-size: 0.6rem; padding: 0.15rem 0.35rem; background: var(--color-danger); color: #fff; flex-shrink: 0;">❌ ELIMINATO</span>' : ''}
+        ${isCountryEliminated(p.country) ? ' <span class="badge badge-danger" style="font-size: 0.6rem; padding: 0.15rem 0.35rem; background: var(--color-danger); color: #fff; flex-shrink: 0;">❌ ELIMINATO</span>' : ''}
         <button class="btn-ai-sparkle" onclick="showPlayerAIAnalysis('${p.id}', '${escapedName}', '${escapedCountry}', '${p.role}', this); event.stopPropagation();" title="Analisi IA ✨">✨</button>
       </td>
       <td><span class="badge badge-${p.role.toLowerCase()}">${p.role}</span></td>
@@ -2215,7 +2304,7 @@ function renderTeamDashboard() {
       const sortedPlayers = [...t.players].sort((a, b) => rolePriority[a.role] - rolePriority[b.role] || a.name.localeCompare(b.name));
       
       sortedPlayers.forEach(p => {
-        const isEliminated = state.eliminatedCountries.includes(p.country);
+        const isEliminated = isCountryEliminated(p.country);
         rosterHtml += `
           <div class="mini-player-item ${isEliminated ? 'player-eliminated' : ''}">
             <span class="mini-player-name" style="display: inline-flex; align-items: center; gap: 0.25rem;">
@@ -2631,12 +2720,12 @@ function renderPitch() {
           node.innerHTML = `
             ${strengthBadgeHtml}
             <div style="position: relative; display: inline-block;">
-              <div class="pitch-player-shirt" style="background: var(--color-${player.role.toLowerCase()}); ${state.eliminatedCountries.includes(player.country) ? 'opacity: 0.55; border: 2px dashed var(--color-danger);' : ''}">
+              <div class="pitch-player-shirt" style="background: var(--color-${player.role.toLowerCase()}); ${isCountryEliminated(player.country) ? 'opacity: 0.55; border: 2px dashed var(--color-danger);' : ''}">
                 ${roleLetter}
               </div>
               ${probBadgeHtml}
             </div>
-            <div class="pitch-player-name" style="${state.eliminatedCountries.includes(player.country) ? 'color: var(--color-danger); text-decoration: line-through;' : ''}">${player.name} (${player.country})</div>
+            <div class="pitch-player-name" style="${isCountryEliminated(player.country) ? 'color: var(--color-danger); text-decoration: line-through;' : ''}">${player.name} (${player.country})</div>
           `;
 
 
@@ -2735,9 +2824,9 @@ function renderPitch() {
         <div style="display: flex; align-items: center; gap: 0.35rem; min-width: 0; overflow: hidden;">
           <span style="font-size: 0.7rem; color: var(--color-text-muted); font-weight: bold; min-width: 14px;">${index + 1}.</span>
           <span class="dot" style="background: var(--color-${p.role.toLowerCase()}); flex-shrink: 0;"></span>
-          <span style="font-size: 0.72rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; ${state.eliminatedCountries.includes(p.country) ? 'text-decoration: line-through; color: var(--color-text-muted);' : ''}" title="${p.name} (${p.country})">${p.name} (${p.country})</span>
+          <span style="font-size: 0.72rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; ${isCountryEliminated(p.country) ? 'text-decoration: line-through; color: var(--color-text-muted);' : ''}" title="${p.name} (${p.country})">${p.name} (${p.country})</span>
           ${warningBadgeHtml}
-          ${state.eliminatedCountries.includes(p.country) ? ' <span style="font-size: 0.52rem; color: var(--color-danger); font-weight: 700; border: 1px solid var(--color-danger); padding: 0.05rem 0.15rem; border-radius: 4px; line-height: 1; flex-shrink: 0;">ELIMINATO</span>' : ''}
+          ${isCountryEliminated(p.country) ? ' <span style="font-size: 0.52rem; color: var(--color-danger); font-weight: 700; border: 1px solid var(--color-danger); padding: 0.05rem 0.15rem; border-radius: 4px; line-height: 1; flex-shrink: 0;">ELIMINATO</span>' : ''}
         </div>
         <span style="font-size: 0.7rem; text-align: center; color: var(--color-text-muted); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${opp && opp !== 'Nessuno' && opp !== 'Da verificare' ? `vs ${opp}` : opp}">
           ${opp && opp !== 'Nessuno' && opp !== 'Da verificare' ? `vs ${opp}` : opp}
@@ -4764,7 +4853,7 @@ async function showTeamAIAnalysis(buttonEl, forceRefresh = false) {
   `;
 
   const rosterHash = team.players.map(p => p.id).sort().join(',');
-  const cacheKey = `fantamondiale_team_ai_v5_${team.id}_${rosterHash}`;
+  const cacheKey = `fantamondiale_team_ai_v7_${team.id}_${rosterHash}`;
 
   // Check Cache (only if not force refreshing)
   if (!forceRefresh) {
@@ -4783,16 +4872,9 @@ async function showTeamAIAnalysis(buttonEl, forceRefresh = false) {
   }
 
   // 7. Compile free prospects
-  const freePlayers = state.players.filter(p => !p.ownerId && !state.eliminatedCountries.includes(p.country));
+  const freePlayers = state.players.filter(p => !p.ownerId && !isCountryEliminated(p.country));
   const sortedFreePlayers = [...freePlayers].sort((a, b) => {
-    const rankA = findTopPlayerRank(a);
-    const rankB = findTopPlayerRank(b);
-    if (rankA !== rankB) {
-      return rankA - rankB;
-    }
-    const ratingA = getPlayerPerformanceRating(a);
-    const ratingB = getPlayerPerformanceRating(b);
-    return ratingB - ratingA || b.initialValue - a.initialValue;
+    return getPlayerPriorityScore(b) - getPlayerPriorityScore(a) || b.initialValue - a.initialValue;
   });
   const topFreePlayers = sortedFreePlayers.slice(0, 150).map(p => ({
     id: p.id,
@@ -4857,17 +4939,10 @@ function renderTeamAnalysisPopoverData(popover, team, analysisText, recommendedP
   const parsedHtml = parseMarkdown(analysisText);
 
   // Compile recommended prospects programmatically: top 20 free players in order of FantaMondiale priority
-  const freePlayers = state.players.filter(p => !p.ownerId && !state.eliminatedCountries.includes(p.country));
+  const freePlayers = state.players.filter(p => !p.ownerId && !isCountryEliminated(p.country));
   
   const sortedFree = [...freePlayers].sort((a, b) => {
-    const rankA = findTopPlayerRank(a);
-    const rankB = findTopPlayerRank(b);
-    if (rankA !== rankB) {
-      return rankA - rankB;
-    }
-    const ratingA = getPlayerPerformanceRating(a);
-    const ratingB = getPlayerPerformanceRating(b);
-    return ratingB - ratingA || b.initialValue - a.initialValue;
+    return getPlayerPriorityScore(b) - getPlayerPriorityScore(a) || b.initialValue - a.initialValue;
   });
 
   const prospectsToShow = sortedFree.slice(0, 20); // Show top 20 players!
@@ -5636,7 +5711,7 @@ function getTeamRating(teamName) {
     }
   }
 
-  if (state.eliminatedCountries && state.eliminatedCountries.includes(teamName)) {
+  if (isCountryEliminated(teamName)) {
     rating = 10;
   }
 
