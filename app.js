@@ -73,7 +73,8 @@ let state = {
     },
     aiProvider: 'google',
     openRouterModel: 'openai/gpt-oss-120b:free',
-    geminiModel: 'gemini-flash-lite-latest'
+    geminiModel: 'gemini-flash-lite-latest',
+    enableWebhooks: true
   },
   teams: [
     { id: 't-1', name: 'Dream Team', budget: 300, players: [], module: '4-3-3', isUserTeam: false },
@@ -322,6 +323,7 @@ function initDOM() {
   dom.configAIProvider = document.getElementById('config-ai-provider');
   dom.configOpenRouterModel = document.getElementById('config-openrouter-model');
   dom.configGeminiModel = document.getElementById('config-gemini-model');
+  dom.configEnableWebhooks = document.getElementById('config-enable-webhooks');
 
   dom.fileDatabaseInput = document.getElementById('file-import-players');
   dom.fileSessionInput = document.getElementById('file-import-session');
@@ -399,6 +401,7 @@ function initDOM() {
   if (dom.configAIProvider) dom.configAIProvider.value = state.settings.aiProvider || 'google';
   if (dom.configOpenRouterModel) dom.configOpenRouterModel.value = state.settings.openRouterModel || 'openai/gpt-oss-120b:free';
   if (dom.configGeminiModel) dom.configGeminiModel.value = state.settings.geminiModel || 'gemini-flash-lite-latest';
+  if (dom.configEnableWebhooks) dom.configEnableWebhooks.checked = state.settings.enableWebhooks !== false;
   
   // Apply dynamic show/hide style
   const isOR = (state.settings.aiProvider || 'google') === 'openrouter';
@@ -724,6 +727,9 @@ function saveConfig() {
   state.settings.aiProvider = newAIProvider;
   state.settings.openRouterModel = newOpenRouterModel;
   state.settings.geminiModel = newGeminiModel;
+  if (dom.configEnableWebhooks) {
+    state.settings.enableWebhooks = dom.configEnableWebhooks.checked;
+  }
 
   // Process Teams
   const newTeams = [];
@@ -897,6 +903,7 @@ function handleSessionImport(e) {
       if (dom.configAIProvider) dom.configAIProvider.value = state.settings.aiProvider || 'google';
       if (dom.configOpenRouterModel) dom.configOpenRouterModel.value = state.settings.openRouterModel || 'openai/gpt-oss-120b:free';
       if (dom.configGeminiModel) dom.configGeminiModel.value = state.settings.geminiModel || 'gemini-flash-lite-latest';
+      if (dom.configEnableWebhooks) dom.configEnableWebhooks.checked = state.settings.enableWebhooks !== false;
       const isOR = (state.settings.aiProvider || 'google') === 'openrouter';
       const divORModel = document.getElementById('div-openrouter-model');
       if (divORModel) divORModel.style.display = isOR ? 'block' : 'none';
@@ -1080,6 +1087,7 @@ async function autoLoadCloudSession(id) {
     if (dom.configAIProvider) dom.configAIProvider.value = state.settings.aiProvider || 'google';
     if (dom.configOpenRouterModel) dom.configOpenRouterModel.value = state.settings.openRouterModel || 'openai/gpt-oss-120b:free';
     if (dom.configGeminiModel) dom.configGeminiModel.value = state.settings.geminiModel || 'gemini-flash-lite-latest';
+    if (dom.configEnableWebhooks) dom.configEnableWebhooks.checked = state.settings.enableWebhooks !== false;
     const isOR = (state.settings.aiProvider || 'google') === 'openrouter';
     const divORModel = document.getElementById('div-openrouter-model');
     if (divORModel) divORModel.style.display = isOR ? 'block' : 'none';
@@ -1172,7 +1180,8 @@ function resetSessionClean() {
     },
     aiProvider: 'google',
     openRouterModel: 'openai/gpt-oss-120b:free',
-    geminiModel: 'gemini-flash-lite-latest'
+    geminiModel: 'gemini-flash-lite-latest',
+    enableWebhooks: true
   };
 
   // Reset teams to default
@@ -1935,6 +1944,9 @@ function updateAISettingsEditability() {
   if (dom.configGeminiModel) {
     dom.configGeminiModel.disabled = !state.isAdmin;
   }
+  if (dom.configEnableWebhooks) {
+    dom.configEnableWebhooks.disabled = !state.isAdmin;
+  }
 
   // Update label visual hints based on admin privilege
   const providerLabel = document.querySelector('label[for="config-ai-provider"]');
@@ -1961,6 +1973,15 @@ function updateAISettingsEditability() {
       geminiModelLabel.innerHTML = 'Modello Google Gemini <span style="font-size: 0.65rem; color: var(--color-warning); font-weight: normal; text-transform: none;">(Sola lettura - Accedi come Admin per modificare 🔒)</span>';
     } else {
       geminiModelLabel.innerHTML = 'Modello Google Gemini <span style="font-size: 0.65rem; color: var(--color-success); font-weight: normal; text-transform: none;">(Abilitato - Amministratore 👑)</span>';
+    }
+  }
+
+  const webhookLabel = document.querySelector('label[for="config-enable-webhooks"]');
+  if (webhookLabel) {
+    if (!state.isAdmin) {
+      webhookLabel.innerHTML = 'Abilita Invio Formazione e Rosa (Webhook) <span style="font-size: 0.65rem; color: var(--color-warning); font-weight: normal; text-transform: none;">(Sola lettura - Accedi come Admin per modificare 🔒)</span>';
+    } else {
+      webhookLabel.innerHTML = 'Abilita Invio Formazione e Rosa (Webhook) <span style="font-size: 0.65rem; color: var(--color-success); font-weight: normal; text-transform: none;">(Abilitato - Amministratore 👑)</span>';
     }
   }
 
@@ -2655,14 +2676,19 @@ function renderPitch() {
 
     // If dashboard view, replace visual field container with a clean list of starting players
     if (state.pitchIsDashboardView) {
-      pitchContainer.innerHTML = '';
-      pitchContainer.style.cssText = 'display: flex; flex-direction: column; gap: 0.25rem; width: 100%; max-height: 380px; overflow-y: auto; border: 1px solid var(--border-light); border-radius: 8px; padding: 0.5rem; box-sizing: border-box; background: rgba(10, 15, 30, 0.4);';
+      const benchSection = document.getElementById('pitch-bench-section');
+      if (benchSection) benchSection.style.display = 'none';
+      const tribunaSection = document.getElementById('pitch-tribuna-section');
+      if (tribunaSection) tribunaSection.style.display = 'none';
 
-      const renderStartersHeader = (container) => {
+      pitchContainer.innerHTML = '';
+      pitchContainer.style.cssText = 'display: flex; flex-direction: column; gap: 0.25rem; width: 100%; border: 1px solid var(--border-light); border-radius: 8px; padding: 0.5rem; box-sizing: border-box; background: rgba(10, 15, 30, 0.4);';
+
+      const renderHeaderRow = (container) => {
         const header = document.createElement('div');
         header.style.cssText = 'display: grid; grid-template-columns: 1.6fr 1fr 0.7fr 0.7fr; gap: 0.5rem; width: 100%; box-sizing: border-box; padding: 0.35rem 0.65rem; font-size: 0.62rem; font-weight: 800; color: var(--color-text-muted); border-bottom: 1px solid var(--border-light); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem;';
         header.innerHTML = `
-          <span>Titolare</span>
+          <span>Calciatore</span>
           <span style="text-align: center;">Avversario</span>
           <span style="text-align: right;">Forza F.</span>
           <span style="text-align: right;">Titolare %</span>
@@ -2670,7 +2696,14 @@ function renderPitch() {
         container.appendChild(header);
       };
 
-      const renderStarterNode = (p, container, index) => {
+      const renderSectionDivider = (title, count, color, container) => {
+        const div = document.createElement('div');
+        div.style.cssText = `display: flex; align-items: center; gap: 0.5rem; margin: 0.75rem 0 0.25rem 0; padding: 0.25rem 0.5rem; background: rgba(255,255,255,0.03); border-radius: 4px; border-left: 3px solid ${color};`;
+        div.innerHTML = `<span style="font-size: 0.75rem; font-weight: 700; color: var(--color-text); text-transform: uppercase; letter-spacing: 0.05em;">${title} (${count})</span>`;
+        container.appendChild(div);
+      };
+
+      const renderDashboardRow = (p, container, index, isWarning) => {
         const el = document.createElement('div');
         el.className = 'bench-player-node';
         el.style.cssText = 'display: grid; grid-template-columns: 1.6fr 1fr 0.7fr 0.7fr; align-items: center; gap: 0.5rem; width: 100%; box-sizing: border-box; padding: 0.35rem 0.65rem; cursor: pointer;';
@@ -2700,6 +2733,13 @@ function renderPitch() {
 
         const isEliminated = isCountryEliminated(masterP.country);
 
+        let warningBadgeHtml = '';
+        if (isWarning) {
+          warningBadgeHtml = ` <span style="color: var(--color-warning); font-size: 0.8rem; font-weight: bold; margin-left: 0.25rem;" title="Non entrerà in panchina (max 10 panchinari!)">⚠️</span>`;
+          el.style.background = 'rgba(245, 158, 11, 0.05)';
+          el.style.borderColor = 'rgba(245, 158, 11, 0.2)';
+        }
+
         el.innerHTML = `
           <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.35rem; min-width: 0; overflow: hidden; width: 100%;">
             <div style="display: flex; align-items: center; gap: 0.35rem; min-width: 0; overflow: hidden;">
@@ -2708,7 +2748,8 @@ function renderPitch() {
               <span style="font-size: 0.72rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; ${isEliminated ? 'text-decoration: line-through; color: var(--color-text-muted);' : ''}" title="${masterP.name} (${masterP.country})">
                 ${masterP.name} (${masterP.country})
               </span>
-              ${isEliminated ? ' <span style="font-size: 0.52rem; color: var(--color-danger); font-weight: 700; border: 1px solid var(--color-danger); padding: 0.05rem 0.15rem; border-radius: 4px; line-height: 1; flex-shrink: 0;">ELIMINATO</span>' : ''}
+              ${warningBadgeHtml}
+              ${isCountryEliminated(masterP.country) ? ' <span style="font-size: 0.52rem; color: var(--color-danger); font-weight: 700; border: 1px solid var(--color-danger); padding: 0.05rem 0.15rem; border-radius: 4px; line-height: 1; flex-shrink: 0;">ELIMINATO</span>' : ''}
             </div>
             <span style="font-size: 0.68rem; font-weight: 700; color: #fff; flex-shrink: 0; background: rgba(255,255,255,0.06); padding: 0.1rem 0.3rem; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); margin-left: 0.25rem;">${masterP.purchaseCost || 0} cr</span>
           </div>
@@ -2726,7 +2767,6 @@ function renderPitch() {
         el.removeAttribute('draggable');
         el.style.cursor = 'pointer';
 
-        // Wire rich popover events
         el.addEventListener('click', (e) => {
           e.stopPropagation();
           const isMobile = window.innerWidth <= 768;
@@ -2737,13 +2777,45 @@ function renderPitch() {
       };
 
       const startersList = [...porStarters, ...difStarters, ...cenStarters, ...attStarters];
+      
+      // Render Table Headers first
+      renderHeaderRow(pitchContainer);
+
+      // Section 1: Titolari
+      renderSectionDivider('Titolari', startersList.length, '#10b981', pitchContainer);
       if (startersList.length === 0) {
-        pitchContainer.innerHTML = `<span style="color: var(--color-text-muted); font-size: 0.75rem; font-style: italic; padding: 1rem; text-align: center; display: block;">Nessun titolare...</span>`;
+        const fallback = document.createElement('span');
+        fallback.style.cssText = 'color: var(--color-text-muted); font-size: 0.75rem; font-style: italic; padding: 0.5rem 0.65rem; display: block;';
+        fallback.textContent = 'Nessun titolare...';
+        pitchContainer.appendChild(fallback);
       } else {
-        renderStartersHeader(pitchContainer);
-        startersList.forEach((p, idx) => renderStarterNode(p, pitchContainer, idx));
+        startersList.forEach((p, idx) => renderDashboardRow(p, pitchContainer, idx, false));
+      }
+
+      // Section 2: Panchina
+      renderSectionDivider('Panchina', actualBenchList.length, '#f59e0b', pitchContainer);
+      if (actualBenchList.length === 0) {
+        const fallback = document.createElement('span');
+        fallback.style.cssText = 'color: var(--color-text-muted); font-size: 0.75rem; font-style: italic; padding: 0.5rem 0.65rem; display: block;';
+        fallback.textContent = 'Panchina vuota...';
+        pitchContainer.appendChild(fallback);
+      } else {
+        actualBenchList.forEach((p, idx) => renderDashboardRow(p, pitchContainer, idx, false));
+      }
+
+      // Section 3: Tribuna
+      renderSectionDivider('Tribuna', tribunaList.length, 'var(--color-text-muted)', pitchContainer);
+      if (tribunaList.length === 0) {
+        const fallback = document.createElement('span');
+        fallback.style.cssText = 'color: var(--color-text-muted); font-size: 0.75rem; font-style: italic; padding: 0.5rem 0.65rem; display: block;';
+        fallback.textContent = 'Nessun giocatore in tribuna...';
+        pitchContainer.appendChild(fallback);
+      } else {
+        tribunaList.forEach((p, idx) => renderDashboardRow(p, pitchContainer, idx, true));
       }
     } else {
+      const benchSection = document.getElementById('pitch-bench-section');
+      if (benchSection) benchSection.style.display = 'block';
       // Draw Football field lines vertically
       pitchContainer.innerHTML = `
         <div class="pitch-container" style="position: relative; width: 100%; height: 380px;">
@@ -3443,8 +3515,8 @@ function showTeamPitch(teamId, showIdeal = false, isDashboardView = false) {
     mainControlsRow.style.width = 'auto'; // allow shrinking if not full width
     buttonsWrapper.appendChild(mainControlsRow);
 
-    // Create second row/container for webhooks (only if not dashboard view)
-    if (!isDashboardView) {
+    // Create second row/container for webhooks (only if not dashboard view and webhooks enabled)
+    if (!isDashboardView && state.settings.enableWebhooks !== false) {
       const webhookContainer = document.createElement('div');
       webhookContainer.className = 'webhook-container';
       webhookContainer.style.display = 'flex';

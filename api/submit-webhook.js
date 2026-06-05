@@ -20,7 +20,10 @@ export default async function handler(req, res) {
       .update(bodyStr)
       .digest('hex');
 
-    const webhookUrl = 'https://exposed-port-8644-8b56f0c59a8d9036d9b7-mzr5d4vzoe.h24.openclaw.agent37.com/webhooks/fantacalcio-formazioni';
+    const webhookUrl = process.env.WEBHOOK_URL;
+    if (!webhookUrl) {
+      return res.status(500).json({ error: 'Webhook URL non configurato nelle variabili d\'ambiente (WEBHOOK_URL).' });
+    }
 
     const response = await fetch(webhookUrl, {
       method: 'POST',
