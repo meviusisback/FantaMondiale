@@ -7097,24 +7097,124 @@ function handleWizardCSVFile(file) {
 
 function openTutorial() {
   tutorialSlide = 1;
-  const dlg = document.getElementById('app-tutorial-dialog');
-  if (!dlg) return;
+  const bubble = document.getElementById('app-tutorial-bubble');
+  if (!bubble) return;
 
+  bubble.classList.add('open');
   showTutorialSlide(1);
-  dlg.showModal();
+  
+  // Register scroll and resize listeners to reposition the bubble
+  window.addEventListener('resize', handleTutorialReposition);
+  window.addEventListener('scroll', handleTutorialReposition, { passive: true });
+}
+
+function closeTutorial() {
+  const bubble = document.getElementById('app-tutorial-bubble');
+  if (bubble) bubble.classList.remove('open');
+  
+  // Clean up listeners
+  window.removeEventListener('resize', handleTutorialReposition);
+  window.removeEventListener('scroll', handleTutorialReposition);
+}
+
+function handleTutorialReposition() {
+  if (typeof tutorialSlide === 'number') {
+    positionTutorialBubble(tutorialSlide);
+  }
+}
+
+function positionTutorialBubble(slide) {
+  const bubble = document.getElementById('app-tutorial-bubble');
+  if (!bubble || !bubble.classList.contains('open')) return;
+
+  // Map slide numbers to target elements
+  const selectors = {
+    1: 'button[data-tab="giocatori"]', // Database Giocatori
+    2: 'button[data-tab="rose"]',      // Rose & Statistiche
+    3: '#btn-team-ideal-pitch',         // Formazione (Sidebar)
+    4: 'button[data-tab="tabellone"]',  // Tabellone & Gironi
+    5: '#btn-actions-menu'              // Unified Actions Menu
+  };
+
+  const selector = selectors[slide];
+  const target = selector ? document.querySelector(selector) : null;
+  if (!target) {
+    // If no target, center the bubble on screen as a fallback
+    bubble.style.position = 'fixed';
+    bubble.style.top = '50%';
+    bubble.style.left = '50%';
+    bubble.style.transform = 'translate(-50%, -50%)';
+    bubble.classList.remove('arrow-top', 'arrow-bottom');
+    return;
+  }
+
+  // Restore absolute positioning relative to page
+  bubble.style.position = 'absolute';
+  bubble.style.transform = 'none';
+
+  const targetRect = target.getBoundingClientRect();
+  const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+  const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
+
+  // Calculate position
+  let top = targetRect.bottom + scrollY + 12; // 12px below the target
+  let left = targetRect.left + scrollX + (targetRect.width / 2) - (bubble.offsetWidth / 2);
+
+  // VIEWPORT BOUNDARY CONSTRAINTS
+  const margin = 12;
+  if (left < margin) {
+    left = margin;
+  }
+  if (left + bubble.offsetWidth > window.innerWidth - margin) {
+    left = window.innerWidth - bubble.offsetWidth - margin;
+  }
+
+  // Check if bubble fits below, otherwise flip to above the target
+  const fitsBelow = (targetRect.bottom + bubble.offsetHeight + 24) < window.innerHeight;
+  if (!fitsBelow && targetRect.top > bubble.offsetHeight + 24) {
+    top = targetRect.top + scrollY - bubble.offsetHeight - 12;
+    bubble.classList.remove('arrow-top');
+    bubble.classList.add('arrow-bottom');
+  } else {
+    bubble.classList.remove('arrow-bottom');
+    bubble.classList.add('arrow-top');
+  }
+
+  // Calculate arrow offset relative to the bubble to keep it pointed at target center
+  const arrowX = targetRect.left + (targetRect.width / 2) - left;
+  bubble.style.setProperty('--arrow-left', `${arrowX}px`);
+
+  bubble.style.top = `${top}px`;
+  bubble.style.left = `${left}px`;
 }
 
 function showTutorialSlide(slide) {
   tutorialSlide = slide;
+
+  // Context Tab Switching so targeted elements are in view
+  if (slide === 1) {
+    switchTab('giocatori');
+  } else if (slide === 2) {
+    switchTab('rose');
+  } else if (slide === 3) {
+    // Roster tab has the active team selector and sidebar Formazione button visible
+    switchTab('rose'); 
+  } else if (slide === 4) {
+    switchTab('tabellone');
+  } else if (slide === 5) {
+    // Switch to giocatori tab to show actions menu in header context
+    switchTab('giocatori');
+  }
 
   // Toggle active slides
   document.querySelectorAll('.tutorial-slide').forEach((s, idx) => {
     s.classList.toggle('active', idx === (slide - 1));
   });
 
-  // Update slide count label
-  const stepLabel = document.getElementById('tutorial-step-label');
-  if (stepLabel) stepLabel.innerText = `Slide ${slide} di 5`;
+  // Toggle active quick nav chips
+  document.querySelectorAll('.tut-nav-chip').forEach((c, idx) => {
+    c.classList.toggle('active', idx === (slide - 1));
+  });
 
   // Update navigation buttons
   const prevBtn = document.getElementById('btn-tut-prev');
@@ -7126,16 +7226,18 @@ function showTutorialSlide(slide) {
   if (nextBtn) {
     nextBtn.innerText = slide === 5 ? 'Chiudi 🏁' : 'Avanti ➡️';
   }
+
+  // Reposition bubble after DOM has updated and tab transitions finished
+  setTimeout(() => {
+    positionTutorialBubble(slide);
+  }, 100);
 }
 
 function handleTutorialNext() {
   if (tutorialSlide < 5) {
     showTutorialSlide(tutorialSlide + 1);
   } else {
-    // Close tutorial
-    const dlg = document.getElementById('app-tutorial-dialog');
-    if (dlg) dlg.close();
-
+    closeTutorial();
     showToast('Guida completata! Se hai bisogno di aiuto, puoi riavviare la guida dal menu Azioni Asta 📚', 'success');
 
     // If there was a pending cloud save prompt from the wizard, trigger it now!
@@ -7151,6 +7253,8 @@ function handleTutorialNext() {
 // Global scope access helpers
 window.openSetupWizard = openSetupWizard;
 window.openTutorial = openTutorial;
+window.closeTutorial = closeTutorial;
+window.showTutorialSlide = showTutorialSlide;
 
 function handleTutorialPrev() {
   if (tutorialSlide > 1) {
