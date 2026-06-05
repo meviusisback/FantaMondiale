@@ -2655,14 +2655,31 @@ function renderPitch() {
 
     // If dashboard view, replace visual field container with a clean list of starting players
     if (state.pitchIsDashboardView) {
-      let tableRowsHtml = '';
-      const startersList = [...porStarters, ...difStarters, ...cenStarters, ...attStarters];
-      startersList.forEach((p, idx) => {
+      pitchContainer.innerHTML = '';
+      pitchContainer.style.cssText = 'display: flex; flex-direction: column; gap: 0.25rem; width: 100%; max-height: 380px; overflow-y: auto; border: 1px solid var(--border-light); border-radius: 8px; padding: 0.5rem; box-sizing: border-box; background: rgba(10, 15, 30, 0.4);';
+
+      const renderStartersHeader = (container) => {
+        const header = document.createElement('div');
+        header.style.cssText = 'display: grid; grid-template-columns: 1.6fr 1fr 0.7fr 0.7fr; gap: 0.5rem; width: 100%; box-sizing: border-box; padding: 0.35rem 0.65rem; font-size: 0.62rem; font-weight: 800; color: var(--color-text-muted); border-bottom: 1px solid var(--border-light); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem;';
+        header.innerHTML = `
+          <span>Titolare</span>
+          <span style="text-align: center;">Avversario</span>
+          <span style="text-align: right;">Forza F.</span>
+          <span style="text-align: right;">Titolare %</span>
+        `;
+        container.appendChild(header);
+      };
+
+      const renderStarterNode = (p, container, index) => {
+        const el = document.createElement('div');
+        el.className = 'bench-player-node';
+        el.style.cssText = 'display: grid; grid-template-columns: 1.6fr 1fr 0.7fr 0.7fr; align-items: center; gap: 0.5rem; width: 100%; box-sizing: border-box; padding: 0.35rem 0.65rem; cursor: pointer;';
+
         const masterP = state.players.find(mp => mp.id === p.id) || p;
         const cachedAnalysisRaw = state.aiCache[masterP.id] || JSON.parse(sessionStorage.getItem(`fantamondiale_ai_${masterP.id}`) || 'null');
         const cachedAnalysis = cachedAnalysisRaw ? normalizePlayerAnalysis(cachedAnalysisRaw) : null;
-        const strength = cachedAnalysis ? cachedAnalysis.matchStrength : 'N/D';
         const startProb = cachedAnalysis ? cachedAnalysis.starterProbability : 'N/D';
+        const strength = cachedAnalysis ? cachedAnalysis.matchStrength : 'N/D';
         const opp = getNextOpponentForCountry(masterP.country);
 
         let probColor = 'var(--color-text-muted)';
@@ -2683,53 +2700,49 @@ function renderPitch() {
 
         const isEliminated = isCountryEliminated(masterP.country);
 
-        tableRowsHtml += `
-          <tr style="cursor: pointer;" onclick="showPitchPlayerTooltip('${masterP.id}', this, window.innerWidth <= 768)">
-            <td>
-              <span class="badge badge-${masterP.role.toLowerCase()}" style="font-size: 0.65rem; padding: 0.15rem 0.35rem; border-radius: 4px;">${masterP.role}</span>
-            </td>
-            <td>
-              <div style="display: flex; align-items: center; gap: 0.35rem;">
-                <span style="font-size: 0.8rem; font-weight: 700; ${isEliminated ? 'text-decoration: line-through; color: var(--color-text-muted);' : ''}">${masterP.name}</span>
-                <span style="font-size: 0.7rem; color: var(--color-text-muted);">(${masterP.country})</span>
-                ${isEliminated ? '<span style="font-size: 0.55rem; color: var(--color-danger); border: 1px solid var(--color-danger); padding: 0.05rem 0.15rem; border-radius: 4px; font-weight: 700;">ELIMINATO</span>' : ''}
-              </div>
-            </td>
-            <td>
-              <strong style="color: #fff; font-size: 0.8rem;">${masterP.purchaseCost || 0} cr</strong>
-            </td>
-            <td style="color: var(--color-text-muted); font-size: 0.75rem; font-weight: 600;">
-              ${opp && opp !== 'Nessuno' && opp !== 'Da verificare' ? `vs ${opp}` : opp}
-            </td>
-            <td style="text-align: right; color: ${strengthColor}; font-weight: 700; font-size: 0.75rem;">
-              ${strength}
-            </td>
-            <td style="text-align: right; color: ${probColor}; font-weight: 700; font-size: 0.75rem;">
-              ${startProb}
-            </td>
-          </tr>
+        el.innerHTML = `
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.35rem; min-width: 0; overflow: hidden; width: 100%;">
+            <div style="display: flex; align-items: center; gap: 0.35rem; min-width: 0; overflow: hidden;">
+              <span style="font-size: 0.7rem; color: var(--color-text-muted); font-weight: bold; min-width: 14px;">${index + 1}.</span>
+              <span class="dot" style="background: var(--color-${masterP.role.toLowerCase()}); flex-shrink: 0;"></span>
+              <span style="font-size: 0.72rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; ${isEliminated ? 'text-decoration: line-through; color: var(--color-text-muted);' : ''}" title="${masterP.name} (${masterP.country})">
+                ${masterP.name} (${masterP.country})
+              </span>
+              ${isEliminated ? ' <span style="font-size: 0.52rem; color: var(--color-danger); font-weight: 700; border: 1px solid var(--color-danger); padding: 0.05rem 0.15rem; border-radius: 4px; line-height: 1; flex-shrink: 0;">ELIMINATO</span>' : ''}
+            </div>
+            <span style="font-size: 0.68rem; font-weight: 700; color: #fff; flex-shrink: 0; background: rgba(255,255,255,0.06); padding: 0.1rem 0.3rem; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); margin-left: 0.25rem;">${masterP.purchaseCost || 0} cr</span>
+          </div>
+          <span style="font-size: 0.7rem; text-align: center; color: var(--color-text-muted); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${opp && opp !== 'Nessuno' && opp !== 'Da verificare' ? `vs ${opp}` : opp}">
+            ${opp && opp !== 'Nessuno' && opp !== 'Da verificare' ? `vs ${opp}` : opp}
+          </span>
+          <span style="font-size: 0.7rem; text-align: right; color: ${strengthColor}; font-weight: 700;">
+            ${strength}
+          </span>
+          <span style="font-size: 0.7rem; text-align: right; color: ${probColor}; font-weight: 700;">
+            ${startProb}
+          </span>
         `;
-      });
 
-      pitchContainer.innerHTML = `
-        <div class="player-table-container" style="max-height: 380px; border: 1px solid var(--border-light); border-radius: 8px;">
-          <table class="player-table">
-            <thead>
-              <tr>
-                <th>Ruolo</th>
-                <th>Calciatore</th>
-                <th>Costo</th>
-                <th>Avversario</th>
-                <th style="text-align: right;">Forza F.</th>
-                <th style="text-align: right;">Titolare %</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${tableRowsHtml || '<tr><td colspan="6" style="text-align: center; color: var(--color-text-muted); font-style: italic;">Nessun titolare schierabile...</td></tr>'}
-            </tbody>
-          </table>
-        </div>
-      `;
+        el.removeAttribute('draggable');
+        el.style.cursor = 'pointer';
+
+        // Wire rich popover events
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const isMobile = window.innerWidth <= 768;
+          showPitchPlayerTooltip(masterP.id, el, isMobile);
+        });
+
+        container.appendChild(el);
+      };
+
+      const startersList = [...porStarters, ...difStarters, ...cenStarters, ...attStarters];
+      if (startersList.length === 0) {
+        pitchContainer.innerHTML = `<span style="color: var(--color-text-muted); font-size: 0.75rem; font-style: italic; padding: 1rem; text-align: center; display: block;">Nessun titolare...</span>`;
+      } else {
+        renderStartersHeader(pitchContainer);
+        startersList.forEach((p, idx) => renderStarterNode(p, pitchContainer, idx));
+      }
     } else {
       // Draw Football field lines vertically
       pitchContainer.innerHTML = `
@@ -2909,14 +2922,17 @@ function renderPitch() {
       }
 
       el.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 0.35rem; min-width: 0; overflow: hidden;">
-          <span style="font-size: 0.7rem; color: var(--color-text-muted); font-weight: bold; min-width: 14px;">${index + 1}.</span>
-          <span class="dot" style="background: var(--color-${masterP.role.toLowerCase()}); flex-shrink: 0;"></span>
-          <span style="font-size: 0.72rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; ${isCountryEliminated(masterP.country) ? 'text-decoration: line-through; color: var(--color-text-muted);' : ''}" title="${masterP.name} (${masterP.country})">
-            ${masterP.name} (${masterP.country})${state.pitchIsDashboardView ? ` - <strong style="color: #fff; font-size: 0.68rem;">${masterP.purchaseCost || 0} cr</strong>` : ''}
-          </span>
-          ${warningBadgeHtml}
-          ${isCountryEliminated(masterP.country) ? ' <span style="font-size: 0.52rem; color: var(--color-danger); font-weight: 700; border: 1px solid var(--color-danger); padding: 0.05rem 0.15rem; border-radius: 4px; line-height: 1; flex-shrink: 0;">ELIMINATO</span>' : ''}
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.35rem; min-width: 0; overflow: hidden; width: 100%;">
+          <div style="display: flex; align-items: center; gap: 0.35rem; min-width: 0; overflow: hidden;">
+            <span style="font-size: 0.7rem; color: var(--color-text-muted); font-weight: bold; min-width: 14px;">${index + 1}.</span>
+            <span class="dot" style="background: var(--color-${masterP.role.toLowerCase()}); flex-shrink: 0;"></span>
+            <span style="font-size: 0.72rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; ${isCountryEliminated(masterP.country) ? 'text-decoration: line-through; color: var(--color-text-muted);' : ''}" title="${masterP.name} (${masterP.country})">
+              ${masterP.name} (${masterP.country})
+            </span>
+            ${warningBadgeHtml}
+            ${isCountryEliminated(masterP.country) ? ' <span style="font-size: 0.52rem; color: var(--color-danger); font-weight: 700; border: 1px solid var(--color-danger); padding: 0.05rem 0.15rem; border-radius: 4px; line-height: 1; flex-shrink: 0;">ELIMINATO</span>' : ''}
+          </div>
+          ${state.pitchIsDashboardView ? `<span style="font-size: 0.68rem; font-weight: 700; color: #fff; flex-shrink: 0; background: rgba(255,255,255,0.06); padding: 0.1rem 0.3rem; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); margin-left: 0.25rem;">${masterP.purchaseCost || 0} cr</span>` : ''}
         </div>
         <span style="font-size: 0.7rem; text-align: center; color: var(--color-text-muted); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${opp && opp !== 'Nessuno' && opp !== 'Da verificare' ? `vs ${opp}` : opp}">
           ${opp && opp !== 'Nessuno' && opp !== 'Da verificare' ? `vs ${opp}` : opp}
