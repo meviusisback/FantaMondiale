@@ -1804,8 +1804,40 @@ function renderAll() {
   renderPlayerList();
   renderTeamDashboard();
   updateAISettingsEditability();
+  updateCloudSessionIndicators();
   if (state.activeTab === 'tabellone') {
     renderTournament();
+  }
+}
+
+function updateCloudSessionIndicators() {
+  const headerBadge = document.getElementById('header-cloud-badge');
+  const headerSessionName = document.getElementById('header-cloud-session-name');
+  const dropdownSessionSection = document.getElementById('dropdown-active-session-section');
+  const dropdownSessionTitle = document.getElementById('dropdown-active-session-title');
+  const dropdownSessionMeta = document.getElementById('dropdown-active-session-meta');
+
+  if (state.activeCloudSessionId && state.activeCloudSessionMetadata) {
+    const title = state.activeCloudSessionMetadata.title || 'Sessione Attiva';
+    const author = state.activeCloudSessionMetadata.author || 'Anonimo';
+    const date = state.activeCloudSessionMetadata.date || '-';
+
+    if (headerBadge && headerSessionName) {
+      headerSessionName.textContent = title;
+      headerBadge.style.display = 'inline-flex';
+    }
+    if (dropdownSessionSection && dropdownSessionTitle && dropdownSessionMeta) {
+      dropdownSessionTitle.textContent = title;
+      dropdownSessionMeta.textContent = `Autore: ${author} | Data: ${date}`;
+      dropdownSessionSection.style.display = 'block';
+    }
+  } else {
+    if (headerBadge) {
+      headerBadge.style.display = 'none';
+    }
+    if (dropdownSessionSection) {
+      dropdownSessionSection.style.display = 'none';
+    }
   }
 }
 

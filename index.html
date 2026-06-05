@@ -13,7 +13,12 @@
     <!-- APP HEADER -->
     <header>
       <div class="logo-section">
-        <h1>FantaMondiale 🏆</h1>
+        <h1 style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+          FantaMondiale 🏆
+          <span id="header-cloud-badge" class="badge badge-cloud" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.25); font-size: 0.7rem; font-weight: 700; padding: 0.2rem 0.5rem; border-radius: 6px; display: none; align-items: center; gap: 0.25rem;">
+            ☁️ Sessione: <strong id="header-cloud-session-name" style="color: #fff;">-</strong>
+          </span>
+        </h1>
         <p>Manager Asta e Selezione Rose</p>
       </div>
       
@@ -26,6 +31,14 @@
           </button>
           
           <div class="dropdown-menu" id="actions-dropdown-menu" style="min-width: 250px; right: 0; left: auto;">
+            <div id="dropdown-active-session-section" style="padding: 0.5rem 0.75rem; background: rgba(59, 130, 246, 0.08); border-bottom: 1px solid rgba(59, 130, 246, 0.15); display: none;">
+              <div style="font-size: 0.65rem; font-weight: 800; color: #60a5fa; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.25rem;">
+                ☁️ Sessione Cloud Attiva
+              </div>
+              <div id="dropdown-active-session-title" style="font-size: 0.8rem; font-weight: 700; color: #fff; margin-top: 0.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">-</div>
+              <div id="dropdown-active-session-meta" style="font-size: 0.65rem; color: var(--color-text-muted); margin-top: 0.1rem;">-</div>
+            </div>
+            
             <div class="dropdown-header">Database & Import</div>
             
             <div class="file-input-wrapper dropdown-item-action-wrapper" data-tooltip="Importa calciatori da file CSV">
