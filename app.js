@@ -2286,22 +2286,25 @@ function renderTeamDashboard() {
     const card = document.createElement('div');
     card.className = 'panel team-card';
 
-    const por = t.players.filter(p => p.role === 'POR').length;
-    const dif = t.players.filter(p => p.role === 'DIF').length;
-    const cen = t.players.filter(p => p.role === 'CEN').length;
-    const att = t.players.filter(p => p.role === 'ATT').length;
-    const totalCount = t.players.length;
+    // Map to master list to ensure latest data is displayed
+    const teamPlayers = t.players.map(p => state.players.find(mp => mp.id === p.id) || p);
+
+    const por = teamPlayers.filter(p => p.role === 'POR').length;
+    const dif = teamPlayers.filter(p => p.role === 'DIF').length;
+    const cen = teamPlayers.filter(p => p.role === 'CEN').length;
+    const att = teamPlayers.filter(p => p.role === 'ATT').length;
+    const totalCount = teamPlayers.length;
 
     const maxBid = calculateMaxBid(t);
     const emptySlots = countEmptySlots(t);
     const isRosterFull = emptySlots === 0;
 
     let rosterHtml = '';
-    if (t.players.length === 0) {
+    if (teamPlayers.length === 0) {
       rosterHtml = '<div style="color: var(--color-text-muted); font-style: italic; padding: 0.5rem 0;">Rosa ancora vuota...</div>';
     } else {
       const rolePriority = { POR: 0, DIF: 1, CEN: 2, ATT: 3 };
-      const sortedPlayers = [...t.players].sort((a, b) => rolePriority[a.role] - rolePriority[b.role] || a.name.localeCompare(b.name));
+      const sortedPlayers = [...teamPlayers].sort((a, b) => rolePriority[a.role] - rolePriority[b.role] || a.name.localeCompare(b.name));
       
       sortedPlayers.forEach(p => {
         const isEliminated = isCountryEliminated(p.country);
@@ -2347,13 +2350,13 @@ function renderTeamDashboard() {
           <div class="role-bar-value" style="color: var(--color-att)">${att}</div>
         </div>
       </div>
-
+ 
       <!-- Toggle button for mobile -->
       <button class="mobile-section-toggle" onclick="this.classList.toggle('open'); document.getElementById('roster-collapsible-${t.id}').classList.toggle('open');" style="margin-top: 0.75rem; margin-bottom: 0;">
         <span>Roster (${totalCount}/35 giocatori)</span>
         <svg class="toggle-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
       </button>
-
+ 
       <!-- Collapsible wrapper -->
       <div id="roster-collapsible-${t.id}" class="mobile-collapsible">
         <div class="team-players-mini" style="border-top: none; padding-top: 0;">
@@ -2361,7 +2364,7 @@ function renderTeamDashboard() {
           ${rosterHtml}
         </div>
       </div>
-      <button class="btn btn-accent" style="width: 100%; margin-top: 0.75rem; font-size: 0.75rem; padding: 0.4rem 0.8rem;" onclick="showTeamPitch('${t.id}')">Visualizza Campo ⚽</button>
+      <button class="btn btn-accent" style="width: 100%; margin-top: 0.75rem; font-size: 0.75rem; padding: 0.4rem 0.8rem;" onclick="showTeamPitch('${t.id}', false, true)">Visualizza Campo ⚽</button>
     `;
 
     container.appendChild(card);
@@ -2567,10 +2570,13 @@ function renderPitch() {
     const idealLineup = state.teamIdealLineups?.[team.id];
     let porStarters, porBench, difStarters, difBench, cenStarters, cenBench, attStarters, attBench;
 
+    // Map all team players to master list in state.players to ensure latest data is displayed
+    const teamPlayers = team.players.map(p => state.players.find(mp => mp.id === p.id) || p);
+
     if (state.pitchShowIdeal && idealLineup) {
       // If we have an AI-recommended ideal lineup, use the exact players recommended by the AI!
-      const startersList = team.players.filter(p => idealLineup.starters.includes(p.id));
-      const benchList = team.players.filter(p => idealLineup.bench.includes(p.id));
+      const startersList = teamPlayers.filter(p => idealLineup.starters.includes(p.id));
+      const benchList = teamPlayers.filter(p => idealLineup.bench.includes(p.id));
 
       porStarters = startersList.filter(p => p.role === 'POR');
       porBench = benchList.filter(p => p.role === 'POR');
@@ -2585,10 +2591,10 @@ function renderPitch() {
       attBench = benchList.filter(p => p.role === 'ATT');
     } else {
       // Separate all team players by role
-      let porPlayers = team.players.filter(p => p.role === 'POR');
-      let difPlayers = team.players.filter(p => p.role === 'DIF');
-      let cenPlayers = team.players.filter(p => p.role === 'CEN');
-      let attPlayers = team.players.filter(p => p.role === 'ATT');
+      let porPlayers = teamPlayers.filter(p => p.role === 'POR');
+      let difPlayers = teamPlayers.filter(p => p.role === 'DIF');
+      let cenPlayers = teamPlayers.filter(p => p.role === 'CEN');
+      let attPlayers = teamPlayers.filter(p => p.role === 'ATT');
 
       // If ideal lineup mode, sort by AI Form Score (fallback)
       if (state.pitchShowIdeal) {
@@ -2639,7 +2645,7 @@ function renderPitch() {
 
     let benchList;
     if (state.pitchShowIdeal && idealLineup) {
-      benchList = idealLineup.bench.map(id => team.players.find(p => p.id === id)).filter(Boolean);
+      benchList = idealLineup.bench.map(id => teamPlayers.find(p => p.id === id)).filter(Boolean);
     } else {
       benchList = [...porBench, ...difBench, ...cenBench, ...attBench];
     }
@@ -2647,29 +2653,108 @@ function renderPitch() {
     const actualBenchList = benchList.slice(0, 10);
     const tribunaList = benchList.slice(10);
 
-    // Draw Football field lines vertically
-    pitchContainer.innerHTML = `
-      <div class="pitch-container" style="position: relative; width: 100%; height: 380px;">
-        <div class="pitch-line pitch-midline"></div>
-        <div class="pitch-line pitch-penalty-bottom"></div>
-        <div class="pitch-line pitch-penalty-top"></div>
-        <div class="pitch-line pitch-goal-bottom"></div>
-        <div class="pitch-line pitch-goal-top"></div>
-        <div class="pitch-center-circle"></div>
-        
-        <!-- Flex layout grid overlay to dynamic rows sizing -->
-        <div class="pitch-grid-overlay">
-          <!-- Row 4: Attackers -->
-          <div id="row-att" class="pitch-grid-row"></div>
-          <!-- Row 3: Midfielders -->
-          <div id="row-cen" class="pitch-grid-row"></div>
-          <!-- Row 2: Defenders -->
-          <div id="row-dif" class="pitch-grid-row"></div>
-          <!-- Row 1: Goalkeeper -->
-          <div id="row-por" class="pitch-grid-row"></div>
+    // If dashboard view, replace visual field container with a clean list of starting players
+    if (state.pitchIsDashboardView) {
+      let tableRowsHtml = '';
+      const startersList = [...porStarters, ...difStarters, ...cenStarters, ...attStarters];
+      startersList.forEach((p, idx) => {
+        const masterP = state.players.find(mp => mp.id === p.id) || p;
+        const cachedAnalysisRaw = state.aiCache[masterP.id] || JSON.parse(sessionStorage.getItem(`fantamondiale_ai_${masterP.id}`) || 'null');
+        const cachedAnalysis = cachedAnalysisRaw ? normalizePlayerAnalysis(cachedAnalysisRaw) : null;
+        const strength = cachedAnalysis ? cachedAnalysis.matchStrength : 'N/D';
+        const startProb = cachedAnalysis ? cachedAnalysis.starterProbability : 'N/D';
+        const opp = getNextOpponentForCountry(masterP.country);
+
+        let probColor = 'var(--color-text-muted)';
+        if (startProb && startProb.endsWith('%')) {
+          const val = parseInt(startProb);
+          if (val >= 70) probColor = '#10b981';
+          else if (val >= 40) probColor = '#f59e0b';
+          else probColor = '#ef4444';
+        }
+
+        let strengthColor = 'var(--color-text-muted)';
+        if (strength !== 'N/D') {
+          const val = parseInt(strength);
+          if (val >= 80) strengthColor = '#10b981';
+          else if (val >= 50) strengthColor = '#f59e0b';
+          else strengthColor = '#ef4444';
+        }
+
+        const isEliminated = isCountryEliminated(masterP.country);
+
+        tableRowsHtml += `
+          <tr style="cursor: pointer;" onclick="showPitchPlayerTooltip('${masterP.id}', this, window.innerWidth <= 768)">
+            <td>
+              <span class="badge badge-${masterP.role.toLowerCase()}" style="font-size: 0.65rem; padding: 0.15rem 0.35rem; border-radius: 4px;">${masterP.role}</span>
+            </td>
+            <td>
+              <div style="display: flex; align-items: center; gap: 0.35rem;">
+                <span style="font-size: 0.8rem; font-weight: 700; ${isEliminated ? 'text-decoration: line-through; color: var(--color-text-muted);' : ''}">${masterP.name}</span>
+                <span style="font-size: 0.7rem; color: var(--color-text-muted);">(${masterP.country})</span>
+                ${isEliminated ? '<span style="font-size: 0.55rem; color: var(--color-danger); border: 1px solid var(--color-danger); padding: 0.05rem 0.15rem; border-radius: 4px; font-weight: 700;">ELIMINATO</span>' : ''}
+              </div>
+            </td>
+            <td>
+              <strong style="color: #fff; font-size: 0.8rem;">${masterP.purchaseCost || 0} cr</strong>
+            </td>
+            <td style="color: var(--color-text-muted); font-size: 0.75rem; font-weight: 600;">
+              ${opp && opp !== 'Nessuno' && opp !== 'Da verificare' ? `vs ${opp}` : opp}
+            </td>
+            <td style="text-align: right; color: ${strengthColor}; font-weight: 700; font-size: 0.75rem;">
+              ${strength}
+            </td>
+            <td style="text-align: right; color: ${probColor}; font-weight: 700; font-size: 0.75rem;">
+              ${startProb}
+            </td>
+          </tr>
+        `;
+      });
+
+      pitchContainer.innerHTML = `
+        <div class="player-table-container" style="max-height: 380px; border: 1px solid var(--border-light); border-radius: 8px;">
+          <table class="player-table">
+            <thead>
+              <tr>
+                <th>Ruolo</th>
+                <th>Calciatore</th>
+                <th>Costo</th>
+                <th>Avversario</th>
+                <th style="text-align: right;">Forza F.</th>
+                <th style="text-align: right;">Titolare %</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${tableRowsHtml || '<tr><td colspan="6" style="text-align: center; color: var(--color-text-muted); font-style: italic;">Nessun titolare schierabile...</td></tr>'}
+            </tbody>
+          </table>
         </div>
-      </div>
-    `;
+      `;
+    } else {
+      // Draw Football field lines vertically
+      pitchContainer.innerHTML = `
+        <div class="pitch-container" style="position: relative; width: 100%; height: 380px;">
+          <div class="pitch-line pitch-midline"></div>
+          <div class="pitch-line pitch-penalty-bottom"></div>
+          <div class="pitch-line pitch-penalty-top"></div>
+          <div class="pitch-line pitch-goal-bottom"></div>
+          <div class="pitch-line pitch-goal-top"></div>
+          <div class="pitch-center-circle"></div>
+          
+          <!-- Flex layout grid overlay to dynamic rows sizing -->
+          <div class="pitch-grid-overlay">
+            <!-- Row 4: Attackers -->
+            <div id="row-att" class="pitch-grid-row"></div>
+            <!-- Row 3: Midfielders -->
+            <div id="row-cen" class="pitch-grid-row"></div>
+            <!-- Row 2: Defenders -->
+            <div id="row-dif" class="pitch-grid-row"></div>
+            <!-- Row 1: Goalkeeper -->
+            <div id="row-por" class="pitch-grid-row"></div>
+          </div>
+        </div>
+      `;
+    }
 
     // Draw starting row elements programmatically
     const populateRow = (starters, neededCount, roleName, rowId) => {
@@ -2680,14 +2765,16 @@ function renderPitch() {
         if (i < starters.length) {
           // Render Active Draggable Player card
           const player = starters[i];
+          const masterP = state.players.find(mp => mp.id === player.id) || player;
+
           const node = document.createElement('div');
           node.className = 'pitch-player-node';
           node.style.position = 'relative';
           node.setAttribute('draggable', 'true');
-          node.setAttribute('data-player-id', player.id);
-          node.style.viewTransitionName = `player-${player.id}`;
+          node.setAttribute('data-player-id', masterP.id);
+          node.style.viewTransitionName = `player-${masterP.id}`;
 
-          const cachedAnalysisRaw = state.aiCache[player.id] || JSON.parse(sessionStorage.getItem(`fantamondiale_ai_${player.id}`) || 'null');
+          const cachedAnalysisRaw = state.aiCache[masterP.id] || JSON.parse(sessionStorage.getItem(`fantamondiale_ai_${masterP.id}`) || 'null');
           const cachedAnalysis = cachedAnalysisRaw ? normalizePlayerAnalysis(cachedAnalysisRaw) : null;
           const strength = cachedAnalysis ? cachedAnalysis.matchStrength : undefined;
           let strengthBadgeHtml = '';
@@ -2716,18 +2803,17 @@ function renderPitch() {
             probBadgeHtml = `<div class="pitch-player-prob-badge" title="Percentuale titolarità: ${startProb}" style="position: absolute; bottom: -3px; right: -3px; min-width: 17px; height: 17px; padding: 0 2px; box-sizing: border-box; border-radius: 9px; background: ${probBg}; color: #fff; font-size: 0.48rem; font-weight: 800; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.25); box-shadow: 0 1px 3px rgba(0,0,0,0.4); z-index: 4;">${startProb}</div>`;
           }
 
-          const roleLetter = { POR: 'P', DIF: 'D', CEN: 'C', ATT: 'A' }[player.role] || player.role[0];
+          const roleLetter = { POR: 'P', DIF: 'D', CEN: 'C', ATT: 'A' }[masterP.role] || masterP.role[0];
           node.innerHTML = `
             ${strengthBadgeHtml}
             <div style="position: relative; display: inline-block;">
-              <div class="pitch-player-shirt" style="background: var(--color-${player.role.toLowerCase()}); ${isCountryEliminated(player.country) ? 'opacity: 0.55; border: 2px dashed var(--color-danger);' : ''}">
+              <div class="pitch-player-shirt" style="background: var(--color-${masterP.role.toLowerCase()}); ${isCountryEliminated(masterP.country) ? 'opacity: 0.55; border: 2px dashed var(--color-danger);' : ''}">
                 ${roleLetter}
               </div>
               ${probBadgeHtml}
             </div>
-            <div class="pitch-player-name" style="${isCountryEliminated(player.country) ? 'color: var(--color-danger); text-decoration: line-through;' : ''}">${player.name} (${player.country})</div>
+            <div class="pitch-player-name" style="${isCountryEliminated(masterP.country) ? 'color: var(--color-danger); text-decoration: line-through;' : ''}">${masterP.name} (${masterP.country})</div>
           `;
-
 
           // Wire drag and drop events
           node.addEventListener('dragstart', handleDragStart);
@@ -2740,7 +2826,7 @@ function renderPitch() {
           node.addEventListener('click', (e) => {
             e.stopPropagation();
             const isMobile = window.innerWidth <= 768;
-            showPitchPlayerTooltip(player.id, node, isMobile);
+            showPitchPlayerTooltip(masterP.id, node, isMobile);
           });
 
           rowElement.appendChild(node);
@@ -2761,11 +2847,13 @@ function renderPitch() {
       }
     };
 
-    // Populate Flex Rows
-    populateRow(porStarters, porNeeded, 'POR', 'row-por');
-    populateRow(difStarters, defNeeded, 'DIF', 'row-dif');
-    populateRow(cenStarters, cenNeeded, 'CEN', 'row-cen');
-    populateRow(attStarters, attNeeded, 'ATT', 'row-att');
+    if (!state.pitchIsDashboardView) {
+      // Populate Flex Rows
+      populateRow(porStarters, porNeeded, 'POR', 'row-por');
+      populateRow(difStarters, defNeeded, 'DIF', 'row-dif');
+      populateRow(cenStarters, cenNeeded, 'CEN', 'row-cen');
+      populateRow(attStarters, attNeeded, 'ATT', 'row-att');
+    }
 
     // 3. Render Bench listing programmatically with Drag events
     benchContainer.innerHTML = '';
@@ -2786,16 +2874,16 @@ function renderPitch() {
     const renderPlayerNode = (p, container, isTribuna, index) => {
       const el = document.createElement('div');
       el.className = 'bench-player-node';
-      el.setAttribute('draggable', 'true');
       el.setAttribute('data-player-id', p.id);
       el.style.viewTransitionName = `player-${p.id}`;
       el.style.cssText = 'display: grid; grid-template-columns: 1.6fr 1fr 0.7fr 0.7fr; align-items: center; gap: 0.5rem; width: 100%; box-sizing: border-box; padding: 0.35rem 0.65rem; cursor: pointer;';
 
-      const cachedAnalysisRaw = state.aiCache[p.id] || JSON.parse(sessionStorage.getItem(`fantamondiale_ai_${p.id}`) || 'null');
+      const masterP = state.players.find(mp => mp.id === p.id) || p;
+      const cachedAnalysisRaw = state.aiCache[masterP.id] || JSON.parse(sessionStorage.getItem(`fantamondiale_ai_${masterP.id}`) || 'null');
       const cachedAnalysis = cachedAnalysisRaw ? normalizePlayerAnalysis(cachedAnalysisRaw) : null;
       const startProb = cachedAnalysis ? cachedAnalysis.starterProbability : 'N/D';
       const strength = cachedAnalysis ? cachedAnalysis.matchStrength : 'N/D';
-      const opp = getNextOpponentForCountry(p.country);
+      const opp = getNextOpponentForCountry(masterP.country);
 
       let probColor = 'var(--color-text-muted)';
       if (startProb && startProb.endsWith('%')) {
@@ -2823,10 +2911,12 @@ function renderPitch() {
       el.innerHTML = `
         <div style="display: flex; align-items: center; gap: 0.35rem; min-width: 0; overflow: hidden;">
           <span style="font-size: 0.7rem; color: var(--color-text-muted); font-weight: bold; min-width: 14px;">${index + 1}.</span>
-          <span class="dot" style="background: var(--color-${p.role.toLowerCase()}); flex-shrink: 0;"></span>
-          <span style="font-size: 0.72rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; ${isCountryEliminated(p.country) ? 'text-decoration: line-through; color: var(--color-text-muted);' : ''}" title="${p.name} (${p.country})">${p.name} (${p.country})</span>
+          <span class="dot" style="background: var(--color-${masterP.role.toLowerCase()}); flex-shrink: 0;"></span>
+          <span style="font-size: 0.72rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; ${isCountryEliminated(masterP.country) ? 'text-decoration: line-through; color: var(--color-text-muted);' : ''}" title="${masterP.name} (${masterP.country})">
+            ${masterP.name} (${masterP.country})${state.pitchIsDashboardView ? ` - <strong style="color: #fff; font-size: 0.68rem;">${masterP.purchaseCost || 0} cr</strong>` : ''}
+          </span>
           ${warningBadgeHtml}
-          ${isCountryEliminated(p.country) ? ' <span style="font-size: 0.52rem; color: var(--color-danger); font-weight: 700; border: 1px solid var(--color-danger); padding: 0.05rem 0.15rem; border-radius: 4px; line-height: 1; flex-shrink: 0;">ELIMINATO</span>' : ''}
+          ${isCountryEliminated(masterP.country) ? ' <span style="font-size: 0.52rem; color: var(--color-danger); font-weight: 700; border: 1px solid var(--color-danger); padding: 0.05rem 0.15rem; border-radius: 4px; line-height: 1; flex-shrink: 0;">ELIMINATO</span>' : ''}
         </div>
         <span style="font-size: 0.7rem; text-align: center; color: var(--color-text-muted); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${opp && opp !== 'Nessuno' && opp !== 'Da verificare' ? `vs ${opp}` : opp}">
           ${opp && opp !== 'Nessuno' && opp !== 'Da verificare' ? `vs ${opp}` : opp}
@@ -2839,18 +2929,23 @@ function renderPitch() {
         </span>
       `;
 
-
-      el.addEventListener('dragstart', handleDragStart);
-      el.addEventListener('dragend', handleDragEnd);
-      el.addEventListener('dragover', handleDragOver);
-      el.addEventListener('dragleave', handleDragLeave);
-      el.addEventListener('drop', handleDrop);
+      if (!state.pitchIsDashboardView) {
+        el.setAttribute('draggable', 'true');
+        el.addEventListener('dragstart', handleDragStart);
+        el.addEventListener('dragend', handleDragEnd);
+        el.addEventListener('dragover', handleDragOver);
+        el.addEventListener('dragleave', handleDragLeave);
+        el.addEventListener('drop', handleDrop);
+      } else {
+        el.removeAttribute('draggable');
+        el.style.cursor = 'default';
+      }
 
       // Wire rich popover events
       el.addEventListener('click', (e) => {
         e.stopPropagation();
         const isMobile = window.innerWidth <= 768;
-        showPitchPlayerTooltip(p.id, el, isMobile);
+        showPitchPlayerTooltip(masterP.id, el, isMobile);
       });
 
       container.appendChild(el);
@@ -3240,18 +3335,37 @@ async function submitFormationWebhook(team, showIdeal, round) {
   }
 }
 
-function showTeamPitch(teamId, showIdeal = false) {
+function showTeamPitch(teamId, showIdeal = false, isDashboardView = false) {
   const team = state.teams.find(t => t.id === teamId);
   if (!team) return;
 
   state.activePitchTeamId = teamId;
   state.pitchShowIdeal = showIdeal;
+  state.pitchIsDashboardView = isDashboardView;
   dom.pitchModuleSelect.value = team.module || '4-3-3';
   
   // Set modal title dynamically
   const pitchTitleEl = document.getElementById('pitchTitle');
   if (pitchTitleEl) {
-    pitchTitleEl.innerHTML = showIdeal ? 'Formazione Ideale IA 📈🔮' : 'Formazione in Campo ⚽';
+    if (isDashboardView) {
+      pitchTitleEl.innerHTML = `Titolari & Roster: ${team.name} 📋⚽`;
+    } else {
+      pitchTitleEl.innerHTML = showIdeal ? 'Formazione Ideale IA 📈🔮' : 'Formazione in Campo ⚽';
+    }
+  }
+
+  // Set instructions dynamically
+  const instructionTextEl = document.getElementById('pitch-instruction-text');
+  if (instructionTextEl) {
+    instructionTextEl.innerText = isDashboardView 
+      ? 'Elenco dei titolari e della panchina. Clicca su un calciatore per l\'analisi IA dettagliata.' 
+      : 'Trascina un calciatore e rilascialo su un compagno dello stesso ruolo per scambiare titolari e panchina!';
+  }
+
+  // Hide/Show module select container
+  const moduleContainerEl = document.getElementById('pitch-module-select-container');
+  if (moduleContainerEl) {
+    moduleContainerEl.style.display = isDashboardView ? 'none' : 'flex';
   }
 
   // Generate action buttons dynamically
@@ -3278,8 +3392,8 @@ function showTeamPitch(teamId, showIdeal = false) {
     copyBtn.onclick = () => copyLineupToClipboard(team, showIdeal);
     mainControlsRow.appendChild(copyBtn);
 
-    // If showing Ideal, add AI buttons inside the formation screen
-    if (showIdeal) {
+    // If showing Ideal, add AI buttons inside the formation screen (never in dashboard view)
+    if (showIdeal && !isDashboardView) {
       // 1. Ricalcolo Giocatori button
       const recalcPlayersBtn = document.createElement('button');
       recalcPlayersBtn.className = 'btn';
@@ -3310,80 +3424,83 @@ function showTeamPitch(teamId, showIdeal = false) {
       aiLineupBtn.onclick = () => generateIdealLineup(team);
       mainControlsRow.appendChild(aiLineupBtn);
     }
+    mainControlsRow.style.width = 'auto'; // allow shrinking if not full width
     buttonsWrapper.appendChild(mainControlsRow);
 
-    // Create second row/container for webhooks
-    const webhookContainer = document.createElement('div');
-    webhookContainer.className = 'webhook-container';
-    webhookContainer.style.display = 'flex';
-    webhookContainer.style.alignItems = 'center';
-    webhookContainer.style.gap = '0.5rem';
-    webhookContainer.style.flexWrap = 'wrap';
-    webhookContainer.style.marginTop = '0.5rem';
-    webhookContainer.style.paddingTop = '0.5rem';
-    webhookContainer.style.borderTop = '1px dashed var(--border-light)';
-    webhookContainer.style.width = '100%';
+    // Create second row/container for webhooks (only if not dashboard view)
+    if (!isDashboardView) {
+      const webhookContainer = document.createElement('div');
+      webhookContainer.className = 'webhook-container';
+      webhookContainer.style.display = 'flex';
+      webhookContainer.style.alignItems = 'center';
+      webhookContainer.style.gap = '0.5rem';
+      webhookContainer.style.flexWrap = 'wrap';
+      webhookContainer.style.marginTop = '0.5rem';
+      webhookContainer.style.paddingTop = '0.5rem';
+      webhookContainer.style.borderTop = '1px dashed var(--border-light)';
+      webhookContainer.style.width = '100%';
 
-    // Round Selector
-    const roundLabel = document.createElement('label');
-    roundLabel.style.fontSize = '0.75rem';
-    roundLabel.style.fontWeight = '700';
-    roundLabel.style.color = 'var(--color-text-muted)';
-    roundLabel.innerText = 'TURNO:';
-    webhookContainer.appendChild(roundLabel);
+      // Round Selector
+      const roundLabel = document.createElement('label');
+      roundLabel.style.fontSize = '0.75rem';
+      roundLabel.style.fontWeight = '700';
+      roundLabel.style.color = 'var(--color-text-muted)';
+      roundLabel.innerText = 'TURNO:';
+      webhookContainer.appendChild(roundLabel);
 
-    const roundSelect = document.createElement('select');
-    roundSelect.className = 'input-control';
-    roundSelect.style.width = '100px';
-    roundSelect.style.padding = '0.25rem 0.5rem';
-    roundSelect.style.fontSize = '0.75rem';
-    roundSelect.style.borderRadius = '4px';
-    roundSelect.style.height = '30px';
-    
-    const rounds = ['G1', 'G2', 'G3', 'Sedicesimi', 'Ottavi', 'Quarti', 'Semifinale', 'Finale'];
-    rounds.forEach(r => {
-      const opt = document.createElement('option');
-      opt.value = r;
-      opt.innerText = r;
-      if (r === (state.activeRound || 'G1')) {
-        opt.selected = true;
-      }
-      roundSelect.appendChild(opt);
-    });
-    roundSelect.onchange = (e) => {
-      state.activeRound = e.target.value;
-    };
-    webhookContainer.appendChild(roundSelect);
+      const roundSelect = document.createElement('select');
+      roundSelect.className = 'input-control';
+      roundSelect.style.width = '100px';
+      roundSelect.style.padding = '0.25rem 0.5rem';
+      roundSelect.style.fontSize = '0.75rem';
+      roundSelect.style.borderRadius = '4px';
+      roundSelect.style.height = '30px';
+      
+      const rounds = ['G1', 'G2', 'G3', 'Sedicesimi', 'Ottavi', 'Quarti', 'Semifinale', 'Finale'];
+      rounds.forEach(r => {
+        const opt = document.createElement('option');
+        opt.value = r;
+        opt.innerText = r;
+        if (r === (state.activeRound || 'G1')) {
+          opt.selected = true;
+        }
+        roundSelect.appendChild(opt);
+      });
+      roundSelect.onchange = (e) => {
+        state.activeRound = e.target.value;
+      };
+      webhookContainer.appendChild(roundSelect);
 
-    // Button Invio Rosa Fissa
-    const rosaBtn = document.createElement('button');
-    rosaBtn.className = 'btn btn-primary';
-    rosaBtn.style.padding = '0.4rem 0.8rem';
-    rosaBtn.style.fontSize = '0.75rem';
-    rosaBtn.style.height = '30px';
-    rosaBtn.style.display = 'flex';
-    rosaBtn.style.alignItems = 'center';
-    rosaBtn.style.gap = '0.35rem';
-    rosaBtn.innerHTML = '📤 Invio Rosa Fissa';
-    rosaBtn.onclick = () => submitRosterWebhook(team);
-    webhookContainer.appendChild(rosaBtn);
+      // Button Invio Rosa Fissa
+      const rosaBtn = document.createElement('button');
+      rosaBtn.className = 'btn btn-primary';
+      rosaBtn.style.padding = '0.4rem 0.8rem';
+      rosaBtn.style.fontSize = '0.75rem';
+      rosaBtn.style.height = '30px';
+      rosaBtn.style.display = 'flex';
+      rosaBtn.style.alignItems = 'center';
+      rosaBtn.style.gap = '0.35rem';
+      rosaBtn.innerHTML = '📤 Invio Rosa Fissa';
+      rosaBtn.onclick = () => submitRosterWebhook(team);
+      webhookContainer.appendChild(rosaBtn);
 
-    // Button Invio Formazione
-    const formationBtn = document.createElement('button');
-    formationBtn.className = 'btn btn-success';
-    formationBtn.style.padding = '0.4rem 0.8rem';
-    formationBtn.style.fontSize = '0.75rem';
-    formationBtn.style.height = '30px';
-    formationBtn.style.display = 'flex';
-    formationBtn.style.alignItems = 'center';
-    formationBtn.style.gap = '0.35rem';
-    formationBtn.style.background = 'var(--color-success)';
-    formationBtn.style.borderColor = 'var(--color-success)';
-    formationBtn.innerHTML = '📤 Invio Formazione';
-    formationBtn.onclick = () => submitFormationWebhook(team, showIdeal, roundSelect.value);
-    webhookContainer.appendChild(formationBtn);
+      // Button Invio Formazione
+      const formationBtn = document.createElement('button');
+      formationBtn.className = 'btn btn-success';
+      formationBtn.style.padding = '0.4rem 0.8rem';
+      formationBtn.style.fontSize = '0.75rem';
+      formationBtn.style.height = '30px';
+      formationBtn.style.display = 'flex';
+      formationBtn.style.alignItems = 'center';
+      formationBtn.style.gap = '0.35rem';
+      formationBtn.style.background = 'var(--color-success)';
+      formationBtn.style.borderColor = 'var(--color-success)';
+      formationBtn.innerHTML = '📤 Invio Formazione';
+      formationBtn.onclick = () => submitFormationWebhook(team, showIdeal, roundSelect.value);
+      webhookContainer.appendChild(formationBtn);
 
-    buttonsWrapper.appendChild(webhookContainer);
+      buttonsWrapper.appendChild(webhookContainer);
+    }
   }
 
   renderPitch();
