@@ -1,4 +1,6 @@
 import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -20,7 +22,33 @@ export default async function handler(req, res) {
       .update(bodyStr)
       .digest('hex');
 
-    const webhookUrl = 'https://exposed-port-8644-8b56f0c59a8d9036d9b7-mzr5d4vzoe.h24.openclaw.agent37.com/webhooks/fantacalcio-formazioni';
+    let webhookUrl = process.env.WEBHOOK_URL;
+    if (!webhookUrl) {
+      try {
+        const envPath = path.join(process.cwd(), '.env');
+        if (fs.existsSync(envPath)) {
+          const envContent = fs.readFileSync(envPath, 'utf8');
+          const lines = envContent.split('\n');
+          for (const line of lines) {
+            const match = line.match(/^\s*WEBHOOK_URL\s*=\s*(.*)\s*$/);
+            if (match) {
+              webhookUrl = match[1].trim();
+              break;
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load local .env file:', e);
+      }
+    }
+
+    if (webhookUrl) {
+      webhookUrl = webhookUrl.replace(/^['"]|['"]$/g, '');
+    }
+
+    if (!webhookUrl) {
+      return res.status(500).json({ error: 'Webhook URL non configurato nelle variabili d\'ambiente (WEBHOOK_URL).' });
+    }
 
     const response = await fetch(webhookUrl, {
       method: 'POST',
