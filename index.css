@@ -247,8 +247,8 @@ header {
 /* Grid Layouts for Content */
 .dashboard-grid {
   display: grid;
-  grid-template-columns: 320px 1fr;
-  gap: 1.5rem;
+  grid-template-columns: 280px 1fr;
+  gap: 1.25rem;
   align-items: start;
   position: relative;
   z-index: 1;
@@ -773,6 +773,7 @@ header {
 .player-table-container {
   max-height: 620px;
   overflow-y: auto;
+  overflow-x: auto;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-light);
 }
@@ -788,7 +789,7 @@ header {
   background: rgba(10, 15, 30, 0.9);
   position: sticky;
   top: 0;
-  padding: 0.85rem 1rem;
+  padding: 0.8rem 0.6rem;
   font-weight: 700;
   color: var(--color-text-muted);
   border-bottom: 1px solid var(--border-light);
@@ -799,7 +800,7 @@ header {
 }
 
 .player-table td {
-  padding: 0.65rem 1rem;
+  padding: 0.6rem 0.6rem;
   border-bottom: 1px solid var(--border-light);
   color: var(--color-text);
   vertical-align: middle;

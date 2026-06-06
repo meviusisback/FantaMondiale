@@ -24,6 +24,8 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Dati incompleti: metadati o stato assenti.' });
     }
 
+    const isCorrectAdmin = process.env.ADMIN_PASSWORD && password === process.env.ADMIN_PASSWORD;
+
     let id = metadata.id;
     const isNew = !id || id === 'new';
     if (isNew) {
@@ -52,7 +54,6 @@ export default async function handler(req, res) {
         if (!password) {
           return res.status(401).json({ error: 'Password richiesta per aggiornare questa sessione.' });
         }
-        const isCorrectAdmin = process.env.ADMIN_PASSWORD && password === process.env.ADMIN_PASSWORD;
         if (!isCorrectAdmin) {
           const providedHash = getHash(password);
           if (providedHash !== existingHash) {
@@ -103,7 +104,7 @@ export default async function handler(req, res) {
       ['SET', `fantamondiale_session:${id}`, JSON.stringify(state)],
       ['SET', 'fantamondiale_sessions_list', JSON.stringify(sessionsList)]
     ];
-    if (password) {
+    if (password && (!isCorrectAdmin || isNew)) {
       pipelineCommands.push(['SET', `fantamondiale_password:${id}`, getHash(password)]);
     }
 
