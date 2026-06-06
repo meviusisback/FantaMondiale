@@ -827,12 +827,25 @@ function parseCSV(text) {
     return cells;
   };
 
-  const headers = parseRow(lines[0]).map(h => h.toLowerCase().replace(/['"“”]/g, ''));
+  const headers = parseRow(lines[0]).map(h => h.toLowerCase().replace(/['"“”]/g, '').trim());
   
-  let nameIdx = headers.findIndex(h => h.includes('nome') || h.includes('player') || h.includes('giocatore') || h === 'name');
-  let roleIdx = headers.findIndex(h => h.includes('ruolo') || h.includes('pos') || h === 'role');
-  let countryIdx = headers.findIndex(h => h.includes('squadra') || h.includes('club') || h.includes('nazionale') || h.includes('nazione') || h === 'country');
-  let valueIdx = headers.findIndex(h => h.includes('quotazione') || h.includes('valore') || h.includes('costo') || h.includes('prezzo') || h === 'value');
+  let nameIdx = headers.findIndex(h => 
+    h === 'nome' || h === 'name' || h === 'player' || 
+    h.includes('nome') || h.includes('name') || h.includes('giocatore') || h.includes('calciatore')
+  );
+  let roleIdx = headers.findIndex(h => 
+    h === 'r' || h === 'ruolo' || h === 'role' || h === 'pos' || 
+    h.includes('ruolo') || h.includes('role') || h.includes('pos')
+  );
+  let countryIdx = headers.findIndex(h => 
+    h === 'nazione' || h === 'nazionale' || h === 'squadra' || h === 'club' || h === 'country' || h === 'team' ||
+    h.includes('naz') || h.includes('squadra') || h.includes('club') || h.includes('nazione') || h.includes('country') || h.includes('team') || h.includes('paese')
+  );
+  let valueIdx = headers.findIndex(h => 
+    h === 'quot' || h === 'quot.' || h === 'val' || h === 'val.' || h === 'valore' || h === 'value' || 
+    h === 'costo' || h === 'cost' || h === 'prezzo' || h === 'price' || h === 'fvm' || h === 'q' || h === 'qt' || h === 'qt.' ||
+    h.includes('quot') || h.includes('val') || h.includes('cost') || h.includes('prezzo') || h.includes('price') || h.includes('fvm')
+  );
 
   if (nameIdx === -1) nameIdx = 0;
   if (roleIdx === -1) roleIdx = 1;
@@ -1545,6 +1558,7 @@ function findTopPlayerRank(player) {
   
   const words = cleanName.split(/\s+/).filter(w => w.length > 2);
   
+  // Pass 1: Try matching name AND country nationality
   for (let i = 0; i < TOP_150_PLAYERS.length; i++) {
     const topP = TOP_150_PLAYERS[i];
     const topName = topP.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9\s]/g, '');
@@ -1571,7 +1585,6 @@ function findTopPlayerRank(player) {
                          (cleanCountry === 'colombia' && topCountry === 'colombia') ||
                          (cleanCountry === 'nigeria' && topCountry === 'nigeria') ||
                          (cleanCountry === 'uruguay' && topCountry === 'uruguay') ||
-                         (cleanCountry === 'marocco' && topCountry === 'morocco') ||
                          (cleanCountry === 'maroc' && topCountry === 'morocco') ||
                          (cleanCountry === 'canada' && topCountry === 'canada') ||
                          (cleanCountry === 'austria' && topCountry === 'austria') ||
@@ -1590,6 +1603,21 @@ function findTopPlayerRank(player) {
       }
     }
   }
+
+  // Pass 2 Fallback: Match by name only (for club names or empty country fields in custom CSVs)
+  for (let i = 0; i < TOP_150_PLAYERS.length; i++) {
+    const topP = TOP_150_PLAYERS[i];
+    const topName = topP.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9\s]/g, '');
+    
+    if (cleanName === topName) {
+      return i + 1;
+    }
+    // Safeguard length > 8 to prevent false positive matches on short common names
+    if ((cleanName.includes(topName) || topName.includes(cleanName)) && cleanName.length > 8 && topName.length > 8) {
+      return i + 1;
+    }
+  }
+
   return 999;
 }
 
@@ -1748,8 +1776,8 @@ function calculateIdealBidRange(player, targetTeam = null) {
       roleExplanation = `${roleExplanation} (top player esente da penalità ballottaggio)`;
     }
     
-    const targetMin = Math.round(avgCreditsPerPlayer * adjustedWeight * 0.75 * roleSaturationFactor);
-    const targetMax = Math.round(avgCreditsPerPlayer * adjustedWeight * 1.25 * roleSaturationFactor);
+    const targetMin = Math.round(remainingCredits * adjustedWeight * 0.75 * roleSaturationFactor);
+    const targetMax = Math.round(remainingCredits * adjustedWeight * 1.25 * roleSaturationFactor);
     
     minPrice = Math.max(minPrice, targetMin);
     maxPrice = Math.max(maxPrice, targetMax);
