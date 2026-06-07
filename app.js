@@ -2520,17 +2520,21 @@ function handleDrop(e) {
   if (isIdealMode) {
 
     if (isP1Starter !== isP2Starter) {
-      // Swap positions in starters and bench arrays
+      // Swap positions in starters and bench arrays,
+      // preserving the original bench position so the swapped player
+      // lands in the same bench slot (not at the end → tribuna)
       if (isP1Starter) {
+        const p2BenchIdx = ideal.bench.indexOf(p2.id);
         ideal.starters = ideal.starters.filter(id => id !== p1.id);
         ideal.bench = ideal.bench.filter(id => id !== p2.id);
         ideal.starters.push(p2.id);
-        ideal.bench.push(p1.id);
+        ideal.bench.splice(p2BenchIdx, 0, p1.id);
       } else {
+        const p1BenchIdx = ideal.bench.indexOf(p1.id);
         ideal.starters = ideal.starters.filter(id => id !== p2.id);
         ideal.bench = ideal.bench.filter(id => id !== p1.id);
         ideal.starters.push(p1.id);
-        ideal.bench.push(p2.id);
+        ideal.bench.splice(p1BenchIdx, 0, p2.id);
       }
     } else {
       // Both starters or both bench
@@ -3000,124 +3004,117 @@ function renderPitch() {
       populateRow(attStarters, attNeeded, 'ATT', 'row-att');
     }
 
-    // 3. Render Bench listing programmatically with Drag events
-    benchContainer.innerHTML = '';
-    benchContainer.style.cssText = 'display: flex; flex-direction: column; gap: 0.25rem; width: 100%;';
+    // Only render bench/tribuna containers for the pitch field view (not Titolari & Roster dashboard)
+    if (!state.pitchIsDashboardView) {
+      // 3. Render Bench listing programmatically with Drag events
+      benchContainer.innerHTML = '';
+      benchContainer.style.cssText = 'display: flex; flex-direction: column; gap: 0.25rem; width: 100%;';
 
-    const renderHeader = (container) => {
-      const header = document.createElement('div');
-      header.style.cssText = 'display: grid; grid-template-columns: 1.6fr 1fr 0.7fr 0.7fr; gap: 0.5rem; width: 100%; box-sizing: border-box; padding: 0.35rem 0.65rem; font-size: 0.62rem; font-weight: 800; color: var(--color-text-muted); border-bottom: 1px solid var(--border-light); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem;';
-      header.innerHTML = `
-        <span>Calciatore</span>
-        <span style="text-align: center;">Avversario</span>
-        <span style="text-align: right;">Forza F.</span>
-        <span style="text-align: right;">Titolare %</span>
-      `;
-      container.appendChild(header);
-    };
+      const renderHeader = (container) => {
+        const header = document.createElement('div');
+        header.style.cssText = 'display: grid; grid-template-columns: 1.6fr 1fr 0.7fr 0.7fr; gap: 0.5rem; width: 100%; box-sizing: border-box; padding: 0.35rem 0.65rem; font-size: 0.62rem; font-weight: 800; color: var(--color-text-muted); border-bottom: 1px solid var(--border-light); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem;';
+        header.innerHTML = `
+          <span>Calciatore</span>
+          <span style="text-align: center;">Avversario</span>
+          <span style="text-align: right;">Forza F.</span>
+          <span style="text-align: right;">Titolare %</span>
+        `;
+        container.appendChild(header);
+      };
 
-    const renderPlayerNode = (p, container, isTribuna, index) => {
-      const el = document.createElement('div');
-      el.className = 'bench-player-node';
-      el.setAttribute('data-player-id', p.id);
-      el.style.viewTransitionName = `player-${p.id}`;
-      el.style.cssText = 'display: grid; grid-template-columns: 1.6fr 1fr 0.7fr 0.7fr; align-items: center; gap: 0.5rem; width: 100%; box-sizing: border-box; padding: 0.35rem 0.65rem; cursor: pointer;';
+      const renderPlayerNode = (p, container, isTribuna, index) => {
+        const el = document.createElement('div');
+        el.className = 'bench-player-node';
+        el.setAttribute('data-player-id', p.id);
+        el.style.viewTransitionName = `player-${p.id}`;
+        el.style.cssText = 'display: grid; grid-template-columns: 1.6fr 1fr 0.7fr 0.7fr; align-items: center; gap: 0.5rem; width: 100%; box-sizing: border-box; padding: 0.35rem 0.65rem; cursor: pointer;';
 
-      const masterP = state.players.find(mp => mp.id === p.id) || p;
-      const cachedAnalysisRaw = state.aiCache[masterP.id] || JSON.parse(sessionStorage.getItem(`fantamondiale_ai_${masterP.id}`) || 'null');
-      const cachedAnalysis = cachedAnalysisRaw ? normalizePlayerAnalysis(cachedAnalysisRaw) : null;
-      const startProb = cachedAnalysis ? cachedAnalysis.starterProbability : 'N/D';
-      const strength = cachedAnalysis ? cachedAnalysis.matchStrength : 'N/D';
-      const opp = getNextOpponentForCountry(masterP.country);
+        const masterP = state.players.find(mp => mp.id === p.id) || p;
+        const cachedAnalysisRaw = state.aiCache[masterP.id] || JSON.parse(sessionStorage.getItem(`fantamondiale_ai_${masterP.id}`) || 'null');
+        const cachedAnalysis = cachedAnalysisRaw ? normalizePlayerAnalysis(cachedAnalysisRaw) : null;
+        const startProb = cachedAnalysis ? cachedAnalysis.starterProbability : 'N/D';
+        const strength = cachedAnalysis ? cachedAnalysis.matchStrength : 'N/D';
+        const opp = getNextOpponentForCountry(masterP.country);
 
-      let probColor = 'var(--color-text-muted)';
-      if (startProb && startProb.endsWith('%')) {
-        const val = parseInt(startProb);
-        if (val >= 70) probColor = '#10b981'; // Green
-        else if (val >= 40) probColor = '#f59e0b'; // Amber
-        else probColor = '#ef4444'; // Red
-      }
+        let probColor = 'var(--color-text-muted)';
+        if (startProb && startProb.endsWith('%')) {
+          const val = parseInt(startProb);
+          if (val >= 70) probColor = '#10b981'; // Green
+          else if (val >= 40) probColor = '#f59e0b'; // Amber
+          else probColor = '#ef4444'; // Red
+        }
 
-      let strengthColor = 'var(--color-text-muted)';
-      if (strength !== 'N/D') {
-        const val = parseInt(strength);
-        if (val >= 80) strengthColor = '#10b981';
-        else if (val >= 50) strengthColor = '#f59e0b';
-        else strengthColor = '#ef4444';
-      }
+        let strengthColor = 'var(--color-text-muted)';
+        if (strength !== 'N/D') {
+          const val = parseInt(strength);
+          if (val >= 80) strengthColor = '#10b981';
+          else if (val >= 50) strengthColor = '#f59e0b';
+          else strengthColor = '#ef4444';
+        }
 
-      let warningBadgeHtml = '';
-      if (isTribuna) {
-        warningBadgeHtml = ` <span style="color: var(--color-warning); font-size: 0.8rem; font-weight: bold; margin-left: 0.25rem;" title="Non entrerà in panchina (max 10 panchinari!)">⚠️</span>`;
-        el.style.background = 'rgba(245, 158, 11, 0.05)';
-        el.style.borderColor = 'rgba(245, 158, 11, 0.2)';
-      }
+        let warningBadgeHtml = '';
+        if (isTribuna) {
+          warningBadgeHtml = ` <span style="color: var(--color-warning); font-size: 0.8rem; font-weight: bold; margin-left: 0.25rem;" title="Non entrerà in panchina (max 10 panchinari!)">⚠️</span>`;
+          el.style.background = 'rgba(245, 158, 11, 0.05)';
+          el.style.borderColor = 'rgba(245, 158, 11, 0.2)';
+        }
 
-      el.innerHTML = `
-        <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.35rem; min-width: 0; overflow: hidden; width: 100%;">
-          <div style="display: flex; align-items: center; gap: 0.35rem; min-width: 0; overflow: hidden;">
-            <span style="font-size: 0.7rem; color: var(--color-text-muted); font-weight: bold; min-width: 14px;">${index + 1}.</span>
-            <span class="dot" style="background: var(--color-${masterP.role.toLowerCase()}); flex-shrink: 0;"></span>
-            <span style="font-size: 0.72rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; ${isCountryEliminated(masterP.country) ? 'text-decoration: line-through; color: var(--color-text-muted);' : ''}" title="${masterP.name} (${masterP.country})">
-              ${masterP.name} (${masterP.country})
-            </span>
-            ${warningBadgeHtml}
-            ${isCountryEliminated(masterP.country) ? ' <span style="font-size: 0.52rem; color: var(--color-danger); font-weight: 700; border: 1px solid var(--color-danger); padding: 0.05rem 0.15rem; border-radius: 4px; line-height: 1; flex-shrink: 0;">ELIMINATO</span>' : ''}
+        el.innerHTML = `
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.35rem; min-width: 0; overflow: hidden; width: 100%;">
+            <div style="display: flex; align-items: center; gap: 0.35rem; min-width: 0; overflow: hidden;">
+              <span style="font-size: 0.7rem; color: var(--color-text-muted); font-weight: bold; min-width: 14px;">${index + 1}.</span>
+              <span class="dot" style="background: var(--color-${masterP.role.toLowerCase()}); flex-shrink: 0;"></span>
+              <span style="font-size: 0.72rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; ${isCountryEliminated(masterP.country) ? 'text-decoration: line-through; color: var(--color-text-muted);' : ''}" title="${masterP.name} (${masterP.country})">
+                ${masterP.name} (${masterP.country})
+              </span>
+              ${warningBadgeHtml}
+              ${isCountryEliminated(masterP.country) ? ' <span style="font-size: 0.52rem; color: var(--color-danger); font-weight: 700; border: 1px solid var(--color-danger); padding: 0.05rem 0.15rem; border-radius: 4px; line-height: 1; flex-shrink: 0;">ELIMINATO</span>' : ''}
+            </div>
+            <span style="font-size: 0.68rem; font-weight: 700; color: #fff; flex-shrink: 0; background: rgba(255,255,255,0.06); padding: 0.1rem 0.3rem; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); margin-left: 0.25rem;">${masterP.purchaseCost || 0} cr</span>
           </div>
-          ${state.pitchIsDashboardView ? `<span style="font-size: 0.68rem; font-weight: 700; color: #fff; flex-shrink: 0; background: rgba(255,255,255,0.06); padding: 0.1rem 0.3rem; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); margin-left: 0.25rem;">${masterP.purchaseCost || 0} cr</span>` : ''}
-        </div>
-        <span style="font-size: 0.7rem; text-align: center; color: var(--color-text-muted); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${opp && opp !== 'Nessuno' && opp !== 'Da verificare' ? `vs ${opp}` : opp}">
-          ${opp && opp !== 'Nessuno' && opp !== 'Da verificare' ? `vs ${opp}` : opp}
-        </span>
-        <span style="font-size: 0.7rem; text-align: right; color: ${strengthColor}; font-weight: 700;">
-          ${strength}
-        </span>
-        <span style="font-size: 0.7rem; text-align: right; color: ${probColor}; font-weight: 700;">
-          ${startProb}
-        </span>
-      `;
+          <span style="font-size: 0.7rem; text-align: center; color: var(--color-text-muted); font-weight: 600;" title="${opp && opp !== 'Nessuno' && opp !== 'Da verificare' ? `vs ${opp}` : opp}">
+            ${opp && opp !== 'Nessuno' && opp !== 'Da verificare' ? `vs ${opp}` : opp}
+          </span>
+          <span style="font-size: 0.7rem; text-align: right; color: ${strengthColor}; font-weight: 700;">
+            ${strength}
+          </span>
+          <span style="font-size: 0.7rem; text-align: right; color: ${probColor}; font-weight: 700;">
+            ${startProb}
+          </span>
+        `;
 
-      if (!state.pitchIsDashboardView) {
-        el.setAttribute('draggable', 'true');
-        el.addEventListener('dragstart', handleDragStart);
-        el.addEventListener('dragend', handleDragEnd);
-        el.addEventListener('dragover', handleDragOver);
-        el.addEventListener('dragleave', handleDragLeave);
-        el.addEventListener('drop', handleDrop);
-      } else {
         el.removeAttribute('draggable');
-        el.style.cursor = 'default';
+        el.style.cursor = 'pointer';
+
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const isMobile = window.innerWidth <= 768;
+          showPitchPlayerTooltip(masterP.id, el, isMobile);
+        });
+
+        container.appendChild(el);
+      };
+
+      if (actualBenchList.length === 0) {
+        benchContainer.innerHTML = `<span style="color: var(--color-text-muted); font-size: 0.75rem; font-style: italic;">Panchina vuota... Tutti i giocatori rientrano nei titolari.</span>`;
+      } else {
+        renderHeader(benchContainer);
+        actualBenchList.forEach((p, idx) => renderPlayerNode(p, benchContainer, false, idx));
       }
 
-      // Wire rich popover events
-      el.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const isMobile = window.innerWidth <= 768;
-        showPitchPlayerTooltip(masterP.id, el, isMobile);
-      });
-
-      container.appendChild(el);
-    };
-
-    if (actualBenchList.length === 0) {
-      benchContainer.innerHTML = `<span style="color: var(--color-text-muted); font-size: 0.75rem; font-style: italic;">Panchina vuota... Tutti i giocatori rientrano nei titolari.</span>`;
-    } else {
-      renderHeader(benchContainer);
-      actualBenchList.forEach((p, idx) => renderPlayerNode(p, benchContainer, false, idx));
-    }
-
-    // Render Tribuna List
-    const tribunaSection = document.getElementById('pitch-tribuna-section');
-    const tribunaContainer = document.getElementById('pitch-tribuna-container');
-    if (tribunaSection && tribunaContainer) {
-      tribunaContainer.innerHTML = '';
-      tribunaContainer.style.cssText = 'display: flex; flex-direction: column; gap: 0.25rem; width: 100%;';
-      if (tribunaList.length > 0) {
-        tribunaSection.style.display = 'block';
-        renderHeader(tribunaContainer);
-        tribunaList.forEach((p, idx) => renderPlayerNode(p, tribunaContainer, true, idx));
-      } else {
-        tribunaSection.style.display = 'none';
+      // Render Tribuna List
+      const tribunaSection = document.getElementById('pitch-tribuna-section');
+      const tribunaContainer = document.getElementById('pitch-tribuna-container');
+      if (tribunaSection && tribunaContainer) {
+        tribunaContainer.innerHTML = '';
+        tribunaContainer.style.cssText = 'display: flex; flex-direction: column; gap: 0.25rem; width: 100%;';
+        if (tribunaList.length > 0) {
+          tribunaSection.style.display = 'block';
+          renderHeader(tribunaContainer);
+          tribunaList.forEach((p, idx) => renderPlayerNode(p, tribunaContainer, true, idx));
+        } else {
+          tribunaSection.style.display = 'none';
+        }
       }
     }
 

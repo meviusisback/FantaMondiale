@@ -369,10 +369,10 @@ header {
     overflow: visible;
   }
 
-  /* Remove nested scroll containers on mobile */
+  /* Controlled scroll for roster on mobile (prevents unbounded expansion) */
   .mobile-collapsible .console-roster-container {
-    max-height: none;
-    overflow-y: visible;
+    max-height: 300px;
+    overflow-y: auto;
     border-top: none;
     border-top-left-radius: 0;
     border-top-right-radius: 0;
@@ -400,7 +400,8 @@ header {
     padding: 1rem !important;
   }
   .player-table-container {
-    overflow-x: hidden !important; /* Contain layout */
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
   }
   .player-table tr {
     max-width: 100% !important;
@@ -568,14 +569,27 @@ header {
     padding: 1rem;
     width: 95% !important;
   }
+  #pitch-dialog {
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+  }
+  .pitch-container {
+    height: min(380px, 50vh);
+  }
+  .pitch-grid-row {
+    gap: 0.65rem;
+  }
+  .pitch-player-node {
+    width: 58px;
+  }
   .pitch-player-shirt {
-    width: 32px;
-    height: 32px;
-    font-size: 0.85rem;
+    width: 28px;
+    height: 28px;
+    font-size: 0.7rem;
   }
   .pitch-player-name {
-    font-size: 0.58rem;
-    max-width: 65px;
+    font-size: 0.55rem;
+    max-width: 56px;
   }
   .tabs-header {
     width: 100%;
@@ -592,6 +606,64 @@ header {
   .settings-config-grid {
     grid-template-columns: 1fr;
     gap: 1.25rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .pitch-container {
+    height: min(320px, 45vh);
+  }
+  .pitch-grid-row {
+    gap: 0.35rem;
+  }
+  .pitch-player-node {
+    width: 48px;
+  }
+  .pitch-player-shirt {
+    width: 24px;
+    height: 24px;
+    font-size: 0.6rem;
+  }
+  .pitch-player-name {
+    font-size: 0.48rem;
+    max-width: 45px;
+  }
+  .pitch-placeholder-node {
+    width: 44px;
+    height: 44px;
+    font-size: 0.6rem;
+  }
+  .bench-player-node {
+    font-size: 0.68rem;
+    padding: 0.3rem 0.5rem;
+  }
+}
+
+@media (max-width: 400px) {
+  dialog {
+    padding: 0.75rem !important;
+  }
+  .pitch-container {
+    height: min(280px, 40vh);
+  }
+  .pitch-grid-row {
+    gap: 0.2rem;
+  }
+  .pitch-player-node {
+    width: 42px;
+  }
+  .pitch-player-shirt {
+    width: 22px;
+    height: 22px;
+    font-size: 0.55rem;
+  }
+  .pitch-player-name {
+    font-size: 0.45rem;
+    max-width: 40px;
+  }
+  #pitch-module-select-container {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 
