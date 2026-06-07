@@ -2520,17 +2520,21 @@ function handleDrop(e) {
   if (isIdealMode) {
 
     if (isP1Starter !== isP2Starter) {
-      // Swap positions in starters and bench arrays
+      // Swap positions in starters and bench arrays,
+      // preserving the original bench position so the swapped player
+      // lands in the same bench slot (not at the end → tribuna)
       if (isP1Starter) {
+        const p2BenchIdx = ideal.bench.indexOf(p2.id);
         ideal.starters = ideal.starters.filter(id => id !== p1.id);
         ideal.bench = ideal.bench.filter(id => id !== p2.id);
         ideal.starters.push(p2.id);
-        ideal.bench.push(p1.id);
+        ideal.bench.splice(p2BenchIdx, 0, p1.id);
       } else {
+        const p1BenchIdx = ideal.bench.indexOf(p1.id);
         ideal.starters = ideal.starters.filter(id => id !== p2.id);
         ideal.bench = ideal.bench.filter(id => id !== p1.id);
         ideal.starters.push(p1.id);
-        ideal.bench.push(p2.id);
+        ideal.bench.splice(p1BenchIdx, 0, p2.id);
       }
     } else {
       // Both starters or both bench
