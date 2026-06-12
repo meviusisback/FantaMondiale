@@ -2667,9 +2667,9 @@ function renderPitch() {
     const teamPlayers = team.players.map(p => state.players.find(mp => mp.id === p.id) || p);
 
     if (state.pitchShowIdeal && idealLineup) {
-      // If we have an AI-recommended ideal lineup, use the exact players recommended by the AI!
-      const startersList = teamPlayers.filter(p => idealLineup.starters.includes(p.id));
-      const benchList = teamPlayers.filter(p => idealLineup.bench.includes(p.id));
+      // Map IDs directly to player objects to preserve the AI's sorted list order
+      const startersList = idealLineup.starters.map(id => teamPlayers.find(p => p.id === id)).filter(Boolean);
+      const benchList = idealLineup.bench.map(id => teamPlayers.find(p => p.id === id)).filter(Boolean);
 
       porStarters = startersList.filter(p => p.role === 'POR');
       porBench = benchList.filter(p => p.role === 'POR');
@@ -4895,6 +4895,9 @@ function renderPopoverLoading(popover, name) {
 
 function renderPopoverData(popover, name, country, role, rawData, buttonEl) {
   const data = normalizePlayerAnalysis(rawData);
+  if (data.matchAnalysis) {
+    data.matchAnalysis.nextOpponent = getNextOpponentForCountry(country);
+  }
 
   const categoryValue = (data.playerCategory || '').toLowerCase().trim();
   let categoryClass = 'buono';
@@ -4941,7 +4944,7 @@ function renderPopoverData(popover, name, country, role, rawData, buttonEl) {
     `;
   }
 
-  // 2. Format Group Analysis block
+  // 2. Format Group and Match Analysis blocks
   const strength = parseInt(data.matchStrength) || 50;
   let strengthColor = '#f43f5e'; // Red/Rose
   if (strength >= 80) {
@@ -4949,6 +4952,18 @@ function renderPopoverData(popover, name, country, role, rawData, buttonEl) {
   } else if (strength >= 50) {
     strengthColor = '#f59e0b'; // Amber
   }
+
+  const nextMatchHtml = `
+    <div class="ai-next-match-section" style="background: rgba(239, 68, 68, 0.03); border: 1px solid rgba(239, 68, 68, 0.15); border-radius: 8px; padding: 0.5rem 0.6rem; margin-bottom: 0.55rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+        <span style="font-size: 0.62rem; color: #f43f5e; text-transform: uppercase; font-weight: 800; letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.25rem;">Prossimo Match ⚔️</span>
+        <span style="font-size: 0.72rem; font-weight: 800; color: #f43f5e; text-transform: uppercase;">vs ${data.matchAnalysis?.nextOpponent || 'Da verificare'}</span>
+      </div>
+      <p style="margin: 0; font-size: 0.68rem; line-height: 1.4; color: #fff; font-weight: 500;">
+        ${data.matchAnalysis?.criteriaText || 'Analisi del match non disponibile.'}
+      </p>
+    </div>
+  `;
 
   const groupAnalysisHtml = `
     <div class="ai-group-analysis-section" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.04); border-radius: 8px; padding: 0.5rem 0.6rem; margin-bottom: 0.55rem;">
@@ -5037,6 +5052,10 @@ function renderPopoverData(popover, name, country, role, rawData, buttonEl) {
     </div>
 
     ${bidRangeHtml}
+
+    ${nextMatchHtml}
+
+    ${groupAnalysisHtml}
 
     ${alternativesHtml}
 

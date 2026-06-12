@@ -228,6 +228,11 @@ Rispondi esclusivamente con il codice JSON, senza alcun blocco di codice markdow
       };
       parsedData.alternatives = [];
       parsedData.roleCompetitionComment = "La nazionale di appartenenza è stata eliminata o non partecipa al Mondiale.";
+    } else {
+      // Programmatic override to guarantee next opponent matches the active round
+      parsedData.nextOpponent = nextOpponent || "Da verificare";
+      if (!parsedData.matchAnalysis) parsedData.matchAnalysis = {};
+      parsedData.matchAnalysis.nextOpponent = nextOpponent || "Da verificare";
     }
 
     return res.status(200).json(parsedData);

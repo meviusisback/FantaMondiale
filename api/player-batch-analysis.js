@@ -27,7 +27,7 @@ export default async function handler(req, res) {
 
     // Format roster players for the AI
     const targetPlayersText = players.map(p => 
-      `- ID: ${p.id} | Ruolo: ${p.role} | Nome: ${p.name} | Nazionale: ${p.country}`
+      `- ID: ${p.id} | Ruolo: ${p.role} | Nome: ${p.name} | Nazionale: ${p.country} | Prossimo Avversario: ${p.nextOpponent || 'Da verificare'}`
     ).join('\n');
 
     const prompt = `Sei un esperto analista calcistico e fantallenatore specializzato nel torneo "FantaMondiale" (il fantacalcio basato sulla fase finale dei Mondiali di calcio).
@@ -284,9 +284,9 @@ Rispondi esclusivamente con il codice JSON, senza alcun blocco di codice markdow
           appearances: "Dati non disponibili nella stagione 25/26",
           formState: "Valutazione in corso.",
           matchStrength: 50,
-          nextOpponent: "Da verificare",
+          nextOpponent: p.nextOpponent || "Da verificare",
           matchAnalysis: {
-            nextOpponent: "Da verificare",
+            nextOpponent: p.nextOpponent || "Da verificare",
             criteriaText: "Analisi del match in corso."
           },
           expectedBonuses: "Nessun bonus atteso specificato.",
@@ -299,6 +299,14 @@ Rispondi esclusivamente con il codice JSON, senza alcun blocco di codice markdow
           alternatives: [],
           roleCompetitionComment: ""
         };
+      } else {
+        // Programmatic override to ensure next opponent is correct
+        const nextOpp = p.nextOpponent || "Da verificare";
+        parsedData.playersAnalysis[p.id].nextOpponent = nextOpp;
+        if (!parsedData.playersAnalysis[p.id].matchAnalysis) {
+          parsedData.playersAnalysis[p.id].matchAnalysis = {};
+        }
+        parsedData.playersAnalysis[p.id].matchAnalysis.nextOpponent = nextOpp;
       }
 
     });
