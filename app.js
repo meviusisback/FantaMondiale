@@ -1248,13 +1248,21 @@ function openNewSessionFromStartup() {
   resetSessionClean();
   renderAll();
 
-  openSetupWizard('cloud');
+  // Defer showing the setup wizard to prevent focus-restoration race conditions
+  setTimeout(() => {
+    openSetupWizard('cloud');
+  }, 100);
 }
 
 function loadStartupCloudSession(id) {
   const startupDlg = document.getElementById('startup-cloud-dialog');
   if (startupDlg) startupDlg.close();
-  loadSpecificCloudSession(id, true);
+  
+  // Defer execution using setTimeout to prevent the browser's default focus-restoration
+  // and click event bubbling from immediately closing the new password prompt modal.
+  setTimeout(() => {
+    loadSpecificCloudSession(id, true);
+  }, 100);
 }
 
 // --- DIRECT INLINE ASSIGNMENT ENGINE ---
@@ -3688,6 +3696,17 @@ function handlePitchModuleChange(e) {
 function showToast(message, type = 'success') {
   if (!dom.toast) return;
 
+  const openDialog = document.querySelector('dialog[open]');
+  if (openDialog) {
+    if (dom.toast.parentElement !== openDialog) {
+      openDialog.appendChild(dom.toast);
+    }
+  } else {
+    if (dom.toast.parentElement !== document.body) {
+      document.body.appendChild(dom.toast);
+    }
+  }
+
   dom.toast.className = `toast toast-${type} show`;
   
   let iconHtml = '';
@@ -4064,11 +4083,20 @@ async function loadSpecificCloudSession(id, skipConfirm = false) {
     return;
   }
 
-  // If currently logged in as admin, automatically use the admin credentials to bypass the session password prompt
-  let password = state.cloudSessionPassword;
-  if (!state.isAdmin) {
+  // If currently logged in as admin and password is in memory, automatically bypass prompt
+  let password = null;
+  if (state.isAdmin && state.cloudSessionPassword) {
+    password = state.cloudSessionPassword;
+  }
+  // If reloading current active session, reuse cached password
+  else if (state.activeCloudSessionId === id && state.cloudSessionPassword) {
+    password = state.cloudSessionPassword;
+  }
+  // Otherwise, prompt the user for password
+  else {
     password = await promptCloudPassword(id, true);
   }
+
   if (password === null) {
     if (!state.activeCloudSessionId) {
       openStartupDialog();
@@ -4272,52 +4300,56 @@ async function loginAsAdmin() {
   const startupDlg = document.getElementById('startup-cloud-dialog');
   if (startupDlg) startupDlg.close();
 
-  // Ask for password using promptCloudPassword with ID 'admin_login'
-  const password = await promptCloudPassword('admin_login');
-  if (password === null) {
-    // If they cancel, open startup dialog again
-    openStartupDialog();
-    return;
-  }
-
-  try {
-    const response = await fetch(`/api/load?id=admin_verify&password=${encodeURIComponent(password)}`);
-    const result = await response.json();
-
-    if (!response.ok) {
-      cloudPasswordFailedAttempts['admin_login'] = (cloudPasswordFailedAttempts['admin_login'] || 0) + 1;
-      const remaining = 4 - cloudPasswordFailedAttempts['admin_login'];
-      
-      if (cloudPasswordFailedAttempts['admin_login'] >= 4) {
-        showToast('Hai inserito una password errata per 4 volte. Accesso bloccato! 🔒', 'danger');
-        return;
-      }
-
-      showToast(`Password errata. Rimangono ${remaining} tentativi.`, 'danger');
-      setTimeout(() => {
-        loginAsAdmin();
-      }, 500);
+  // Defer showing the password modal to the next event loop tick
+  // to avoid focus-restoration/click race conditions.
+  setTimeout(async () => {
+    // Ask for password using promptCloudPassword with ID 'admin_login'
+    const password = await promptCloudPassword('admin_login');
+    if (password === null) {
+      // If they cancel, open startup dialog again
+      openStartupDialog();
       return;
     }
 
-    // Success!
-    cloudPasswordFailedAttempts['admin_login'] = 0;
-    state.cloudSessionPassword = password; // Set admin password in memory
-    state.isAdmin = true;
-    localStorage.setItem('fantamondiale_is_admin', 'true');
-    localStorage.setItem('fantamondiale_last_cloud_session_password', password); // Persist password
-    if (dom.btnManageCloudSessions) dom.btnManageCloudSessions.style.display = 'block';
+    try {
+      const response = await fetch(`/api/load?id=admin_verify&password=${encodeURIComponent(password)}`);
+      const result = await response.json();
 
-    showToast('Accesso Amministratore eseguito con successo! 👑 Gestisci tutte le sessioni.', 'success');
-    
-    renderAll();
-    // Open manage sessions modal directly so the admin can start editing/deleting!
-    openCloudLoadModal();
-  } catch (error) {
-    console.error(error);
-    showToast(error.message, 'danger');
-    openStartupDialog();
-  }
+      if (!response.ok) {
+        cloudPasswordFailedAttempts['admin_login'] = (cloudPasswordFailedAttempts['admin_login'] || 0) + 1;
+        const remaining = 4 - cloudPasswordFailedAttempts['admin_login'];
+        
+        if (cloudPasswordFailedAttempts['admin_login'] >= 4) {
+          showToast('Hai inserito una password errata per 4 volte. Accesso bloccato! 🔒', 'danger');
+          return;
+        }
+
+        showToast(`Password errata. Rimangono ${remaining} tentativi.`, 'danger');
+        setTimeout(() => {
+          loginAsAdmin();
+        }, 500);
+        return;
+      }
+
+      // Success!
+      cloudPasswordFailedAttempts['admin_login'] = 0;
+      state.cloudSessionPassword = password; // Set admin password in memory
+      state.isAdmin = true;
+      localStorage.setItem('fantamondiale_is_admin', 'true');
+      localStorage.setItem('fantamondiale_last_cloud_session_password', password); // Persist password
+      if (dom.btnManageCloudSessions) dom.btnManageCloudSessions.style.display = 'block';
+
+      showToast('Accesso Amministratore eseguito con successo! 👑 Gestisci tutte le sessioni.', 'success');
+      
+      renderAll();
+      // Open manage sessions modal directly so the admin can start editing/deleting!
+      openCloudLoadModal();
+    } catch (error) {
+      console.error(error);
+      showToast(error.message, 'danger');
+      openStartupDialog();
+    }
+  }, 100);
 }
 
 function logoutCloudSession() {
