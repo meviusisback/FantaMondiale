@@ -99,7 +99,7 @@ let state = {
   teamIdealLineups: {},
   isAdmin: false,
   activeCloudSessionMetadata: null,
-  eliminatedCountries: ['Italia', 'Egitto', 'Nigeria'],
+  eliminatedCountries: ['Italia', 'Nigeria'],
   tournament: null,
   tournamentTab: 'gironi',
   activeRound: 'G1'
@@ -2770,6 +2770,7 @@ function renderPitch() {
       const renderDashboardRow = (p, container, index, isWarning) => {
         const el = document.createElement('div');
         el.className = 'bench-player-node';
+        el.setAttribute('data-player-id', p.id);
         el.style.cssText = 'display: grid; grid-template-columns: 1.6fr 1fr 0.7fr 0.7fr; align-items: center; gap: 0.5rem; width: 100%; box-sizing: border-box; padding: 0.35rem 0.65rem; cursor: pointer;';
 
         const masterP = state.players.find(mp => mp.id === p.id) || p;
@@ -2828,8 +2829,15 @@ function renderPitch() {
           </span>
         `;
 
-        el.removeAttribute('draggable');
-        el.style.cursor = 'pointer';
+        el.setAttribute('draggable', 'true');
+        el.style.cursor = 'grab';
+
+        // Wire drag and drop events
+        el.addEventListener('dragstart', handleDragStart);
+        el.addEventListener('dragend', handleDragEnd);
+        el.addEventListener('dragover', handleDragOver);
+        el.addEventListener('dragleave', handleDragLeave);
+        el.addEventListener('drop', handleDrop);
 
         el.addEventListener('click', (e) => {
           e.stopPropagation();
@@ -3083,8 +3091,15 @@ function renderPitch() {
           </span>
         `;
 
-        el.removeAttribute('draggable');
-        el.style.cursor = 'pointer';
+        el.setAttribute('draggable', 'true');
+        el.style.cursor = 'grab';
+
+        // Wire drag and drop events
+        el.addEventListener('dragstart', handleDragStart);
+        el.addEventListener('dragend', handleDragEnd);
+        el.addEventListener('dragover', handleDragOver);
+        el.addEventListener('dragleave', handleDragLeave);
+        el.addEventListener('drop', handleDrop);
 
         el.addEventListener('click', (e) => {
           e.stopPropagation();
@@ -4006,8 +4021,8 @@ function promptCloudPassword(id, skipCache = false) {
 
     const handleConfirm = () => {
       const pwd = input.value;
-      dlg.close();
       cleanup();
+      dlg.close();
       resolve(pwd);
     };
 
@@ -4388,6 +4403,9 @@ function renderPitchPopoverError(popover, errorMsg) {
 
 function renderPitchPopoverData(popover, name, country, role, rawData, triggerEl, isMobile) {
   const data = normalizePlayerAnalysis(rawData);
+  if (data.matchAnalysis) {
+    data.matchAnalysis.nextOpponent = getNextOpponentForCountry(country);
+  }
   const closeBtnHtml = `<button class="pitch-popover-close" onclick="closePitchPopover()">✕</button>`;
 
   const strength = parseInt(data.matchStrength) || 50;
@@ -5815,7 +5833,7 @@ async function generateIdealLineup(team) {
         playerCategory: analysis.playerCategory || "buono",
         starterProbability: analysis.starterProbability || "50%",
         matchStrength: analysis.matchStrength || 50,
-        nextOpponent: analysis.matchAnalysis?.nextOpponent || "Da verificare",
+        nextOpponent: getNextOpponentForCountry(p.country),
         formState: analysis.formState || "In forma."
       };
     });
@@ -5997,8 +6015,12 @@ function getTournamentTree() {
     }
   });
 
-  // Sort by Elo rating descending (deterministic ranking)
-  allThirds.sort((a, b) => getTeamRating(b.teamName) - getTeamRating(a.teamName));
+  // Sort by Elo rating descending, breaking ties alphabetically for 100% determinism
+  allThirds.sort((a, b) => {
+    const ratingDiff = getTeamRating(b.teamName) - getTeamRating(a.teamName);
+    if (ratingDiff !== 0) return ratingDiff;
+    return a.teamName.localeCompare(b.teamName);
+  });
   const bestThirds = allThirds.slice(0, 8);
 
   // 2. Perform backtracking bipartite matching between group winners and 3rd placed teams
@@ -6139,6 +6161,84 @@ function getTournamentTree() {
   };
 }
 
+function getStandardItalianCountryName(countryName) {
+  if (!countryName) return '';
+  const clean = countryName.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9\s]/g, '');
+  
+  const map = {
+    'egypt': 'Egitto',
+    'italy': 'Italia',
+    'nigeria': 'Nigeria',
+    'sweden': 'Svezia',
+    'norway': 'Norvegia',
+    'belgium': 'Belgio',
+    'france': 'Francia',
+    'spain': 'Spagna',
+    'england': 'Inghilterra',
+    'germany': 'Germania',
+    'netherlands': 'Paesi Bassi',
+    'morocco': 'Marocco',
+    'turkey': 'Turchia',
+    'poland': 'Polonia',
+    'croatia': 'Croazia',
+    'switzerland': 'Svizzera',
+    'colombia': 'Colombia',
+    'uruguay': 'Uruguay',
+    'canada': 'Canada',
+    'austria': 'Austria',
+    'hungary': 'Ungheria',
+    'brazil': 'Brasile',
+    'portugal': 'Portogallo',
+    'argentina': 'Argentina',
+    'mexico': 'Messico',
+    'south africa': 'Sudafrica',
+    'south korea': 'Corea del Sud',
+    'korea': 'Corea del Sud',
+    'czech republic': 'Rep. Ceca',
+    'czech': 'Rep. Ceca',
+    'saudi arabia': 'Arabia Saudita',
+    'usa': 'Stati Uniti',
+    'united states': 'Stati Uniti',
+    'australia': 'Australia',
+    'paraguay': 'Paraguay',
+    'ecuador': 'Ecuador',
+    'curacao': 'Curaçao',
+    'cote divoire': "Costa d'Avorio",
+    'ivory coast': "Costa d'Avorio",
+    'japan': 'Giappone',
+    'tunisia': 'Tunisia',
+    'iran': 'Iran',
+    'new zealand': 'Nuova Zelanda',
+    'cape verde': 'Capo Verde',
+    'senegal': 'Senegal',
+    'iraq': 'Iraq',
+    'algeria': 'Algeria',
+    'jordan': 'Giordania',
+    'giordania': 'Giordania',
+    'democratic republic of the congo': 'Repubblica Democratica del Congo',
+    'dr congo': 'Repubblica Democratica del Congo',
+    'congo dr': 'Repubblica Democratica del Congo',
+    'congo rd': 'Repubblica Democratica del Congo',
+    'congo': 'Repubblica Democratica del Congo',
+    'uzbekistan': 'Uzbekistan',
+    'ghana': 'Ghana',
+    'croazia': 'Croazia',
+    'panama': 'Panama',
+    'scotland': 'Scozia',
+    'haiti': 'Haiti',
+    'qatar': 'Qatar',
+    'bosnia and herzegovina': 'Bosnia ed Erzegovina',
+    'bosnia': 'Bosnia ed Erzegovina'
+  };
+
+  return map[clean] || countryName.trim();
+}
+
+function normalizeCountryForMatch(name) {
+  if (!name) return '';
+  return name.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9\s]/g, '');
+}
+
 function getNextOpponentForCountry(countryName, round) {
   if (!state.tournament || !state.tournament.groups) {
     initializeTournament();
@@ -6146,19 +6246,26 @@ function getNextOpponentForCountry(countryName, round) {
   
   const r = round || state.activeRound || 'G1';
   
+  const stdCountry = getStandardItalianCountryName(countryName);
+  const targetClean = normalizeCountryForMatch(stdCountry);
+  
   if (r === 'G1' || r === 'G2' || r === 'G3') {
-    // Find the group containing the countryName
     const groups = state.tournament.groups || {};
     let groupTeams = null;
     for (const gk in groups) {
-      if (groups[gk] && groups[gk].includes(countryName)) {
-        groupTeams = groups[gk];
-        break;
+      if (groups[gk]) {
+        const hasTeam = groups[gk].some(t => normalizeCountryForMatch(t) === targetClean);
+        if (hasTeam) {
+          groupTeams = groups[gk];
+          break;
+        }
       }
     }
     if (!groupTeams || groupTeams.length < 4) return 'Da verificare';
     
-    const idx = groupTeams.indexOf(countryName);
+    const idx = groupTeams.findIndex(t => normalizeCountryForMatch(t) === targetClean);
+    if (idx === -1) return 'Da verificare';
+    
     if (r === 'G1') {
       if (idx === 0) return groupTeams[1];
       if (idx === 1) return groupTeams[0];
@@ -6188,9 +6295,13 @@ function getNextOpponentForCountry(countryName, round) {
     }
     
     for (const match of matches) {
-      if (match && match.includes(countryName)) {
-        const opponent = match[0] === countryName ? match[1] : match[0];
-        return opponent || 'In attesa...';
+      if (match) {
+        const hasTeam = match.some(t => t && normalizeCountryForMatch(t) === targetClean);
+        if (hasTeam) {
+          const idx = match.findIndex(t => t && normalizeCountryForMatch(t) === targetClean);
+          const opponent = idx === 0 ? match[1] : match[0];
+          return opponent || 'In attesa...';
+        }
       }
     }
   }

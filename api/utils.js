@@ -43,7 +43,7 @@ export async function getEliminatedCountries(apiKey, provider, openRouterModel, 
     const currentDate = new Date().toLocaleDateString('it-IT') + ' ' + new Date().toLocaleTimeString('it-IT');
     
     const prompt = `Esegui una ricerca web in tempo reale e identifica l'elenco esatto di tutte le nazionali di calcio maschili che NON partecipano (non qualificate) o che sono già state ufficialmente ELIMINATE ad oggi (${currentDate}) dalla fase finale del Mondiale di calcio ${currentYear}.
-Rispondi esclusivamente con un array JSON di stringhe in lingua italiana (es. ["Italia", "Egitto", "Nigeria", "Svezia"]). Non aggiungere spiegazioni, non usare markdown e non scrivere altro testo.`;
+Rispondi esclusivamente con un array JSON di stringhe in lingua italiana (es. ["Italia", "Nigeria", "Svezia"]). Non aggiungere spiegazioni, non usare markdown e non scrivere altro testo.`;
 
     let text = '';
     if (useOpenRouter) {
