@@ -281,15 +281,33 @@ Rispondi esclusivamente con il codice JSON, senza alcun blocco di codice markdow
     // ==========================================
     // PHASE 4: FINAL DEDUP - Rebuild bench from scratch based on who's NOT in starters
     // This is the single source of truth and guarantees no player appears in both lists.
+    // Sort bench players in descending order of their matchStrength (Forza del Turno).
     // ==========================================
     const finalStarterSet = new Set(parsedData.starters);
     
-    // Active bench players first (not eliminated, not starters), then eliminated at the bottom
+    const playerStrengthMap = {};
+    players.forEach(p => {
+      // Use Phase 1/AI-updated score if present, otherwise fall back to pre-calculated matchStrength
+      const aiAnalysisStrength = parsedData.playersAnalysis?.[p.id]?.matchStrength;
+      const strengthVal = aiAnalysisStrength !== undefined ? aiAnalysisStrength : p.matchStrength;
+      playerStrengthMap[p.id] = parseInt(strengthVal) || 50;
+    });
+
+    const getStrength = (id) => {
+      if (eliminatedSet.has(id)) return 0;
+      return playerStrengthMap[id] !== undefined ? playerStrengthMap[id] : 50;
+    };
+
+    // Active bench players first (not eliminated, not starters) sorted by strength descending
     const activeBenchFinal = players
       .filter(p => !finalStarterSet.has(p.id) && !eliminatedSet.has(p.id))
+      .sort((a, b) => getStrength(b.id) - getStrength(a.id))
       .map(p => p.id);
+
+    // Eliminated bench players at the bottom sorted by strength descending
     const eliminatedBenchFinal = players
       .filter(p => !finalStarterSet.has(p.id) && eliminatedSet.has(p.id))
+      .sort((a, b) => getStrength(b.id) - getStrength(a.id))
       .map(p => p.id);
     
     parsedData.bench = [...activeBenchFinal, ...eliminatedBenchFinal];

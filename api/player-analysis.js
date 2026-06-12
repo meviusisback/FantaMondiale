@@ -78,7 +78,29 @@ ${appearancesJsonDesc}
   * **COMPOSIZIONE ALTERNATIVE (MANDATORIA):** Questa lista deve **sempre** contenere esattamente 1 o 2 concorrenti reali dello stesso ruolo in quella Nazionale (es. per Lukaku indica Openda; per Haaland indica Strand Larsen o Sørloth; per Courtois indica Casteels e Sels) che andranno in panchina se gioca il titolare analizzato. NON lasciare mai l'array vuoto per i giocatori attivi.
 - roleCompetitionComment: una descrizione testuale unica e discorsiva in lingua italiana (2-3 frasi chiare) che parli in dettaglio della situazione della titolarità del calciatore analizzato, focalizzandosi su di lui e analizzando lo scenario per il prossimo turno. Deve discutere in dettaglio le potenziali insidie e le dinamiche legate alle sue alternative/concorrenti in Nazionale in base al prossimo avversario (nextOpponent), al suo stato di forma recente, a indiscrezioni reali sugli allenamenti o al modulo tattico previsto.
 
-- matchStrength: valore numerico (intero da 1 a 100) che indica la forza del calciatore per il prossimo specifico match/turno del Mondiale (voto da 1 a 100). Questa valutazione DEVE riflettere e risentire fortemente della difficoltà della partita contro il prossimo avversario (nextOpponent): penalizza significativamente il valore se il match è difficile contro una nazionale favorita o difesa solida, e premialo in caso di matchup agevole.
+- matchStrength: valore numerico (intero da 0 a 100) che indica la forza del calciatore per il prossimo specifico match/turno del Mondiale in ottica FantaMondiale. Questa valutazione DEVE essere calcolata deterministicamente sommando i seguenti punteggi oggettivi:
+  1) TITOLARITÀ (Max 30 punti):
+     * Titolare fisso (starterProbability >= 80%): 30 punti
+     * Ballottaggio / Subentrante regolare (50% - 79%): 15 punti
+     * Riserva sporadica (< 50%): 5 punti
+     * Infortunato/Squalificato/Eliminato: 0 punti
+  2) NAZIONALE DI APPARTENENZA (Max 20 punti):
+     * Nazionale Top/Favorita (es. Argentina, Brasile, Francia, Inghilterra, Spagna, Germania): 20 punti
+     * Nazionale Media (es. Italia, Belgio, Portogallo, Olanda, Croazia, Uruguay): 12 punti
+     * Nazionale Debole: 5 punti
+  3) DIFFICOLTÀ PROSSIMO AVVERSARIO (Max 20 punti):
+     * Avversario Debole/Morbido: 20 punti
+     * Avversario di fascia Media: 12 punti
+     * Avversario Top/Difesa Solida: 5 punti
+  4) STATO DI FORMA FISICA/MENTALE (Max 15 punti):
+     * Forma eccellente (ultime prestazioni ottime, gol/assist recenti): 15 punti
+     * Forma normale/sufficiente: 10 punti
+     * Forma calante o rientro da infortunio: 5 punti
+  5) IMPATTO BONUS FANTAMONDIALE (Max 15 punti):
+     * Rigorista o battitore piazzati principale: 15 punti
+     * Attaccante o centrocampista offensivo propenso al gol/assist: 10 punti
+     * Giocatore da modificatore (difensori/centrocampisti con ottimi voti puri costanti): 8 punti
+     * Giocatore difensivo/falloso senza alcuna propensione ai bonus: 3 punti
 - nextOpponent: la nazionale avversaria reale del prossimo turno. **REGOLA CRUCIALE E MANDATORIA:** Usa tassativamente e fedelmente il valore '${nextOpponent || 'Da verificare'}' (ad esempio: se è 'Egitto', scrivi esattamente 'Egitto'), a meno che la nazione del giocatore sia eliminata (in tal caso rispondi 'Nessuno'). Non inventare o usare altri avversari.
 - matchAnalysis: un oggetto con le seguenti chiavi:
   * nextOpponent: lo stesso nome della nazionale avversaria del prossimo turno.

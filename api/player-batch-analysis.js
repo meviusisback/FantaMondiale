@@ -61,7 +61,27 @@ Nazioni attualmente eliminate o assenti dal Mondiale ad oggi: ${ELIMINATED_COUNT
   * Inizia 'formState' con la dicitura: "ELIMINATO: [Spiegazione dettagliata]".
 
 VALUTAZIONE E ANALISI STRATEGICA:
-- **matchStrength**: valore numerico da 1 a 100 che indica la forza del calciatore per il prossimo specifico match/turno del Mondiale (voto da 1 a 100). Questa valutazione DEVE risentire fortemente della difficoltà della partita contro il prossimo avversario (nextOpponent): penalizza significativamente il valore se il match è difficile contro una nazionale favorita o difesa solida, e premialo in caso di matchup agevole. Per Centrocampisti (CEN) e Difensori (DIF), considera la loro attitudine a portare costanza ed elevati voti puri (senza bonus) per ottimizzare i modificatori di reparto (difesa: bonus con 3, 4, o 5 difensori da media >= 6.5, >= 6.25, >= 6.25; centrocampo: bonus con 3, 4, o 5 centrocampisti da media >= 6.75, >= 6.5, >= 6.25).
+- **matchStrength**: valore numerico (intero da 0 a 100) che indica la forza del calciatore per il prossimo specifico match/turno del Mondiale in ottica FantaMondiale. Questa valutazione DEVE essere calcolata deterministicamente sommando i seguenti punteggi oggettivi:
+  1) TITOLARITÀ (Max 30 punti):
+     * Titolare fisso (starterProbability >= 80%): 30 punti
+     * Ballottaggio / Subentrante regolare (50% - 79%): 15 punti
+     * Riserva sporadica (< 50%): 5 punti
+     * Infortunato/Squalificato/Eliminato: 0 punti
+  2) NAZIONALE DI APPARTENENZA (Max 20 punti):
+     * Nazionale Top/Favorita (es. Argentina, Brasile, Francia, Inghilterra, Spagna, Germania): 20 punti
+     * Nazionale Media (es. Italia, Belgio, Portogallo, Olanda, Croazia, Uruguay): 12 punti
+     * Nazionale Debole: 5 punti
+  3) DIFFICOLTÀ PROSSIMO AVVERSARIO (Max 20 punti):
+     * Avversario Debole/Morbido: 20 punti
+     * Avversario di fascia Media: 12 punti
+     * Avversario Top/Difesa Solida: 5 punti
+  4) STATO DI FORMA FISICA/MENTALE (Max 15 punti):
+     * Forma eccellente (ultime prestazioni ottime, gol/assist recenti): 15 punti
+     * Forma normale/sufficiente: 10 punti
+     * Forma calante o rientro da infortunio: 5 punti
+  5) IMPATTO BONUS FANTAMONDIALE (Max 15 punti):
+     * Rigorista o battitore piazzati principale: 15 punti
+     * Attaccante o centrocampista offensivo propenso al gol/assist (o difensori/centrocampisti da modificatore con elevati voti puri previsti): 10 punti (8 punti per voti puri costanti, 3 punti per compiti puramente difensivi/fallosi).
 - **nextOpponent**: la nazionale avversaria reale del prossimo turno. **REGOLA CRUCIALE E MANDATORIA:** Usa tassativamente e fedelmente il valore 'Prossimo Avversario' fornito per ciascun calciatore nell'elenco di input (es: "Egitto"), a meno che il giocatore appartenga a una nazionale eliminata (in tal caso rispondi 'Nessuno'). Non inventare o usare altri avversari.
 - **matchAnalysis**: un oggetto con le seguenti chiavi:
   * **nextOpponent**: lo stesso nome della nazionale avversaria del prossimo turno.
