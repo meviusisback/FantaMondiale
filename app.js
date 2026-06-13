@@ -1013,7 +1013,9 @@ function autoSave() {
               teams: state.teams,
               players: state.players,
               teamIdealLineups: state.teamIdealLineups || {},
-              tournament: state.tournament || null
+              tournament: state.tournament || null,
+              activeRound: state.activeRound || 'G1',
+              nextOpponents: state.nextOpponents || {}
             }
           })
         })
@@ -1958,6 +1960,7 @@ function normalizePlayerAnalysis(data) {
 // --- UI RENDERING WORKFLOW ---
 
 function renderAll() {
+  updateNextOpponentsList();
   renderActiveTeamConsole();
   renderPlayerList();
   renderTeamDashboard();
@@ -3893,7 +3896,9 @@ async function confirmCloudSave() {
           teams: state.teams,
           players: state.players,
           teamIdealLineups: state.teamIdealLineups || {},
-          tournament: state.tournament || null
+          tournament: state.tournament || null,
+          activeRound: state.activeRound || 'G1',
+          nextOpponents: state.nextOpponents || {}
         }
       })
     });
