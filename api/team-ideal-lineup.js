@@ -45,10 +45,10 @@ REGOLE DI SELEZIONE E SCHIERAMENTO (MANDATORIE E RIGIDE):
    - "5-3-2": 1 POR, 5 DIF, 3 CEN, 2 ATT
 4. I giocatori titolari schierati e quelli in panchina devono corrispondere ESATTAMENTE ai calciatori presenti nella rosa fornita. Non inventare o aggiungere nuovi calciatori.
 5. **VALUTAZIONE E SCHIERAMENTO DEI TITOLARI (MANDATORIO):**
-   - La Forza del Turno (matchStrength) è l'UNICO parametro primario da considerare per schierare i titolari: devi inserire tra gli 11 titolari (starters) i giocatori con il punteggio `matchStrength` più alto in ciascun ruolo richiesto dal modulo tattico.
-   - La probabilità di essere titolare (`starterProbability` / titolarità) deve essere utilizzata **SEMPRE E SOLO come criterio di spareggio (tie-breaker)** quando due o più giocatori concorrenti hanno lo stesso punteggio di `matchStrength` (es. se due centrocampisti hanno entrambi `matchStrength` pari a 75, fai giocare titolare quello con la `starterProbability` maggiore, es. 90% rispetto a 60%).
-   - È vietato schierare titolare un giocatore infortunato o eliminato (ovvero con `matchStrength` pari a 0 o `starterProbability` pari a 0%).
-   - Ignora totalmente il ruolo tattico nel calcio reale (es. se un centrocampista è puramente offensivo o difensivo): conta solo massimizzare `matchStrength` ed i bonus nel FantaMondiale.
+   - La Forza del Turno (matchStrength) è l'UNICO parametro primario da considerare per schierare i titolari: devi inserire tra gli 11 titolari (starters) i giocatori con il punteggio 'matchStrength' più alto in ciascun ruolo richiesto dal modulo tattico.
+   - La probabilità di essere titolare ('starterProbability' / titolarità) deve essere utilizzata **SEMPRE E SOLO come criterio di spareggio (tie-breaker)** quando due o più giocatori concorrenti hanno lo stesso punteggio di 'matchStrength' (es. se due centrocampisti hanno entrambi 'matchStrength' pari a 75, fai giocare titolare quello con la 'starterProbability' maggiore, es. 90% rispetto a 60%).
+   - È vietato schierare titolare un giocatore infortunato o eliminato (ovvero con 'matchStrength' pari a 0 o 'starterProbability' pari a 0%).
+   - Ignora totalmente il ruolo tattico nel calcio reale (es. se un centrocampista è puramente offensivo o difensivo): conta solo massimizzare 'matchStrength' ed i bonus nel FantaMondiale.
 6. **MODIFICATORI DI DIFESA E CENTROCAMPO (MANDATORI PER LA SCELTA DEL MODULO):**
    Tieni conto dei modificatori di reparto per ottimizzare il modulo e gli schieramenti:
    - Modificatore Difesa: basato sulla media voto pura (senza bonus/malus) dei difensori. Con 3 difensori: bonus di +1 con media >= 6.5, sale di +1 ogni 0.25 di media in più. Con 4 difensori: bonus scatta a >= 6.25 (+1), a 6.5 è +2, e così via. Con 5 difensori (modulo più premiato): bonus scatta a >= 6.25 (+2), a 6.5 è +3.
