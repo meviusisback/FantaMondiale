@@ -29,6 +29,28 @@ function writeCacheFile(data) {
   } catch (e) {}
 }
 
+const TOURNAMENT_TEAMS = [
+  'Messico', 'Sudafrica', 'Corea del Sud', 'Rep. Ceca',
+  'Canada', 'Bosnia ed Erzegovina', 'Qatar', 'Svizzera',
+  'Brasile', 'Marocco', 'Haiti', 'Scozia',
+  'Stati Uniti', 'Paraguay', 'Australia', 'Turchia',
+  'Germania', 'Curaçao', 'Costa d\'Avorio', 'Ecuador',
+  'Paesi Bassi', 'Giappone', 'Svezia', 'Tunisia',
+  'Belgio', 'Egitto', 'Iran', 'Nuova Zelanda',
+  'Spagna', 'Capo Verde', 'Arabia Saudita', 'Uruguay',
+  'Francia', 'Senegal', 'Iraq', 'Norvegia',
+  'Argentina', 'Algeria', 'Austria', 'Giordania',
+  'Portogallo', 'Repubblica Democratica del Congo', 'Uzbekistan', 'Colombia',
+  'Inghilterra', 'Croazia', 'Ghana', 'Panama'
+];
+
+function normalizeCountry(name) {
+  if (!name) return '';
+  return name.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9\s]/g, '');
+}
+
+const TOURNAMENT_TEAMS_NORMALIZED = new Set(TOURNAMENT_TEAMS.map(normalizeCountry));
+
 export async function getEliminatedCountries(apiKey, provider, openRouterModel, geminiModel) {
   const cacheDuration = 24 * 60 * 60 * 1000; // 24 hours
   let cache = readCacheFile();
@@ -42,8 +64,16 @@ export async function getEliminatedCountries(apiKey, provider, openRouterModel, 
     const currentYear = new Date().getFullYear();
     const currentDate = new Date().toLocaleDateString('it-IT') + ' ' + new Date().toLocaleTimeString('it-IT');
     
-    const prompt = `Esegui una ricerca web in tempo reale e identifica l'elenco esatto di tutte le nazionali di calcio maschili che NON partecipano (non qualificate) o che sono già state ufficialmente ELIMINATE ad oggi (${currentDate}) dalla fase finale del Mondiale di calcio ${currentYear}.
-Rispondi esclusivamente con un array JSON di stringhe in lingua italiana (es. ["Italia", "Nigeria", "Svezia"]). Non aggiungere spiegazioni, non usare markdown e non scrivere altro testo.`;
+    const prompt = `Esegui una ricerca web in tempo reale e identifica:
+1. L'elenco delle nazionali di calcio maschili che NON si sono qualificate per la fase finale del Mondiale ${currentYear} (non partecipanti alla fase finale).
+2. L'elenco delle nazionali di calcio maschili che si erano qualificate per la fase finale del Mondiale ${currentYear} ma che sono già state ufficialmente ELIMINATE (escluse) ad oggi (${currentDate}) durante lo svolgimento del torneo.
+
+Rispondi esclusivamente con un oggetto JSON con le seguenti chiavi:
+{
+  "nonQualificate": ["Nazione1", "Nazione2", ...],
+  "eliminateDalTorneo": ["Nazione3", "Nazione4", ...]
+}
+Non aggiungere spiegazioni, non usare markdown e non scrivere altro testo.`;
 
     let text = '';
     if (useOpenRouter) {
@@ -101,8 +131,21 @@ Rispondi esclusivamente con un array JSON di stringhe in lingua italiana (es. ["
         cleanText = cleanText.substring(0, cleanText.length - 3);
       }
       const parsed = JSON.parse(cleanText.trim());
+      let countries = [];
+
       if (Array.isArray(parsed)) {
-        const countries = parsed.map(c => c.trim());
+        countries = parsed.map(c => c.trim()).filter(c => !TOURNAMENT_TEAMS_NORMALIZED.has(normalizeCountry(c)));
+      } else if (parsed && (Array.isArray(parsed.nonQualificate) || Array.isArray(parsed.eliminateDalTorneo))) {
+        const nonQuali = Array.isArray(parsed.nonQualificate) ? parsed.nonQualificate : [];
+        const elim = Array.isArray(parsed.eliminateDalTorneo) ? parsed.eliminateDalTorneo : [];
+        
+        const nonQualiFiltered = nonQuali.map(c => c.trim()).filter(c => !TOURNAMENT_TEAMS_NORMALIZED.has(normalizeCountry(c)));
+        const elimCleaned = elim.map(c => c.trim());
+        
+        countries = [...nonQualiFiltered, ...elimCleaned];
+      }
+
+      if (parsed) {
         const newCache = {
           lastCheckTime: Date.now(),
           lastCheckDate: currentDate,
@@ -122,7 +165,7 @@ Rispondi esclusivamente con un array JSON di stringhe in lingua italiana (es. ["
     const fallbackCache = {
       lastCheckTime: Date.now(),
       lastCheckDate: new Date().toLocaleDateString('it-IT') + ' ' + new Date().toLocaleTimeString('it-IT'),
-      eliminatedCountries: ['Italia', 'Egitto', 'Nigeria']
+      eliminatedCountries: ['Italia', 'Nigeria']
     };
     writeCacheFile(fallbackCache);
     return fallbackCache.eliminatedCountries;

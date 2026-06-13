@@ -421,7 +421,7 @@
       </p>
       
       <!-- Module selector dropdown -->
-      <div id="pitch-module-select-container" style="display: flex; align-items: center; gap: 0.5rem;">
+      <div id="pitch-module-select-container" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
         <label for="pitch-module-select" style="font-size:0.8rem; font-weight:700; white-space:nowrap; color: var(--color-text-muted)">MODULO:</label>
         <select id="pitch-module-select" class="input-control" style="width: 100px; padding: 0.4rem 0.5rem; font-size: 0.85rem;">
           <option value="4-3-3">4-3-3</option>
@@ -430,6 +430,10 @@
           <option value="3-4-3">3-4-3</option>
           <option value="5-3-2">5-3-2</option>
         </select>
+        <label style="font-size: 0.72rem; font-weight: 800; color: var(--color-text-muted); display: flex; align-items: center; gap: 0.25rem; cursor: pointer; white-space: nowrap; margin-left: 0.25rem;">
+          <input type="checkbox" id="pitch-module-lock" style="cursor: pointer; width: 14px; height: 14px; margin: 0;">
+          FISSA MODULO 📌
+        </label>
       </div>
     </div>
 

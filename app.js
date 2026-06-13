@@ -192,6 +192,7 @@ const dom = {
 
   // Pitch preview visualizer dialog controls
   pitchModuleSelect: null,
+  pitchModuleLock: null,
   pitchVisualizerContainer: null,
   pitchBenchContainer: null,
 
@@ -392,6 +393,7 @@ function initDOM() {
   dom.teamsDashboard = document.getElementById('teams-dashboard-grid');
 
   dom.pitchModuleSelect = document.getElementById('pitch-module-select');
+  dom.pitchModuleLock = document.getElementById('pitch-module-lock');
   dom.pitchVisualizerContainer = document.getElementById('pitch-visualizer-container');
   dom.pitchBenchContainer = document.getElementById('pitch-bench-container');
   
@@ -653,6 +655,9 @@ function setupEventListeners() {
 
   // Pitch formation module change listener
   dom.pitchModuleSelect.addEventListener('change', handlePitchModuleChange);
+  if (dom.pitchModuleLock) {
+    dom.pitchModuleLock.addEventListener('change', handlePitchModuleLockChange);
+  }
 
   // Light dismiss fallback for modal dialogs (custom dialogs in HTML)
   document.querySelectorAll('dialog[closedby="any"]').forEach(dialog => {
@@ -893,7 +898,7 @@ function parseCSV(text) {
       id: `c-${Date.now()}-${i}`,
       name: cells[nameIdx] || 'Sconosciuto',
       role: mappedRole,
-      country: cells[countryIdx] || 'N/A',
+      country: getStandardItalianCountryName(cells[countryIdx] || 'N/A'),
       initialValue: initialValue,
       ownerId: null,
       purchaseCost: null
@@ -932,6 +937,7 @@ function handleSessionImport(e) {
         if (!t.module) t.module = '4-3-3';
       });
       state.players = imported.players;
+      normalizePlayersCountries();
       
       dom.configBudget.value = state.settings.budget;
       if (dom.configSlotPOR) dom.configSlotPOR.value = state.settings.slots.POR;
@@ -1102,6 +1108,7 @@ async function autoLoadCloudSession(id) {
       if (!t.module) t.module = '4-3-3';
     });
     state.players = result.players;
+    normalizePlayersCountries();
     state.teamIdealLineups = result.teamIdealLineups || {};
     state.tournament = result.tournament || null;
     state.activeRound = result.activeRound || 'G1';
@@ -3554,6 +3561,9 @@ function showTeamPitch(teamId, showIdeal = false, isDashboardView = false) {
   state.pitchShowIdeal = showIdeal;
   state.pitchIsDashboardView = isDashboardView;
   dom.pitchModuleSelect.value = team.module || '4-3-3';
+  if (dom.pitchModuleLock) {
+    dom.pitchModuleLock.checked = team.moduleLocked || false;
+  }
   
   // Set modal title dynamically
   const pitchTitleEl = document.getElementById('pitchTitle');
@@ -3740,6 +3750,15 @@ function handlePitchModuleChange(e) {
   autoSave();
   renderPitch();
   renderTeamDashboard();
+}
+
+function handlePitchModuleLockChange(e) {
+  const teamId = state.activePitchTeamId;
+  const team = state.teams.find(t => t.id === teamId);
+  if (!team) return;
+
+  team.moduleLocked = e.target.checked;
+  autoSave();
 }
 
 // --- TOAST NOTIFICATIONS ---
@@ -4203,6 +4222,7 @@ async function loadSpecificCloudSession(id, skipConfirm = false) {
       if (!t.module) t.module = '4-3-3';
     });
     state.players = result.players;
+    normalizePlayersCountries();
     state.teamIdealLineups = result.teamIdealLineups || {};
     state.tournament = result.tournament || null;
     state.activeRound = result.activeRound || 'G1';
@@ -5959,7 +5979,8 @@ async function generateIdealLineup(team) {
         players: playersWithEvaluations,
         provider: state.settings.aiProvider || 'google',
         openRouterModel: state.settings.openRouterModel || 'openai/gpt-oss-120b:free',
-        geminiModel: state.settings.geminiModel || 'gemini-flash-lite-latest'
+        geminiModel: state.settings.geminiModel || 'gemini-flash-lite-latest',
+        lockedModule: team.moduleLocked ? (team.module || '4-3-3') : undefined
       })
     });
 
@@ -6414,10 +6435,51 @@ function getStandardItalianCountryName(countryName) {
     'haiti': 'Haiti',
     'qatar': 'Qatar',
     'bosnia and herzegovina': 'Bosnia ed Erzegovina',
-    'bosnia': 'Bosnia ed Erzegovina'
+    'bosnia': 'Bosnia ed Erzegovina',
+
+    // Italian clean lowercase mappings
+    'egitto': 'Egitto',
+    'italia': 'Italia',
+    'svezia': 'Svezia',
+    'norvegia': 'Norvegia',
+    'belgio': 'Belgio',
+    'francia': 'Francia',
+    'spagna': 'Spagna',
+    'inghilterra': 'Inghilterra',
+    'germania': 'Germania',
+    'paesi bassi': 'Paesi Bassi',
+    'marocco': 'Marocco',
+    'turchia': 'Turchia',
+    'polonia': 'Polonia',
+    'svizzera': 'Svizzera',
+    'brasile': 'Brasile',
+    'portogallo': 'Portogallo',
+    'messico': 'Messico',
+    'sudafrica': 'Sudafrica',
+    'corea del sud': 'Corea del Sud',
+    'rep ceca': 'Rep. Ceca',
+    'arabia saudita': 'Arabia Saudita',
+    'stati uniti': 'Stati Uniti',
+    'costa davorio': "Costa d'Avorio",
+    'giappone': 'Giappone',
+    'nuova zelanda': 'Nuova Zelanda',
+    'capo verde': 'Capo Verde',
+    'repubblica democratica del congo': 'Repubblica Democratica del Congo',
+    'scozia': 'Scozia',
+    'bosnia ed erzegovina': 'Bosnia ed Erzegovina'
   };
 
   return map[clean] || countryName.trim();
+}
+
+function normalizePlayersCountries() {
+  if (state.players && Array.isArray(state.players)) {
+    state.players.forEach(p => {
+      if (p.country) {
+        p.country = getStandardItalianCountryName(p.country);
+      }
+    });
+  }
 }
 
 function normalizeCountryForMatch(name) {
@@ -7599,6 +7661,7 @@ function handleWizardNext() {
     } else {
       state.players = JSON.parse(JSON.stringify(SEED_PLAYERS));
     }
+    normalizePlayersCountries();
 
     // Completely clear all player assignments and budget spendings
     state.players.forEach(p => {

@@ -1,6 +1,6 @@
 import { getEliminatedCountries } from './utils.js';
 
-function calculateDeterministicLineup(players, eliminatedCountries) {
+function calculateDeterministicLineup(players, eliminatedCountries, lockedModule) {
   const ELIMINATED_SET = new Set(eliminatedCountries);
   
   // Filter active players (not from eliminated countries)
@@ -35,7 +35,12 @@ function calculateDeterministicLineup(players, eliminatedCountries) {
   let bestStarters = [];
   let maxScore = -1;
   
-  for (const [mod, req] of Object.entries(modules)) {
+  let activeModules = modules;
+  if (lockedModule && modules[lockedModule]) {
+    activeModules = { [lockedModule]: modules[lockedModule] };
+  }
+  
+  for (const [mod, req] of Object.entries(activeModules)) {
     // Check if we have enough active players for the module (at least 1 GK and the required outfield players)
     if (porCandidates.length < 1 || 
         difCandidates.length < req.DIF || 
@@ -60,14 +65,16 @@ function calculateDeterministicLineup(players, eliminatedCountries) {
     }
   }
   
-  // If no module was fully satisfied (e.g. very small roster), fallback to 4-3-3 taking what we can
+  // If no module was fully satisfied (e.g. very small roster), fallback to best module taking what we can
   if (bestStarters.length === 0) {
-    bestModule = '4-3-3';
+    const fallbackMod = lockedModule && modules[lockedModule] ? lockedModule : '4-3-3';
+    const req = modules[fallbackMod];
+    bestModule = fallbackMod;
     bestStarters = [
       ...porCandidates.slice(0, 1),
-      ...difCandidates.slice(0, 4),
-      ...cenCandidates.slice(0, 3),
-      ...attCandidates.slice(0, 3)
+      ...difCandidates.slice(0, req.DIF),
+      ...cenCandidates.slice(0, req.CEN),
+      ...attCandidates.slice(0, req.ATT)
     ];
   }
   
@@ -144,7 +151,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { teamName, players, provider, openRouterModel, geminiModel } = req.body || {};
+  const { teamName, players, provider, openRouterModel, geminiModel, lockedModule } = req.body || {};
   const useOpenRouter = provider === 'openrouter';
   const apiKey = useOpenRouter ? process.env.OPENROUTER_API_KEY : process.env.GEMINI_API_KEY;
 
@@ -165,7 +172,7 @@ export default async function handler(req, res) {
     const ELIMINATED_COUNTRIES = await getEliminatedCountries(apiKey, provider, openRouterModel, geminiModel);
     
     // 1. Calculate deterministic ideal lineup
-    const deterministicLineup = calculateDeterministicLineup(players, ELIMINATED_COUNTRIES);
+    const deterministicLineup = calculateDeterministicLineup(players, ELIMINATED_COUNTRIES, lockedModule);
 
     // 2. Format starters and bench text for the prompt
     const startersText = deterministicLineup.starters.map(id => {
