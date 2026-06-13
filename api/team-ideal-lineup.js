@@ -44,10 +44,11 @@ REGOLE DI SELEZIONE E SCHIERAMENTO (MANDATORIE E RIGIDE):
    - "3-4-3": 1 POR, 3 DIF, 4 CEN, 3 ATT
    - "5-3-2": 1 POR, 5 DIF, 3 CEN, 2 ATT
 4. I giocatori titolari schierati e quelli in panchina devono corrispondere ESATTAMENTE ai calciatori presenti nella rosa fornita. Non inventare o aggiungere nuovi calciatori.
-5. **VALUTAZIONE GLOBALE BASATA SU VOTO E BONUS (MANDATORIA):**
-   - La scelta di chi schierare titolare deve basarsi rigorosamente sulla **Forza del Turno (matchStrength)** e sulla **Probabilità Titolare** che ti sono state fornite.
-   - Privilegia in assoluto i calciatori con i valori di "Forza del Turno" più elevati. È vietato schierare titolare un giocatore che ha una Forza del Turno molto bassa o pari a 0 (ad esempio perché infortunato o escluso/eliminato), se in rosa disponi di un'alternativa attiva e performante nello stesso ruolo.
-   - **IGNORA COMPLETAMENTE** considerazioni tattiche o di posizionamento del calcio reale (es. non ha alcuna utilità escludere un centrocampista ultra-offensivo da bonus perché "è un'ala e non garantisce equilibrio difensivo"). Nel FantaMondiale contano esclusivamente il voto e i bonus/malus.
+5. **VALUTAZIONE E SCHIERAMENTO DEI TITOLARI (MANDATORIO):**
+   - La Forza del Turno (matchStrength) è l'UNICO parametro primario da considerare per schierare i titolari: devi inserire tra gli 11 titolari (starters) i giocatori con il punteggio `matchStrength` più alto in ciascun ruolo richiesto dal modulo tattico.
+   - La probabilità di essere titolare (`starterProbability` / titolarità) deve essere utilizzata **SEMPRE E SOLO come criterio di spareggio (tie-breaker)** quando due o più giocatori concorrenti hanno lo stesso punteggio di `matchStrength` (es. se due centrocampisti hanno entrambi `matchStrength` pari a 75, fai giocare titolare quello con la `starterProbability` maggiore, es. 90% rispetto a 60%).
+   - È vietato schierare titolare un giocatore infortunato o eliminato (ovvero con `matchStrength` pari a 0 o `starterProbability` pari a 0%).
+   - Ignora totalmente il ruolo tattico nel calcio reale (es. se un centrocampista è puramente offensivo o difensivo): conta solo massimizzare `matchStrength` ed i bonus nel FantaMondiale.
 6. **MODIFICATORI DI DIFESA E CENTROCAMPO (MANDATORI PER LA SCELTA DEL MODULO):**
    Tieni conto dei modificatori di reparto per ottimizzare il modulo e gli schieramenti:
    - Modificatore Difesa: basato sulla media voto pura (senza bonus/malus) dei difensori. Con 3 difensori: bonus di +1 con media >= 6.5, sale di +1 ogni 0.25 di media in più. Con 4 difensori: bonus scatta a >= 6.25 (+1), a 6.5 è +2, e così via. Con 5 difensori (modulo più premiato): bonus scatta a >= 6.25 (+2), a 6.5 è +3.
@@ -281,7 +282,8 @@ Rispondi esclusivamente con il codice JSON, senza alcun blocco di codice markdow
     // ==========================================
     // PHASE 4: FINAL DEDUP - Rebuild bench from scratch based on who's NOT in starters
     // This is the single source of truth and guarantees no player appears in both lists.
-    // Sort bench players in descending order of their matchStrength (Forza del Turno).
+    // Enforce active bench requirements: at least 1 POR, 2 DIF, 2 CEN, 2 ATT in the top 10 active slots,
+    // and sort all players in descending order of their matchStrength (Forza del Turno).
     // ==========================================
     const finalStarterSet = new Set(parsedData.starters);
     
@@ -298,19 +300,74 @@ Rispondi esclusivamente con il codice JSON, senza alcun blocco di codice markdow
       return playerStrengthMap[id] !== undefined ? playerStrengthMap[id] : 50;
     };
 
-    // Active bench players first (not eliminated, not starters) sorted by strength descending
-    const activeBenchFinal = players
-      .filter(p => !finalStarterSet.has(p.id) && !eliminatedSet.has(p.id))
+    // Filter active bench candidates (not in starters, not eliminated)
+    const activeBenchPlayers = players.filter(p => !finalStarterSet.has(p.id) && !eliminatedSet.has(p.id));
+    
+    // Sort all candidates by strength descending
+    activeBenchPlayers.sort((a, b) => getStrength(b.id) - getStrength(a.id));
+
+    // Split candidates by role to identify the top/best ones for the mandatory roles
+    const porCandidates = activeBenchPlayers.filter(p => p.role === 'POR');
+    const difCandidates = activeBenchPlayers.filter(p => p.role === 'DIF');
+    const cenCandidates = activeBenchPlayers.filter(p => p.role === 'CEN');
+    const attCandidates = activeBenchPlayers.filter(p => p.role === 'ATT');
+
+    const selectedMandatory = [];
+    const selectedMandatoryIds = new Set();
+
+    // 1 POR
+    if (porCandidates.length > 0) {
+      selectedMandatory.push(porCandidates[0]);
+      selectedMandatoryIds.add(porCandidates[0].id);
+    }
+    // 2 DIF
+    difCandidates.slice(0, 2).forEach(p => {
+      selectedMandatory.push(p);
+      selectedMandatoryIds.add(p.id);
+    });
+    // 2 CEN
+    cenCandidates.slice(0, 2).forEach(p => {
+      selectedMandatory.push(p);
+      selectedMandatoryIds.add(p.id);
+    });
+    // 2 ATT
+    attCandidates.slice(0, 2).forEach(p => {
+      selectedMandatory.push(p);
+      selectedMandatoryIds.add(p.id);
+    });
+
+    // The remaining active bench candidates
+    const remainingCandidates = activeBenchPlayers.filter(p => !selectedMandatoryIds.has(p.id));
+
+    // Target active bench size is min(10, activeBenchPlayers.length)
+    const targetBenchSize = Math.min(10, activeBenchPlayers.length);
+    const slotsNeeded = targetBenchSize - selectedMandatory.length;
+
+    const activeBenchFinalList = [...selectedMandatory];
+    if (slotsNeeded > 0) {
+      remainingCandidates.slice(0, slotsNeeded).forEach(p => {
+        activeBenchFinalList.push(p);
+        selectedMandatoryIds.add(p.id);
+      });
+    }
+
+    // Sort active bench elements by strength descending
+    activeBenchFinalList.sort((a, b) => getStrength(b.id) - getStrength(a.id));
+    const activeBenchFinalIds = activeBenchFinalList.map(p => p.id);
+
+    // Tribuna players: active bench players that didn't fit into the top 10
+    const tribunaActiveCandidates = activeBenchPlayers
+      .filter(p => !selectedMandatoryIds.has(p.id))
       .sort((a, b) => getStrength(b.id) - getStrength(a.id))
       .map(p => p.id);
 
-    // Eliminated bench players at the bottom sorted by strength descending
+    // Eliminated bench players also go at the end, sorted by strength descending
     const eliminatedBenchFinal = players
       .filter(p => !finalStarterSet.has(p.id) && eliminatedSet.has(p.id))
       .sort((a, b) => getStrength(b.id) - getStrength(a.id))
       .map(p => p.id);
     
-    parsedData.bench = [...activeBenchFinal, ...eliminatedBenchFinal];
+    parsedData.bench = [...activeBenchFinalIds, ...tribunaActiveCandidates, ...eliminatedBenchFinal];
 
     return res.status(200).json(parsedData);
   } catch (error) {

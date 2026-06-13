@@ -102,7 +102,8 @@ let state = {
   eliminatedCountries: ['Italia', 'Nigeria'],
   tournament: null,
   tournamentTab: 'gironi',
-  activeRound: 'G1'
+  activeRound: 'G1',
+  nextOpponents: {}
 };
 
 // --- DOM ELEMENTS CACHE & SELECTORS ---
@@ -930,6 +931,8 @@ function handleSessionImport(e) {
       }
 
       state.tournament = imported.tournament || null;
+      state.activeRound = imported.activeRound || 'G1';
+      state.nextOpponents = imported.nextOpponents || {};
       
       autoSave();
       renderAll();
@@ -1076,6 +1079,8 @@ async function autoLoadCloudSession(id) {
     state.players = result.players;
     state.teamIdealLineups = result.teamIdealLineups || {};
     state.tournament = result.tournament || null;
+    state.activeRound = result.activeRound || 'G1';
+    state.nextOpponents = result.nextOpponents || {};
     state.activeCloudSessionId = id;
     state.cloudSessionPassword = cachedPassword;
 
@@ -2693,27 +2698,14 @@ function renderPitch() {
       if (state.pitchShowIdeal) {
         const getPlayerFormScore = (player) => {
           const cachedRaw = state.aiCache[player.id] || JSON.parse(sessionStorage.getItem(`fantamondiale_ai_${player.id}`) || 'null');
-          if (!cachedRaw) return 50;
+          if (!cachedRaw) return player.purchaseCost * 0.01;
           const cached = normalizePlayerAnalysis(cachedRaw);
-          let score = 50;
-          
-          // Category score
-          const cat = (cached.playerCategory || '').toLowerCase();
-          if (cat.includes('stella')) score += 40;
-          else if (cat.includes('ottimo')) score += 30;
-          else if (cat.includes('buono')) score += 20;
-          else if (cat.includes('accettabile')) score += 10;
-          else if (cat.includes('scarso')) score -= 20;
-
-          // Starter probability score
+          const strength = cached.matchStrength !== undefined ? cached.matchStrength : 50;
+          let prob = 50;
           if (cached.starterProbability) {
-            const prob = parseInt(cached.starterProbability.replace(/[^0-9]/g, '')) || 50;
-            score += prob * 0.2;
+            prob = parseInt(cached.starterProbability.replace(/[^0-9]/g, '')) || 50;
           }
-          
-          // Cost score
-          score += (player.purchaseCost || 0) * 0.1;
-          return score;
+          return strength + (prob / 1000.0);
         };
 
         porPlayers = [...porPlayers].sort((a, b) => getPlayerFormScore(b) - getPlayerFormScore(a));
@@ -2739,6 +2731,20 @@ function renderPitch() {
     let benchList;
     if (state.pitchShowIdeal && idealLineup) {
       benchList = idealLineup.bench.map(id => teamPlayers.find(p => p.id === id)).filter(Boolean);
+    } else if (state.pitchShowIdeal) {
+      const getPlayerFormScore = (player) => {
+        const cachedRaw = state.aiCache[player.id] || JSON.parse(sessionStorage.getItem(`fantamondiale_ai_${player.id}`) || 'null');
+        if (!cachedRaw) return player.purchaseCost * 0.01;
+        const cached = normalizePlayerAnalysis(cachedRaw);
+        const strength = cached.matchStrength !== undefined ? cached.matchStrength : 50;
+        let prob = 50;
+        if (cached.starterProbability) {
+          prob = parseInt(cached.starterProbability.replace(/[^0-9]/g, '')) || 50;
+        }
+        return strength + (prob / 1000.0);
+      };
+      const allFallbackBench = [...porBench, ...difBench, ...cenBench, ...attBench];
+      benchList = compileIdealBench(allFallbackBench, getPlayerFormScore);
     } else {
       benchList = [...porBench, ...difBench, ...cenBench, ...attBench];
     }
@@ -2786,7 +2792,7 @@ function renderPitch() {
         const cachedAnalysis = cachedAnalysisRaw ? normalizePlayerAnalysis(cachedAnalysisRaw) : null;
         const startProb = cachedAnalysis ? cachedAnalysis.starterProbability : 'N/D';
         const strength = cachedAnalysis ? cachedAnalysis.matchStrength : 'N/D';
-        const opp = getNextOpponentForCountry(masterP.country);
+        const opp = stateGetNextOpponent(masterP.country);
 
         let probColor = 'var(--color-text-muted)';
         if (startProb && startProb.endsWith('%')) {
@@ -3050,7 +3056,7 @@ function renderPitch() {
         const cachedAnalysis = cachedAnalysisRaw ? normalizePlayerAnalysis(cachedAnalysisRaw) : null;
         const startProb = cachedAnalysis ? cachedAnalysis.starterProbability : 'N/D';
         const strength = cachedAnalysis ? cachedAnalysis.matchStrength : 'N/D';
-        const opp = getNextOpponentForCountry(masterP.country);
+        const opp = stateGetNextOpponent(masterP.country);
 
         let probColor = 'var(--color-text-muted)';
         if (startProb && startProb.endsWith('%')) {
@@ -3312,6 +3318,20 @@ function compileLineupData(team, showIdeal) {
   let finalBench;
   if (showIdeal && idealLineup) {
     finalBench = idealLineup.bench.map(id => team.players.find(p => p.id === id)).filter(Boolean);
+  } else if (showIdeal) {
+    const getPlayerFormScore = (player) => {
+      const cachedRaw = state.aiCache[player.id] || JSON.parse(sessionStorage.getItem(`fantamondiale_ai_${player.id}`) || 'null');
+      if (!cachedRaw) return player.purchaseCost * 0.01;
+      const cached = normalizePlayerAnalysis(cachedRaw);
+      const strength = cached.matchStrength !== undefined ? cached.matchStrength : 50;
+      let prob = 50;
+      if (cached.starterProbability) {
+        prob = parseInt(cached.starterProbability.replace(/[^0-9]/g, '')) || 50;
+      }
+      return strength + (prob / 1000.0);
+    };
+    const allFallbackBench = [...porBench, ...difBench, ...cenBench, ...attBench];
+    finalBench = compileIdealBench(allFallbackBench, getPlayerFormScore);
   } else {
     finalBench = [...porBench, ...difBench, ...cenBench, ...attBench];
   }
@@ -3636,6 +3656,9 @@ function showTeamPitch(teamId, showIdeal = false, isDashboardView = false) {
       });
       roundSelect.onchange = (e) => {
         state.activeRound = e.target.value;
+        updateNextOpponentsList();
+        autoSave();
+        renderAll();
       };
       webhookContainer.appendChild(roundSelect);
 
@@ -4152,6 +4175,8 @@ async function loadSpecificCloudSession(id, skipConfirm = false) {
     state.players = result.players;
     state.teamIdealLineups = result.teamIdealLineups || {};
     state.tournament = result.tournament || null;
+    state.activeRound = result.activeRound || 'G1';
+    state.nextOpponents = result.nextOpponents || {};
     state.activeCloudSessionId = id;
     state.cloudSessionPassword = password;
 
@@ -4436,7 +4461,7 @@ function renderPitchPopoverError(popover, errorMsg) {
 function renderPitchPopoverData(popover, name, country, role, rawData, triggerEl, isMobile) {
   const data = normalizePlayerAnalysis(rawData);
   if (data.matchAnalysis) {
-    data.matchAnalysis.nextOpponent = getNextOpponentForCountry(country);
+    data.matchAnalysis.nextOpponent = stateGetNextOpponent(country);
   }
   const closeBtnHtml = `<button class="pitch-popover-close" onclick="closePitchPopover()">✕</button>`;
 
@@ -4637,7 +4662,7 @@ async function showPitchPlayerTooltip(playerId, triggerEl, isMobile, forceRefres
           provider: state.settings.aiProvider || 'google',
           openRouterModel: state.settings.openRouterModel || 'openai/gpt-oss-120b:free',
           geminiModel: state.settings.geminiModel || 'gemini-flash-lite-latest',
-          nextOpponent: getNextOpponentForCountry(player.country)
+          nextOpponent: stateGetNextOpponent(player.country)
         })
       });
       const result = await response.json();
@@ -4787,7 +4812,7 @@ async function showPlayerAIAnalysis(playerId, name, country, role, buttonEl, for
         provider: state.settings.aiProvider || 'google',
         openRouterModel: state.settings.openRouterModel || 'openai/gpt-oss-120b:free',
         geminiModel: state.settings.geminiModel || 'gemini-flash-lite-latest',
-        nextOpponent: getNextOpponentForCountry(country)
+        nextOpponent: stateGetNextOpponent(country)
       })
     });
 
@@ -4896,7 +4921,7 @@ function renderPopoverLoading(popover, name) {
 function renderPopoverData(popover, name, country, role, rawData, buttonEl) {
   const data = normalizePlayerAnalysis(rawData);
   if (data.matchAnalysis) {
-    data.matchAnalysis.nextOpponent = getNextOpponentForCountry(country);
+    data.matchAnalysis.nextOpponent = stateGetNextOpponent(country);
   }
 
   const categoryValue = (data.playerCategory || '').toLowerCase().trim();
@@ -5467,22 +5492,14 @@ function copyLineupToClipboard(team, isIdeal) {
     if (isIdeal) {
        const getPlayerFormScore = (player) => {
         const cachedRaw = state.aiCache[player.id] || JSON.parse(sessionStorage.getItem(`fantamondiale_ai_${player.id}`) || 'null');
-        if (!cachedRaw) return 50;
+        if (!cachedRaw) return player.purchaseCost * 0.01;
         const cached = normalizePlayerAnalysis(cachedRaw);
-        let score = 50;
-        const cat = (cached.playerCategory || '').toLowerCase();
-        if (cat.includes('stella')) score += 40;
-        else if (cat.includes('ottimo')) score += 30;
-        else if (cat.includes('buono')) score += 20;
-        else if (cat.includes('accettabile')) score += 10;
-        else if (cat.includes('scarso')) score -= 20;
-
+        const strength = cached.matchStrength !== undefined ? cached.matchStrength : 50;
+        let prob = 50;
         if (cached.starterProbability) {
-          const prob = parseInt(cached.starterProbability.replace(/[^0-9]/g, '')) || 50;
-          score += prob * 0.2;
+          prob = parseInt(cached.starterProbability.replace(/[^0-9]/g, '')) || 50;
         }
-        score += (player.purchaseCost || 0) * 0.1;
-        return score;
+        return strength + (prob / 1000.0);
       };
 
       porPlayers = [...porPlayers].sort((a, b) => getPlayerFormScore(b) - getPlayerFormScore(a));
@@ -5507,6 +5524,20 @@ function copyLineupToClipboard(team, isIdeal) {
   let benchList;
   if (isIdeal && idealLineup) {
     benchList = idealLineup.bench.map(id => team.players.find(p => p.id === id)).filter(Boolean);
+  } else if (isIdeal) {
+    const getPlayerFormScore = (player) => {
+      const cachedRaw = state.aiCache[player.id] || JSON.parse(sessionStorage.getItem(`fantamondiale_ai_${player.id}`) || 'null');
+      if (!cachedRaw) return player.purchaseCost * 0.01;
+      const cached = normalizePlayerAnalysis(cachedRaw);
+      const strength = cached.matchStrength !== undefined ? cached.matchStrength : 50;
+      let prob = 50;
+      if (cached.starterProbability) {
+        prob = parseInt(cached.starterProbability.replace(/[^0-9]/g, '')) || 50;
+      }
+      return strength + (prob / 1000.0);
+    };
+    const allFallbackBench = [...porBench, ...difBench, ...cenBench, ...attBench];
+    benchList = compileIdealBench(allFallbackBench, getPlayerFormScore);
   } else {
     benchList = [...porBench, ...difBench, ...cenBench, ...attBench];
   }
@@ -5590,7 +5621,7 @@ async function recalculatePlayerEvaluations(team) {
       name: p.name,
       role: p.role,
       country: p.country,
-      nextOpponent: getNextOpponentForCountry(p.country)
+      nextOpponent: stateGetNextOpponent(p.country)
     }));
     const batchSize = 3;
     const batches = [];
@@ -5718,7 +5749,7 @@ async function recalculatePlayerEvaluations(team) {
           name: p.name,
           role: p.role,
           country: p.country,
-          nextOpponent: getNextOpponentForCountry(p.country)
+          nextOpponent: stateGetNextOpponent(p.country)
         }));
         for (let i = 0; i < mappedMissing.length; i += 2) {
           retryBatches.push(mappedMissing.slice(i, i + 2));
@@ -5884,7 +5915,7 @@ async function generateIdealLineup(team) {
         playerCategory: analysis.playerCategory || "buono",
         starterProbability: analysis.starterProbability || "50%",
         matchStrength: analysis.matchStrength || 50,
-        nextOpponent: getNextOpponentForCountry(p.country),
+        nextOpponent: stateGetNextOpponent(p.country),
         formState: analysis.formState || "In forma."
       };
     });
@@ -6012,6 +6043,81 @@ function initializeTournament(force = false) {
     },
     showAiProbabilities: false
   };
+
+  updateNextOpponentsList();
+}
+
+function updateNextOpponentsList() {
+  if (!state.tournament) {
+    initializeTournament();
+  }
+  const nextOpponents = {};
+  const activeRound = state.activeRound || 'G1';
+  
+  // Get all unique country names from SEED_PLAYERS
+  const countries = [...new Set(SEED_PLAYERS.map(p => p.country))];
+  
+  for (const country of countries) {
+    nextOpponents[country] = getNextOpponentForCountry(country, activeRound);
+  }
+  
+  state.nextOpponents = nextOpponents;
+}
+
+function stateGetNextOpponent(country) {
+  if (!state.nextOpponents || Object.keys(state.nextOpponents).length === 0) {
+    updateNextOpponentsList();
+  }
+  return state.nextOpponents[country] || getNextOpponentForCountry(country);
+}
+
+function compileIdealBench(benchPlayers, getScoreFn) {
+  // Sort all bench players by score descending
+  const sorted = [...benchPlayers].sort((a, b) => getScoreFn(b) - getScoreFn(a));
+  
+  const porCandidates = sorted.filter(p => p.role === 'POR');
+  const difCandidates = sorted.filter(p => p.role === 'DIF');
+  const cenCandidates = sorted.filter(p => p.role === 'CEN');
+  const attCandidates = sorted.filter(p => p.role === 'ATT');
+
+  const selectedMandatory = [];
+  const selectedMandatoryIds = new Set();
+
+  if (porCandidates.length > 0) {
+    selectedMandatory.push(porCandidates[0]);
+    selectedMandatoryIds.add(porCandidates[0].id);
+  }
+  difCandidates.slice(0, 2).forEach(p => {
+    selectedMandatory.push(p);
+    selectedMandatoryIds.add(p.id);
+  });
+  cenCandidates.slice(0, 2).forEach(p => {
+    selectedMandatory.push(p);
+    selectedMandatoryIds.add(p.id);
+  });
+  attCandidates.slice(0, 2).forEach(p => {
+    selectedMandatory.push(p);
+    selectedMandatoryIds.add(p.id);
+  });
+
+  const remaining = sorted.filter(p => !selectedMandatoryIds.has(p.id));
+  const targetSize = Math.min(10, sorted.length);
+  const slotsNeeded = targetSize - selectedMandatory.length;
+
+  const activeBench = [...selectedMandatory];
+  if (slotsNeeded > 0) {
+    remaining.slice(0, slotsNeeded).forEach(p => {
+      activeBench.push(p);
+      selectedMandatoryIds.add(p.id);
+    });
+  }
+
+  // Sort active bench by score descending
+  activeBench.sort((a, b) => getScoreFn(b) - getScoreFn(a));
+
+  const tribuna = sorted.filter(p => !selectedMandatoryIds.has(p.id));
+  
+  return [...activeBench, ...tribuna];
 }
 
 function getTeamRating(teamName) {

@@ -86,7 +86,7 @@ VALUTAZIONE E ANALISI STRATEGICA:
 - **matchAnalysis**: un oggetto con le seguenti chiavi:
   * **nextOpponent**: lo stesso nome della nazionale avversaria del prossimo turno.
   * **criteriaText**: spiegazione in lingua italiana di 1-2 frasi della difficoltà di questo specifico prossimo match e l'impatto fantacalcistico atteso (es: "Sfida complicata contro la solida retroguardia francese, dove l'attaccante potrebbe faticare a ricevere palloni giocabili.").
-- **expectedBonuses**: breve descrizione (1-2 frasi) dei bonus fantacalcistici attesi (es. gol, assist, rigori, punizioni).
+- **expectedBonuses**: una descrizione testuale dettagliata (2-3 frasi chiare) dei bonus fantacalcistici attesi (es. gol, assist, rigori, punizioni, clean sheet) specificamente valutata e contestualizzata in base al prossimo avversario (nextOpponent) ed alle caratteristiche del match. Ad esempio: per i portieri che affrontano nazionali molto offensive e forti (es. Francia, Argentina), spiega esplicitamente che il bonus clean sheet è estremamente difficile/improbabile a causa dell'elevato potenziale d'attacco avversario, ma che potrebbe mettersi in mostra con parate importanti determinando un buon voto puro; per gli attaccanti contro difese molto solide e chiuse, evidenzia che le opportunità da gol potrebbero essere scarse o limitate; per i tiratori di calci piazzati o rigori, valuta se la fisicità o lo stile di gioco dell'avversario favorirà falli dal limite o calci di rigore.
 - **groupAnalysis**:
   - **groupName**: nome del girone reale (es: "Girone A", "Girone B").
   - **qualificationProbability**: stima percentuale chance qualificazione (es: "85%", "40%").
