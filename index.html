@@ -125,6 +125,9 @@
         <button class="tab-btn" data-tab="tabellone">
           Tabellone & Gironi 🏆
         </button>
+        <button class="tab-btn" data-tab="calendario">
+          Calendario Match 📅
+        </button>
       </nav>
       
       <!-- LEFT SIDEBAR (CONSOLE SQUADRA ATTIVA COCKPIT) -->
@@ -366,6 +369,37 @@
             <!-- Views Container -->
             <div id="tournament-views-container">
               <!-- Rendered dynamically in app.js -->
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 5: CALENDARIO MATCH -->
+        <section id="tab-calendario" class="tab-content">
+          <div class="panel" style="padding: 1.5rem;">
+            <h2 class="panel-title" style="margin-bottom: 0.25rem;">Calendario Match & Accoppiamenti 📅</h2>
+            <p style="font-size:0.8rem; color:var(--color-text-muted); margin: 0 0 1.25rem 0; line-height: 1.4;">
+              Visualizzazione deterministica di tutte le partite calcolate per ciascun turno del Mondiale 2026. Questi accoppiamenti sono generati direttamente dallo script e vengono passati all'AI per l'analisi strategica dei calciatori.
+            </p>
+            
+            <!-- Turno selector for the calendar -->
+            <div style="display: flex; gap: 0.75rem; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap;">
+              <label style="font-size:0.85rem; font-weight:700; color:var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em;">TURNO SELEZIONATO:</label>
+              <select id="calendar-round-select" class="input-control" style="width: 180px; padding: 0.4rem 0.5rem; font-size: 0.85rem;">
+                <option value="G1">Fase a Gironi - G1</option>
+                <option value="G2">Fase a Gironi - G2</option>
+                <option value="G3">Fase a Gironi - G3</option>
+                <option value="Sedicesimi">Sedicesimi di Finale</option>
+                <option value="Ottavi">Ottavi di Finale</option>
+                <option value="Quarti">Quarti di Finale</option>
+                <option value="Semifinale">Semifinali</option>
+                <option value="Finale">Finali</option>
+              </select>
+              <button id="btn-sync-calendar" class="btn btn-secondary" style="padding: 0.4rem 1rem; font-size: 0.8rem; height: 34px; display: flex; align-items: center; gap: 0.35rem;">Aggiorna 🔄</button>
+            </div>
+            
+            <!-- Matches Grid -->
+            <div id="calendar-matches-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0.75rem;">
+              <!-- Generated in app.js -->
             </div>
           </div>
         </section>

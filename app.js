@@ -61,6 +61,21 @@ const SEED_PLAYERS = [
   { id: 's-65', name: 'Julián Álvarez', role: 'ATT', country: 'Argentina', initialValue: 25, ownerId: null, purchaseCost: null }
 ];
 
+const TOURNAMENT_DEFAULT_GROUPS = {
+  A: ['Messico', 'Sudafrica', 'Corea del Sud', 'Rep. Ceca'],
+  B: ['Canada', 'Bosnia ed Erzegovina', 'Qatar', 'Svizzera'],
+  C: ['Brasile', 'Marocco', 'Haiti', 'Scozia'],
+  D: ['Stati Uniti', 'Paraguay', 'Australia', 'Turchia'],
+  E: ['Germania', 'Curaçao', 'Costa d\'Avorio', 'Ecuador'],
+  F: ['Paesi Bassi', 'Giappone', 'Svezia', 'Tunisia'],
+  G: ['Belgio', 'Egitto', 'Iran', 'Nuova Zelanda'],
+  H: ['Spagna', 'Capo Verde', 'Arabia Saudita', 'Uruguay'],
+  I: ['Francia', 'Senegal', 'Iraq', 'Norvegia'],
+  J: ['Argentina', 'Algeria', 'Austria', 'Giordania'],
+  K: ['Portogallo', 'Repubblica Democratica del Congo', 'Uzbekistan', 'Colombia'],
+  L: ['Inghilterra', 'Croazia', 'Ghana', 'Panama']
+};
+
 // --- APP STATE ---
 let state = {
   settings: {
@@ -419,6 +434,16 @@ function initDOM() {
 }
 
 function setupEventListeners() {
+  // Calendar select change and refresh listeners
+  const calSelect = document.getElementById('calendar-round-select');
+  if (calSelect) {
+    calSelect.addEventListener('change', renderCalendarMatches);
+  }
+  const calSyncBtn = document.getElementById('btn-sync-calendar');
+  if (calSyncBtn) {
+    calSyncBtn.addEventListener('click', renderCalendarMatches);
+  }
+
   // Tabs Toggle
   dom.tabButtons.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -694,11 +719,13 @@ function switchTab(tabId) {
 
   const gridContainer = document.querySelector('.dashboard-grid');
   if (gridContainer) {
-    gridContainer.classList.toggle('hide-sidebar', tabId === 'tabellone' || tabId === 'impostazioni');
+    gridContainer.classList.toggle('hide-sidebar', tabId === 'tabellone' || tabId === 'impostazioni' || tabId === 'calendario');
   }
 
   if (tabId === 'tabellone') {
     renderTournament();
+  } else if (tabId === 'calendario') {
+    renderCalendarMatches();
   }
 }
 
@@ -1968,6 +1995,8 @@ function renderAll() {
   updateCloudSessionIndicators();
   if (state.activeTab === 'tabellone') {
     renderTournament();
+  } else if (state.activeTab === 'calendario') {
+    renderCalendarMatches();
   }
 }
 
@@ -6013,20 +6042,7 @@ function initializeTournament(force = false) {
   }
 
   // Base tournament teams list (Group A to L, 4 per group) - Official 2026 FIFA World Cup Groups
-  const defaultGroups = {
-    A: ['Messico', 'Sudafrica', 'Corea del Sud', 'Rep. Ceca'],
-    B: ['Canada', 'Bosnia ed Erzegovina', 'Qatar', 'Svizzera'],
-    C: ['Brasile', 'Marocco', 'Haiti', 'Scozia'],
-    D: ['Stati Uniti', 'Paraguay', 'Australia', 'Turchia'],
-    E: ['Germania', 'Curaçao', 'Costa d\'Avorio', 'Ecuador'],
-    F: ['Paesi Bassi', 'Giappone', 'Svezia', 'Tunisia'],
-    G: ['Belgio', 'Egitto', 'Iran', 'Nuova Zelanda'],
-    H: ['Spagna', 'Capo Verde', 'Arabia Saudita', 'Uruguay'],
-    I: ['Francia', 'Senegal', 'Iraq', 'Norvegia'],
-    J: ['Argentina', 'Algeria', 'Austria', 'Giordania'],
-    K: ['Portogallo', 'Repubblica Democratica del Congo', 'Uzbekistan', 'Colombia'],
-    L: ['Inghilterra', 'Croazia', 'Ghana', 'Panama']
-  };
+  const defaultGroups = TOURNAMENT_DEFAULT_GROUPS;
 
   // Deep clone defaultGroups to state.tournament.groups
   const finalGroups = JSON.parse(JSON.stringify(defaultGroups));
@@ -6420,15 +6436,12 @@ function getNextOpponentForCountry(countryName, round) {
   const targetClean = normalizeCountryForMatch(stdCountry);
   
   if (r === 'G1' || r === 'G2' || r === 'G3') {
-    const groups = state.tournament.groups || {};
     let groupTeams = null;
-    for (const gk in groups) {
-      if (groups[gk]) {
-        const hasTeam = groups[gk].some(t => normalizeCountryForMatch(t) === targetClean);
-        if (hasTeam) {
-          groupTeams = groups[gk];
-          break;
-        }
+    for (const gk in TOURNAMENT_DEFAULT_GROUPS) {
+      const hasTeam = TOURNAMENT_DEFAULT_GROUPS[gk].some(t => normalizeCountryForMatch(t) === targetClean);
+      if (hasTeam) {
+        groupTeams = TOURNAMENT_DEFAULT_GROUPS[gk];
+        break;
       }
     }
     if (!groupTeams || groupTeams.length < 4) return 'Da verificare';
@@ -6478,6 +6491,97 @@ function getNextOpponentForCountry(countryName, round) {
   return 'Da verificare';
 }
 window.getNextOpponentForCountry = getNextOpponentForCountry;
+
+function renderCalendarMatches() {
+  const selectEl = document.getElementById('calendar-round-select');
+  const gridEl = document.getElementById('calendar-matches-grid');
+  if (!selectEl || !gridEl) return;
+
+  const round = selectEl.value;
+  gridEl.innerHTML = '';
+
+  if (round === 'G1' || round === 'G2' || round === 'G3') {
+    // Group stage matches: computed based on TOURNAMENT_DEFAULT_GROUPS
+    const groupKeys = ['A','B','C','D','E','F','G','H','I','J','K','L'];
+    groupKeys.forEach(gk => {
+      const defaultTeams = TOURNAMENT_DEFAULT_GROUPS[gk] || [];
+      if (defaultTeams.length < 4) return;
+
+      let match1 = [];
+      let match2 = [];
+
+      if (round === 'G1') {
+        match1 = [defaultTeams[0], defaultTeams[1]];
+        match2 = [defaultTeams[2], defaultTeams[3]];
+      } else if (round === 'G2') {
+        match1 = [defaultTeams[0], defaultTeams[2]];
+        match2 = [defaultTeams[1], defaultTeams[3]];
+      } else if (round === 'G3') {
+        match1 = [defaultTeams[0], defaultTeams[3]];
+        match2 = [defaultTeams[1], defaultTeams[2]];
+      }
+
+      [match1, match2].forEach((match, idx) => {
+        const card = document.createElement('div');
+        card.style.cssText = 'background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-light); border-radius: 8px; padding: 0.75rem; display: flex; flex-direction: column; gap: 0.25rem; justify-content: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);';
+        card.innerHTML = `
+          <div style="font-size: 0.65rem; color: var(--color-accent); font-weight: 800;">GRUPPO ${gk} - Match ${idx + 1}</div>
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; font-weight: 700; color: #fff;">
+            <span>${match[0]}</span>
+            <span style="font-size:0.65rem; color:var(--color-text-muted); font-weight:normal; margin: 0 0.5rem;">vs</span>
+            <span>${match[1]}</span>
+          </div>
+        `;
+        gridEl.appendChild(card);
+      });
+    });
+  } else {
+    // Knockout rounds: Sedicesimi, Ottavi, Quarti, Semifinale, Finale
+    const tree = getTournamentTree();
+    let matches = [];
+    let title = '';
+
+    if (round === 'Sedicesimi') {
+      matches = tree.r32 || [];
+      title = 'Sedicesimo';
+    } else if (round === 'Ottavi') {
+      matches = tree.r16 || [];
+      title = 'Ottavo';
+    } else if (round === 'Quarti') {
+      matches = tree.qf || [];
+      title = 'Quarto';
+    } else if (round === 'Semifinale') {
+      matches = tree.sf || [];
+      title = 'Semifinale';
+    } else if (round === 'Finale') {
+      matches = [tree.final, tree.thirdPlace].filter(Boolean);
+    }
+
+    matches.forEach((match, idx) => {
+      if (!match) return;
+      const card = document.createElement('div');
+      card.style.cssText = 'background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-light); border-radius: 8px; padding: 0.75rem; display: flex; flex-direction: column; gap: 0.25rem; justify-content: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);';
+      
+      let matchTitle = '';
+      if (round === 'Finale') {
+        matchTitle = idx === 0 ? 'FINALE 1°/2° POSTO 🏆' : 'FINALE 3°/4° POSTO 🥉';
+      } else {
+        matchTitle = `${title} ${idx + 1}`;
+      }
+
+      card.innerHTML = `
+        <div style="font-size: 0.65rem; color: var(--color-accent); font-weight: 800;">${matchTitle}</div>
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; font-weight: 700; color: #fff;">
+          <span>${match[0] || 'In attesa...'}</span>
+          <span style="font-size:0.65rem; color:var(--color-text-muted); font-weight:normal; margin: 0 0.5rem;">vs</span>
+          <span>${match[1] || 'In attesa...'}</span>
+        </div>
+      `;
+      gridEl.appendChild(card);
+    });
+  }
+}
+window.renderCalendarMatches = renderCalendarMatches;
 
 function validateKnockoutWinners() {
   if (!state.tournament || !state.tournament.groups || !state.tournament.groups.A || !state.tournament.knockout) return false;
