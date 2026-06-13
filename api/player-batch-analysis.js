@@ -67,13 +67,13 @@ VALUTAZIONE E ANALISI STRATEGICA:
      * Ballottaggio / Subentrante regolare (50% - 79%): 15 punti
      * Riserva sporadica (< 50%): 5 punti
      * Infortunato/Squalificato/Eliminato: 0 punti
-  2) NAZIONALE DI APPARTENENZA (Max 20 punti):
-     * Nazionale Top/Favorita (es. Argentina, Brasile, Francia, Inghilterra, Spagna, Germania): 20 punti
-     * Nazionale Media (es. Italia, Belgio, Portogallo, Olanda, Croazia, Uruguay): 12 punti
-     * Nazionale Debole: 5 punti
-  3) DIFFICOLTÀ PROSSIMO AVVERSARIO (Max 20 punti):
-     * Avversario Debole/Morbido: 20 punti
-     * Avversario di fascia Media: 12 punti
+  2) NAZIONALE DI APPARTENENZA (Max 10 punti):
+     * Nazionale Top/Favorita (es. Argentina, Brasile, Francia, Inghilterra, Spagna, Germania): 10 punti
+     * Nazionale Media (es. Italia, Belgio, Portogallo, Olanda, Croazia, Uruguay): 6 punti
+     * Nazionale Debole: 3 punti
+  3) DIFFICOLTÀ PROSSIMO AVVERSARIO (Max 30 punti):
+     * Avversario Debole/Morbido: 30 punti
+     * Avversario di fascia Media: 18 punti
      * Avversario Top/Difesa Solida: 5 punti
   4) STATO DI FORMA FISICA/MENTALE (Max 15 punti):
      * Forma eccellente (ultime prestazioni ottime, gol/assist recenti): 15 punti
@@ -85,8 +85,8 @@ VALUTAZIONE E ANALISI STRATEGICA:
 - **nextOpponent**: la nazionale avversaria reale del prossimo turno. **REGOLA CRUCIALE E MANDATORIA:** Usa tassativamente e fedelmente il valore 'Prossimo Avversario' fornito per ciascun calciatore nell'elenco di input (es: "Egitto"), a meno che il giocatore appartenga a una nazionale eliminata (in tal caso rispondi 'Nessuno'). Non inventare o usare altri avversari.
 - **matchAnalysis**: un oggetto con le seguenti chiavi:
   * **nextOpponent**: lo stesso nome della nazionale avversaria del prossimo turno.
-  * **criteriaText**: spiegazione in lingua italiana di 1-2 frasi della difficoltà di questo specifico prossimo match e l'impatto fantacalcistico atteso (es: "Sfida complicata contro la solida retroguardia francese, dove l'attaccante potrebbe faticare a ricevere palloni giocabili.").
-- **expectedBonuses**: una descrizione testuale dettagliata (2-3 frasi chiare) dei bonus fantacalcistici attesi (es. gol, assist, rigori, punizioni, clean sheet) specificamente valutata e contestualizzata in base al prossimo avversario (nextOpponent) ed alle caratteristiche del match. Ad esempio: per i portieri che affrontano nazionali molto offensive e forti (es. Francia, Argentina), spiega esplicitamente che il bonus clean sheet è estremamente difficile/improbabile a causa dell'elevato potenziale d'attacco avversario, ma che potrebbe mettersi in mostra con parate importanti determinando un buon voto puro; per gli attaccanti contro difese molto solide e chiuse, evidenzia che le opportunità da gol potrebbero essere scarse o limitate; per i tiratori di calci piazzati o rigori, valuta se la fisicità o lo stile di gioco dell'avversario favorirà falli dal limite o calci di rigore.
+  * **criteriaText**: spiegazione dettagliata in lingua italiana di 2 frasi chiare che metta in relazione tattica diretta il calciatore con la specifica difesa o attacco del prossimo avversario (nextOpponent) (es: "Sfida complicata contro la solida e fisica retroguardia dell'avversario, dove il calciatore farà fatica a trovare spazi per i bonus, ma potrà comunque puntare su calci piazzati.").
+- **expectedBonuses**: una descrizione testuale estremamente approfondita e dettagliata (almeno 3-4 frasi chiare) dei bonus fantacalcistici attesi (es. gol, assist, rigori, punizioni, clean sheet, cartellini). Questa valutazione DEVE essere interamente contestualizzata e pesata in base alle caratteristiche specifiche della difesa o dell'attacco del prossimo avversario (nextOpponent). Ad esempio: non limitarti a dire "può fare gol", ma analizza se l'avversario ha una difesa lenta che soffre le imboscate del giocatore, se subisce molti gol su palla inattiva (favorendo saltatori o tiratori), se concede molti falli al limite dell'area, o se al contrario ha una retroguardia impenetrabile che limiterà drasticamente le occasioni da bonus del calciatore. Per i portieri, analizza la pericolosità offensiva dell'avversario indicando con precisione la probabilità del clean sheet rispetto al voto puro atteso. L'analisi DEVE nominare esplicitamente il prossimo avversario (nextOpponent) e spiegare come le sue debolezze o forze tattiche influiscano sulle probabilità di bonus.
 - **groupAnalysis**:
   - **groupName**: nome del girone reale (es: "Girone A", "Girone B").
   - **qualificationProbability**: stima percentuale chance qualificazione (es: "85%", "40%").

@@ -72,7 +72,7 @@ ${appearancesJsonDesc}
 - playerCategory: la classificazione del giocatore a livello FantaMondiale (scegli rigorosamente tra: "scarso", "accettabile", "buono", "ottimo", "stella"). Assegna il valore valutando attentamente i criteri definiti sopra.
 - formState: una breve descrizione testuale (1 riga o massimo 2 frasi) dello stato di forma e notizie reali del calciatore aggiornate a questa settimana. **DIVIETO ABSOLUTO:** Non descrivere le caratteristiche generiche del giocatore o che tipo di giocatore è (es. NON scrivere "è un attaccante tecnico", "un terzino veloce", o simili). Devi indicare **esclusivamente e tassativamente** lo stato di forma fisica attuale, notizie reali su infortuni, convocazioni, allenamento, ultime prestazioni sul campo e se partirà titolare o meno (es. "Fisicamente al top dopo l'ultimo gol in campionato", "Recuperato dal risentimento muscolare, si allena regolarmente", "In ottima forma ma partirà dalla panchina in questo turno"). Per i panchinari attivi non scrivere 'ELIMINATO', ma scrivi semplicemente che non giocherà o partirà dalla panchina.
 - description: descrizione del profilo del calciatore, valutando le performance recenti e le aspettative/performance al Mondiale in ottica FantaMondiale (2-3 frasi chiare).
-- expectedBonuses: una descrizione testuale dettagliata (2-3 frasi chiare) dei bonus fantacalcistici attesi dal calciatore (es. gol, assist, rigori, punizioni, clean sheet) specificamente valutata e contestualizzata in base al prossimo avversario (nextOpponent) ed alle caratteristiche del match. Ad esempio: per i portieri che affrontano nazionali molto offensive e forti (es. Francia, Argentina), spiega esplicitamente che il bonus clean sheet è estremamente difficile/improbabile a causa dell'elevato potenziale d'attacco avversario, ma che potrebbe mettersi in mostra con parate importanti determinando un buon voto puro; per gli attaccanti contro difese molto solide e chiuse, evidenzia che le opportunità da gol potrebbero essere scarse o limitate; per i tiratori di calci piazzati o rigori, valuta se la fisicità o lo stile di gioco dell'avversario favorirà falli dal limite o calci di rigore.
+- expectedBonuses: una descrizione testuale estremamente approfondita e dettagliata (almeno 3-4 frasi chiare) dei bonus fantacalcistici attesi (es. gol, assist, rigori, punizioni, clean sheet, cartellini). Questa valutazione DEVE essere interamente contestualizzata e pesata in base alle caratteristiche specifiche della difesa o dell'attacco del prossimo avversario (nextOpponent). Ad esempio: non limitarti a dire "può fare gol", ma analizza se l'avversario ha una difesa lenta che soffre le imboscate del giocatore, se subisce molti gol su palla inattiva (favorendo saltatori o tiratori), se concede molti falli al limite dell'area, o se al contrario ha una retroguardia impenetrabile che limiterà drasticamente le occasioni da bonus del calciatore. Per i portieri, analizza la pericolosità offensiva dell'avversario indicando con precisione la probabilità del clean sheet rispetto al voto puro atteso. L'analisi DEVE nominare esplicitamente il prossimo avversario (nextOpponent) e spiegare come le sue debolezze o forze tattiche influiscano sulle probabilità di bonus.
 - alternatives: un array di massimo 2 oggetti reali rappresentanti i calciatori alternativi nello stesso ruolo in quella specifica Nazionale che potrebbero insidiare la titolarità, con le sole chiavi: name (nome dell'alternativa) e playProbability (probabilità percentuale, es: "35%").
   * **REQUISITO MATEMATICO DEL 100% (MANDATORIO E CRUCIALE):** La somma tra la probabilità di essere titolare del giocatore oggetto di analisi (\`starterProbability\` / es. 85%) e le probabilità di impiego/titolarietà delle alternative concorrenti indicate in \`alternatives\` (es. 15%) **deve essere tassativamente pari al 100% in totale** (ad esempio: se il titolare analizzato ha l'80%, le alternative devono sommare esattamente al 20%; se il titolare ha il 90%, l'alternativa concorrente deve avere il 10%; ecc.).
   * **COMPOSIZIONE ALTERNATIVE (MANDATORIA):** Questa lista deve **sempre** contenere esattamente 1 o 2 concorrenti reali dello stesso ruolo in quella Nazionale (es. per Lukaku indica Openda; per Haaland indica Strand Larsen o Sørloth; per Courtois indica Casteels e Sels) che andranno in panchina se gioca il titolare analizzato. NON lasciare mai l'array vuoto per i giocatori attivi.
@@ -84,13 +84,13 @@ ${appearancesJsonDesc}
      * Ballottaggio / Subentrante regolare (50% - 79%): 15 punti
      * Riserva sporadica (< 50%): 5 punti
      * Infortunato/Squalificato/Eliminato: 0 punti
-  2) NAZIONALE DI APPARTENENZA (Max 20 punti):
-     * Nazionale Top/Favorita (es. Argentina, Brasile, Francia, Inghilterra, Spagna, Germania): 20 punti
-     * Nazionale Media (es. Italia, Belgio, Portogallo, Olanda, Croazia, Uruguay): 12 punti
-     * Nazionale Debole: 5 punti
-  3) DIFFICOLTÀ PROSSIMO AVVERSARIO (Max 20 punti):
-     * Avversario Debole/Morbido: 20 punti
-     * Avversario di fascia Media: 12 punti
+  2) NAZIONALE DI APPARTENENZA (Max 10 punti):
+     * Nazionale Top/Favorita (es. Argentina, Brasile, Francia, Inghilterra, Spagna, Germania): 10 punti
+     * Nazionale Media (es. Italia, Belgio, Portogallo, Olanda, Croazia, Uruguay): 6 punti
+     * Nazionale Debole: 3 punti
+  3) DIFFICOLTÀ PROSSIMO AVVERSARIO (Max 30 punti):
+     * Avversario Debole/Morbido: 30 punti
+     * Avversario di fascia Media: 18 punti
      * Avversario Top/Difesa Solida: 5 punti
   4) STATO DI FORMA FISICA/MENTALE (Max 15 punti):
      * Forma eccellente (ultime prestazioni ottime, gol/assist recenti): 15 punti
@@ -104,7 +104,7 @@ ${appearancesJsonDesc}
 - nextOpponent: la nazionale avversaria reale del prossimo turno. **REGOLA CRUCIALE E MANDATORIA:** Usa tassativamente e fedelmente il valore '${nextOpponent || 'Da verificare'}' (ad esempio: se è 'Egitto', scrivi esattamente 'Egitto'), a meno che la nazione del giocatore sia eliminata (in tal caso rispondi 'Nessuno'). Non inventare o usare altri avversari.
 - matchAnalysis: un oggetto con le seguenti chiavi:
   * nextOpponent: lo stesso nome della nazionale avversaria del prossimo turno.
-  * criteriaText: spiegazione in lingua italiana di 1-2 frasi della difficoltà di questo specifico prossimo match e l'impatto fantacalcistico atteso (es: "Sfida complicata contro la solida retroguardia francese, dove l'attaccante potrebbe faticare a ricevere palloni giocabili.").
+  * criteriaText: spiegazione dettagliata in lingua italiana di 2 frasi chiare che metta in relazione tattica diretta il calciatore con la specifica difesa o attacco del prossimo avversario (nextOpponent) (es: "Sfida complicata contro la solida e fisica retroguardia dell'avversario, dove il calciatore farà fatica a trovare spazi per i bonus, ma potrà comunque puntare su calci piazzati.").
 - groupAnalysis: un oggetto strutturato con le seguenti chiavi:
   - groupName: il nome del girone reale (es. "Girone A", "Girone B").
   - qualificationProbability: stima percentuale (es. "80%", "35%") di probabilità della sua Nazionale di passare il turno di girone e qualificarsi agli ottavi di finale.

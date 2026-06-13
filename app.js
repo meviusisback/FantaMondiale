@@ -265,6 +265,7 @@ function isCountryEliminated(countryName) {
     'netherlands': 'paesi bassi',
     'morocco': 'marocco',
     'turkey': 'turchia',
+    'turkiye': 'turchia',
     'poland': 'polonia',
     'croatia': 'croazia',
     'switzerland': 'svizzera',
@@ -303,7 +304,7 @@ function getPlayerPriorityScore(player) {
     'egypt': 'Egitto', 'italy': 'Italia', 'nigeria': 'Nigeria', 'sweden': 'Svezia',
     'norway': 'Norvegia', 'belgium': 'Belgio', 'france': 'Francia', 'spain': 'Spagna',
     'england': 'Inghilterra', 'germany': 'Germania', 'netherlands': 'Paesi Bassi',
-    'morocco': 'Marocco', 'turkey': 'Turchia', 'poland': 'Polonia', 'croatia': 'Croazia',
+    'morocco': 'Marocco', 'turkey': 'Turchia', 'turkiye': 'Turchia', 'poland': 'Polonia', 'croatia': 'Croazia',
     'switzerland': 'Svizzera', 'czech republic': 'Rep. Ceca', 'colombia': 'Colombia',
     'uruguay': 'Uruguay', 'canada': 'Canada', 'austria': 'Austria', 'hungary': 'Ungheria',
     'brazil': 'Brasile', 'portugal': 'Portogallo', 'argentina': 'Argentina',
@@ -1614,7 +1615,7 @@ function findTopPlayerRank(player) {
                          (cleanCountry === 'belgio' && topCountry === 'belgium') ||
                          (cleanCountry === 'paesi bassi' && topCountry === 'netherlands') ||
                          (cleanCountry === 'marocco' && topCountry === 'morocco') ||
-                         (cleanCountry === 'turchia' && topCountry === 'turkey') ||
+                         (cleanCountry === 'turchia' && (topCountry === 'turkey' || topCountry === 'turkiye')) ||
                          (cleanCountry === 'polonia' && topCountry === 'poland') ||
                          (cleanCountry === 'croazia' && topCountry === 'croatia') ||
                          (cleanCountry === 'svizzera' && topCountry === 'switzerland') ||
@@ -6386,6 +6387,7 @@ function getStandardItalianCountryName(countryName) {
     'netherlands': 'Paesi Bassi',
     'morocco': 'Marocco',
     'turkey': 'Turchia',
+    'turkiye': 'Turchia',
     'poland': 'Polonia',
     'croatia': 'Croazia',
     'switzerland': 'Svizzera',
@@ -6450,6 +6452,7 @@ function getStandardItalianCountryName(countryName) {
     'paesi bassi': 'Paesi Bassi',
     'marocco': 'Marocco',
     'turchia': 'Turchia',
+    'turkiye': 'Turchia',
     'polonia': 'Polonia',
     'svizzera': 'Svizzera',
     'brasile': 'Brasile',

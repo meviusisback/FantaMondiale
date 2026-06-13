@@ -46,7 +46,45 @@ const TOURNAMENT_TEAMS = [
 
 function normalizeCountry(name) {
   if (!name) return '';
-  return name.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9\s]/g, '');
+  const clean = name.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9\s]/g, '');
+  
+  const translationMap = {
+    'turkey': 'turchia',
+    'turkiye': 'turchia',
+    'egypt': 'egitto',
+    'italy': 'italia',
+    'nigeria': 'nigeria',
+    'sweden': 'svezia',
+    'norway': 'norvegia',
+    'belgium': 'belgio',
+    'france': 'francia',
+    'spain': 'spagna',
+    'england': 'inghilterra',
+    'germany': 'germania',
+    'netherlands': 'paesi bassi',
+    'morocco': 'marocco',
+    'poland': 'polonia',
+    'croatia': 'croazia',
+    'switzerland': 'svizzera',
+    'czech republic': 'rep ceca',
+    'czech': 'rep ceca',
+    'saudi arabia': 'arabia saudita',
+    'usa': 'stati uniti',
+    'united states': 'stati uniti',
+    'brazil': 'brasile',
+    'portugal': 'portogallo',
+    'mexico': 'messico',
+    'south africa': 'sudafrica',
+    'south korea': 'corea del sud',
+    'korea': 'corea del sud',
+    'cote divoire': "costa davorio",
+    'ivory coast': "costa davorio",
+    'japan': 'giappone',
+    'new zealand': 'nuova zelanda',
+    'cape verde': 'capo verde'
+  };
+  
+  return translationMap[clean] || clean;
 }
 
 const TOURNAMENT_TEAMS_NORMALIZED = new Set(TOURNAMENT_TEAMS.map(normalizeCountry));
