@@ -756,7 +756,7 @@ function saveConfig() {
   if (state.teams.length > 0) {
     const exists = state.teams.some(t => t.id === state.activeTeamId);
     if (!exists) {
-      state.activeTeamId = state.teams[0].id;
+      selectInitialActiveTeam();
     }
   } else {
     state.activeTeamId = null;
@@ -924,11 +924,7 @@ function handleSessionImport(e) {
       const divGeminiModel = document.getElementById('div-gemini-model');
       if (divGeminiModel) divGeminiModel.style.display = isOR ? 'none' : 'block';
 
-      if (state.teams.length > 0) {
-        state.activeTeamId = state.teams[0].id;
-      } else {
-        state.activeTeamId = null;
-      }
+      selectInitialActiveTeam();
 
       state.tournament = imported.tournament || null;
       state.activeRound = imported.activeRound || 'G1';
@@ -1112,11 +1108,7 @@ async function autoLoadCloudSession(id) {
     const divGeminiModel = document.getElementById('div-gemini-model');
     if (divGeminiModel) divGeminiModel.style.display = isOR ? 'none' : 'block';
 
-    if (state.teams.length > 0) {
-      state.activeTeamId = state.teams[0].id;
-    } else {
-      state.activeTeamId = null;
-    }
+    selectInitialActiveTeam();
 
     renderAll();
     showToast(`Sessione cloud "${state.activeCloudSessionMetadata.title}" caricata automaticamente! ☁️`, 'success');
@@ -2078,7 +2070,7 @@ function renderActiveTeamConsole() {
   if (state.teams.length > 0) {
     const exists = state.teams.some(t => t.id === state.activeTeamId);
     if (!exists) {
-      state.activeTeamId = state.teams[0].id;
+      selectInitialActiveTeam();
     }
     
     dom.activeTeamSelector.innerHTML = state.teams.map(t => 
@@ -4218,11 +4210,7 @@ async function loadSpecificCloudSession(id, skipConfirm = false) {
     const divGeminiModel = document.getElementById('div-gemini-model');
     if (divGeminiModel) divGeminiModel.style.display = isOR ? 'none' : 'block';
 
-    if (state.teams.length > 0) {
-      state.activeTeamId = state.teams[0].id;
-    } else {
-      state.activeTeamId = null;
-    }
+    selectInitialActiveTeam();
 
     autoSave();
     renderAll();
@@ -6118,6 +6106,19 @@ function compileIdealBench(benchPlayers, getScoreFn) {
   const tribuna = sorted.filter(p => !selectedMandatoryIds.has(p.id));
   
   return [...activeBench, ...tribuna];
+}
+
+function selectInitialActiveTeam() {
+  if (!state.teams || state.teams.length === 0) {
+    state.activeTeamId = null;
+    return;
+  }
+  const userTeam = state.teams.find(t => t.isUserTeam);
+  if (userTeam) {
+    state.activeTeamId = userTeam.id;
+  } else {
+    state.activeTeamId = state.teams[0].id;
+  }
 }
 
 function getTeamRating(teamName) {
