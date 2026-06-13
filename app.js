@@ -2773,7 +2773,7 @@ function renderPitch() {
         container.appendChild(div);
       };
 
-      const renderDashboardRow = (p, container, index, isWarning) => {
+      const renderDashboardRow = (p, container, index, isWarning, isStarter = false) => {
         const el = document.createElement('div');
         el.className = 'bench-player-node';
         el.setAttribute('data-player-id', p.id);
@@ -2822,7 +2822,7 @@ function renderPitch() {
               ${warningBadgeHtml}
               ${isCountryEliminated(masterP.country) ? ' <span style="font-size: 0.52rem; color: var(--color-danger); font-weight: 700; border: 1px solid var(--color-danger); padding: 0.05rem 0.15rem; border-radius: 4px; line-height: 1; flex-shrink: 0;">ELIMINATO</span>' : ''}
             </div>
-            <span style="font-size: 0.68rem; font-weight: 700; color: #fff; flex-shrink: 0; background: rgba(255,255,255,0.06); padding: 0.1rem 0.3rem; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); margin-left: 0.25rem;">${masterP.purchaseCost || 0} cr</span>
+            ${isStarter ? `<span style="font-size: 0.68rem; font-weight: 700; color: #fff; flex-shrink: 0; background: rgba(255,255,255,0.06); padding: 0.1rem 0.3rem; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); margin-left: 0.25rem;">${masterP.purchaseCost || 0} cr</span>` : ''}
           </div>
           <span style="font-size: 0.7rem; text-align: center; color: var(--color-text-muted); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${opp && opp !== 'Nessuno' && opp !== 'Da verificare' ? `vs ${opp}` : opp}">
             ${opp && opp !== 'Nessuno' && opp !== 'Da verificare' ? `vs ${opp}` : opp}
@@ -2867,7 +2867,7 @@ function renderPitch() {
         fallback.textContent = 'Nessun titolare...';
         pitchContainer.appendChild(fallback);
       } else {
-        startersList.forEach((p, idx) => renderDashboardRow(p, pitchContainer, idx, false));
+        startersList.forEach((p, idx) => renderDashboardRow(p, pitchContainer, idx, false, true));
       }
 
       // Section 2: Panchina
@@ -2878,7 +2878,7 @@ function renderPitch() {
         fallback.textContent = 'Panchina vuota...';
         pitchContainer.appendChild(fallback);
       } else {
-        actualBenchList.forEach((p, idx) => renderDashboardRow(p, pitchContainer, idx, false));
+        actualBenchList.forEach((p, idx) => renderDashboardRow(p, pitchContainer, idx, false, false));
       }
 
       // Section 3: Tribuna
@@ -2889,7 +2889,7 @@ function renderPitch() {
         fallback.textContent = 'Nessun giocatore in tribuna...';
         pitchContainer.appendChild(fallback);
       } else {
-        tribunaList.forEach((p, idx) => renderDashboardRow(p, pitchContainer, idx, true));
+        tribunaList.forEach((p, idx) => renderDashboardRow(p, pitchContainer, idx, true, false));
       }
     } else {
       const benchSection = document.getElementById('pitch-bench-section');
@@ -3084,7 +3084,6 @@ function renderPitch() {
               ${warningBadgeHtml}
               ${isCountryEliminated(masterP.country) ? ' <span style="font-size: 0.52rem; color: var(--color-danger); font-weight: 700; border: 1px solid var(--color-danger); padding: 0.05rem 0.15rem; border-radius: 4px; line-height: 1; flex-shrink: 0;">ELIMINATO</span>' : ''}
             </div>
-            <span style="font-size: 0.68rem; font-weight: 700; color: #fff; flex-shrink: 0; background: rgba(255,255,255,0.06); padding: 0.1rem 0.3rem; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); margin-left: 0.25rem;">${masterP.purchaseCost || 0} cr</span>
           </div>
           <span style="font-size: 0.7rem; text-align: center; color: var(--color-text-muted); font-weight: 600;" title="${opp && opp !== 'Nessuno' && opp !== 'Da verificare' ? `vs ${opp}` : opp}">
             ${opp && opp !== 'Nessuno' && opp !== 'Da verificare' ? `vs ${opp}` : opp}
@@ -3607,8 +3606,8 @@ function showTeamPitch(teamId, showIdeal = false, isDashboardView = false) {
     mainControlsRow.style.width = 'auto'; // allow shrinking if not full width
     buttonsWrapper.appendChild(mainControlsRow);
 
-    // Create second row/container for webhooks (only if not dashboard view and webhooks enabled)
-    if (!isDashboardView && state.settings.enableWebhooks !== false) {
+    // Create second row/container for Turno and Webhooks (only if not dashboard view)
+    if (!isDashboardView) {
       const webhookContainer = document.createElement('div');
       webhookContainer.className = 'webhook-container';
       webhookContainer.style.display = 'flex';
@@ -3620,17 +3619,18 @@ function showTeamPitch(teamId, showIdeal = false, isDashboardView = false) {
       webhookContainer.style.borderTop = '1px dashed var(--border-light)';
       webhookContainer.style.width = '100%';
 
-      // Round Selector
+      // Round/Turno Selector
       const roundLabel = document.createElement('label');
       roundLabel.style.fontSize = '0.75rem';
       roundLabel.style.fontWeight = '700';
       roundLabel.style.color = 'var(--color-text-muted)';
+      roundLabel.style.marginRight = '0.25rem';
       roundLabel.innerText = 'TURNO:';
       webhookContainer.appendChild(roundLabel);
 
       const roundSelect = document.createElement('select');
       roundSelect.className = 'input-control';
-      roundSelect.style.width = '100px';
+      roundSelect.style.width = '110px';
       roundSelect.style.padding = '0.25rem 0.5rem';
       roundSelect.style.fontSize = '0.75rem';
       roundSelect.style.borderRadius = '4px';
@@ -3654,38 +3654,42 @@ function showTeamPitch(teamId, showIdeal = false, isDashboardView = false) {
       };
       webhookContainer.appendChild(roundSelect);
 
-      // Button Invio Rosa Fissa
-      const rosaBtn = document.createElement('button');
-      rosaBtn.className = 'btn btn-primary';
-      rosaBtn.style.padding = '0.4rem 0.8rem';
-      rosaBtn.style.fontSize = '0.75rem';
-      rosaBtn.style.height = '30px';
-      rosaBtn.style.display = 'flex';
-      rosaBtn.style.alignItems = 'center';
-      rosaBtn.style.gap = '0.35rem';
-      rosaBtn.innerHTML = '📤 Invio Rosa Fissa';
-      rosaBtn.onclick = () => submitRosterWebhook(team);
-      webhookContainer.appendChild(rosaBtn);
+      // Webhook buttons (only if enabled)
+      if (state.settings.enableWebhooks !== false) {
+        // Button Invio Rosa Fissa
+        const rosaBtn = document.createElement('button');
+        rosaBtn.className = 'btn btn-primary';
+        rosaBtn.style.padding = '0.4rem 0.8rem';
+        rosaBtn.style.fontSize = '0.75rem';
+        rosaBtn.style.height = '30px';
+        rosaBtn.style.display = 'flex';
+        rosaBtn.style.alignItems = 'center';
+        rosaBtn.style.gap = '0.35rem';
+        rosaBtn.innerHTML = '📤 Invio Rosa Fissa';
+        rosaBtn.onclick = () => submitRosterWebhook(team);
+        webhookContainer.appendChild(rosaBtn);
 
-      // Button Invio Formazione
-      const formationBtn = document.createElement('button');
-      formationBtn.className = 'btn btn-success';
-      formationBtn.style.padding = '0.4rem 0.8rem';
-      formationBtn.style.fontSize = '0.75rem';
-      formationBtn.style.height = '30px';
-      formationBtn.style.display = 'flex';
-      formationBtn.style.alignItems = 'center';
-      formationBtn.style.gap = '0.35rem';
-      formationBtn.style.background = 'var(--color-success)';
-      formationBtn.style.borderColor = 'var(--color-success)';
-      formationBtn.innerHTML = '📤 Invio Formazione';
-      formationBtn.onclick = () => submitFormationWebhook(team, showIdeal, roundSelect.value);
-      webhookContainer.appendChild(formationBtn);
+        // Button Invio Formazione
+        const formationBtn = document.createElement('button');
+        formationBtn.className = 'btn btn-success';
+        formationBtn.style.padding = '0.4rem 0.8rem';
+        formationBtn.style.fontSize = '0.75rem';
+        formationBtn.style.height = '30px';
+        formationBtn.style.display = 'flex';
+        formationBtn.style.alignItems = 'center';
+        formationBtn.style.gap = '0.35rem';
+        formationBtn.style.background = 'var(--color-success)';
+        formationBtn.style.borderColor = 'var(--color-success)';
+        formationBtn.innerHTML = '📤 Invio Formazione';
+        formationBtn.onclick = () => submitFormationWebhook(team, showIdeal, roundSelect.value);
+        webhookContainer.appendChild(formationBtn);
+      }
 
       buttonsWrapper.appendChild(webhookContainer);
     }
   }
 
+  updateNextOpponentsList();
   renderPitch();
   document.getElementById('pitch-dialog').showModal();
 
@@ -5574,6 +5578,9 @@ async function recalculatePlayerEvaluations(team) {
     showToast('Nessun giocatore in rosa da aggiornare!', 'warning');
     return;
   }
+
+  // Ensure next opponents mapping is updated for the selected active round
+  updateNextOpponentsList();
 
   // Clear cached player analysis data for all players in this team
   team.players.forEach(p => {
